@@ -7,7 +7,7 @@
 2. `docs/02-plan-dlya-claude-druga.md`: что сделано и что дальше. Отмечай там выполненные пункты `[x]` и важные решения в «Журнал решений».
 3. `docs/03-rabota-s-claude.md`: как устроена работа с Claude, скилами и репозиторием.
 
-Скилы команды лежат в `skills/` (zip для установки в `zips/`): `mgimo-brief-breakdown`, `ai-video-pipeline`, `remotion-montage`, `site-design`.
+Скилы команды лежат в `skills/` (zip для установки в `zips/`): `mgimo-brief-breakdown`, `ai-video-pipeline`, `remotion-montage`, `site-design`, `arena` (турнир агентов для идей; в Claude Code уже подключён через `.claude/skills/arena`).
 
 Правила:
 - Ролик монтируем в Remotion, проект ролика в папке `video/`. Большие медиафайлы не коммить, их место на Google Drive.
