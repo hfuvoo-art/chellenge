@@ -1,0 +1,12 @@
+{
+  "newFileLocation": "folder",
+  "newFileFolderPath": "notes",
+  "attachmentFolderPath": "notes/attachments",
+  "alwaysUpdateLinks": true,
+  "userIgnoreFilters": [
+    "zips/",
+    ".arena/",
+    "node_modules/",
+    "video/node_modules/"
+  ]
+}

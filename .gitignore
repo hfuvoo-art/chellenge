@@ -1,2 +1,7 @@
 .arena/
 __pycache__/
+
+# Obsidian: общие настройки в git, личное состояние окон — нет
+.obsidian/workspace*.json
+.obsidian/cache
+.trash/
