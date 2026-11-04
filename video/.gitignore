@@ -1,0 +1,7 @@
+node_modules/
+out/
+# Клипы, звук и материалы партнёра храним на Google Drive, не в git
+public/clips/*
+public/audio/*
+public/brand/*
+!public/**/.gitkeep
