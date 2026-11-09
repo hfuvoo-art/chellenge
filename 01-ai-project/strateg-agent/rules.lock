@@ -1,0 +1,31 @@
+files:
+  rules/evidence.md: c78bc82a50679f20c2de0d053ccae05b9df8e8dbc45266f9199315d36cec83be
+  rules/injection-patterns.yaml: f2365724b23a9a3a863bfa55307b57026db2c80f6e2db441e30ce094f341bfc6
+  rules/safety.md: a073aaf1e3e8538400d884995b446de92a1d68fd68f29e1458100da23ef48f75
+  rules/style.md: 40a3fd8ce0ce9cf53bbed4ff49d893e04d4a7389a285ca072e8cd0cd58dde40a
+  prompts/critic-claims.md: 5bb34278fa85550fb258e39160c5f16d469b95476e8f35542d9da0c24c7e3ceb
+  prompts/critic-promises.md: a8c60e5984a656fb4e73340aa7ffc80696bc3dbad4e21735a3a4845795c03977
+  prompts/critic.md: 6fa4cb6d119d01f67c5f8971c80ee19777b33344a1cb31d13d3cb00498a17d30
+  prompts/extract.md: b81ffcb65983c4a4dec5afc2b64058de04baa48e8c65e6c76251beb87df07d1e
+  prompts/interview-coding.md: 775efdb80287943424b320670a3239a7f83f11500febdd97d30acfa81613f4f9
+  prompts/respondent.md: 3d0eca4e4601a50118c1d22ed470143f12ac61a7daf9aa40e3c42cd042d34161
+  AGENTS.md: be64d6d13b0b70535b6dc62754ccb7c208d5a165a485bdd08ee276c52cdddc74
+  tools/check.py: 72b445163a693ae318566a5844ff745dec6e4765cc3fd8fa2b8190a6db1a5d91
+  tools/lock.py: f0b264aa4eb217f9387f895943997c24c8ff49b38b4ba64b48d58904e3848e6c
+history:
+- updated_at: '2026-11-09T19:38:15+03:00'
+  reason: 'задача 9: правила, промпты, rules.lock'
+  changed:
+  - AGENTS.md
+  - prompts/critic-claims.md
+  - prompts/critic-promises.md
+  - prompts/critic.md
+  - prompts/extract.md
+  - prompts/interview-coding.md
+  - prompts/respondent.md
+  - rules/evidence.md
+  - rules/injection-patterns.yaml
+  - rules/safety.md
+  - rules/style.md
+  - tools/check.py
+  - tools/lock.py

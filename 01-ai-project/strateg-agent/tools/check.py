@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rapidfuzz import fuzz  # noqa: E402
 
-from tools import claims, ingest, tables  # noqa: E402
+from tools import claims, ingest, lock, tables  # noqa: E402
 from tools.common import die, project_path, setup_stdio, sha256_file  # noqa: E402
 from tools.numparse import count_negations, is_year, normalize_quote, num_match, parse_numbers  # noqa: E402
 
@@ -221,6 +221,16 @@ def check_secrets(root) -> list[Finding]:
     return out or [_f("OK", 11, str(root), "ключей не найдено")]
 
 
+def check_lock(root=None) -> list[Finding]:
+    """Проверка 11 (часть): запертые файлы совпадают с rules.lock."""
+    root = Path(root) if root else Path(__file__).resolve().parent.parent
+    problems = lock.verify(root)
+    if not problems:
+        return [_f("OK", 11, "rules.lock", "правила совпадают с rules.lock")]
+    return [_f("FAIL", 11, "rules.lock", "правила не совпадают с rules.lock: " + "; ".join(problems),
+               "Что сделать: если правка осознанная — `python tools/lock.py --update --reason \"…\"`, иначе верни файлы.")]
+
+
 # ---------- запуск ----------
 
 def _is_cell_claim(c) -> bool:
@@ -285,6 +295,7 @@ def run(slug, only=None) -> list[Finding]:
         out += check_refs(slug)
     if 11 in want:
         out += check_secrets(project_path(slug))
+        out += check_lock()
     return out
 
 
