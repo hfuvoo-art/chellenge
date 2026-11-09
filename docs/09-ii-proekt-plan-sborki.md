@@ -318,7 +318,7 @@
   - `search(slug, text, types=None, limit=20) -> list[dict]` — rapidfuzz `token_set_ratio` по `text` и `quote`, порог 60.
 - CLI: `claims.py add --json '{…}'`, `list [--type] [--question Q1] [--status]`, `show C-014`, `search "<строка>"`, `retract C-014 --reason "…"`, `supersede C-014 --by C-031`, `dispute C-014 --reason "…"`.
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_fact_requires_source_locator_quote`;
   - `test_dims_value_only_for_cell_locator` (локатор вида `Лист!C14`);
   - `test_agent_written_claim_cannot_be_fact` (У10);
@@ -327,10 +327,10 @@
   - `test_retract_requires_reason_and_logs`;
   - `test_search_by_wording`: «Турция выезд» находит «выезды в Турцию выросли» первым;
   - `test_list_filters`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_claims.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать. Смена статуса — атомарная перезапись файла.
-- [ ] **Шаг 4.** pytest → PASS.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: claims.py — реестр утверждений с типами и статусами`.
+- [x] **Шаг 2.** `python -m pytest tests/test_claims.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать. Смена статуса — атомарная перезапись файла.
+- [x] **Шаг 4.** pytest → PASS.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: claims.py — реестр утверждений с типами и статусами`.
 
 ### Задача 6. Спайк извлечения на сыром тексте: замер lite/pro (9.11)
 
