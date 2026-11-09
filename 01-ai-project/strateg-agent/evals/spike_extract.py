@@ -217,6 +217,63 @@ def write_placeholder() -> None:
     write_text_atomic(TABLE_PATH, render_table([], None, None))
 
 
+_SID = re.compile(r"^S-\d{3,}$")
+_QLINE = re.compile(r"^\s*[-*]\s*(Q\d+)\s*[:.]\s*(.+)$", re.M)
+
+
+def write_claims(slug: str, files: list[Path], log=print) -> int:
+    """Временный путь до extract.py (задача 9b): materials/S-NNN.md проекта → lite → claims.jsonl.
+    Пишется только утверждение с дословной цитатой («точно»). Оценка из текста (estimate) пишется как fact
+    с пометкой «по оценке источника»: estimate — только наш расчёт с calc/ (решение 11.11 к задаче 10)."""
+    from tools import claims
+    from tools.common import project_path
+
+    qfile = project_path(slug) / "questions.md"
+    qs = _QLINE.findall(qfile.read_text(encoding="utf-8")) if qfile.is_file() else []
+    qcodes = [q for q, _ in qs]
+    qtext = "\n".join(f"{q}: {t.strip()}" for q, t in qs)
+    prompt = load_prompt()
+    who = f"extract.py:spike:{model_label('extract')}"
+    total = {"written": 0, "skipped": 0, "parts": 0, "failed_parts": 0}
+    for f in files:
+        sid = f.stem
+        text = f.read_text(encoding="utf-8")
+        for i, part in enumerate(split_parts(text), 1):
+            total["parts"] += 1
+            user = (f"Вопросы исследования:\n{qtext}\n\n" if qtext else "") + \
+                f"Фрагмент {i} (источник: {sid}).\n\n<<<ИСТОЧНИК\n{part}\nИСТОЧНИК>>>"
+            try:
+                obj, r = llm.chat_json([{"role": "system", "content": prompt}, {"role": "user", "content": user}],
+                                       role="extract", slug=slug, action_id=f"extract:{sid}:part-{i:02d}",
+                                       required_keys=["claims"], max_tokens=4000, temperature=0)
+            except (llm.LLMJSONError, llm.LLMUnavailable) as e:
+                total["failed_parts"] += 1
+                log(f"  {sid} часть {i}: ПРОВАЛ ({e}). Что сделать: запустите команду ещё раз — записанное не задвоится.")
+                continue
+            items = obj.get("claims") if isinstance(obj.get("claims"), list) else []
+            for c in items:
+                if not isinstance(c, dict) or check_quote(c.get("quote"), part) != "точно":
+                    total["skipped"] += 1
+                    continue
+                t = c.get("type") if c.get("type") in ("fact", "estimate", "forecast") else "fact"
+                body = str(c.get("text") or "").strip()
+                if t == "estimate":
+                    t, body = "fact", f"По оценке источника: {body}"
+                q = [x for x in (c.get("question") or []) if isinstance(x, str) and (not qcodes or x in qcodes)]
+                try:
+                    claims.add(slug, {"type": t, "text": body, "source": sid, "locator": str(c.get("locator") or ""),
+                                      "quote": str(c["quote"]).strip(), "question": q or qcodes[:1],
+                                      "extracted_by": who})
+                    total["written"] += 1
+                except ValueError as e:
+                    total["skipped"] += 1
+                    log(f"  {sid} часть {i}: отклонено: {e}")
+            log(f"  {sid} часть {i}: утверждений {len(items)}, {r.latency_s:.1f} с")
+    log(f"Записано (или уже было в реестре): {total['written']}, отброшено (цитата не дословная или запись отклонена): {total['skipped']}, "
+        f"частей: {total['parts']}, провалов частей: {total['failed_parts']}. Дальше: python tools/check.py --only 1,2,3,4 -p {slug}")
+    return 1 if total["failed_parts"] else 0
+
+
 def main(argv=None) -> int:
     setup_stdio()
     ap = argparse.ArgumentParser(
@@ -225,7 +282,31 @@ def main(argv=None) -> int:
     ap.add_argument("files", nargs="+", type=Path, help="тексты .md или .txt")
     ap.add_argument("--models", default="lite,pro",
                     help="какие модели гнать: lite (роль extract, EXTRACT_MODEL) и/или pro (роль pro, PRO_MODEL); по умолчанию lite,pro")
+    ap.add_argument("--write", action="store_true",
+                    help="временная замена extract.py (до задачи 10): файлы — projects/<проект>/materials/S-NNN.md; "
+                         "lite извлекает утверждения и пишет в claims.jsonl только дословные цитаты; таблица спайка не меняется")
+    ap.add_argument("-p", "--project", help="имя проекта для --write (по умолчанию текущий)")
     a = ap.parse_args(argv)
+
+    if a.write:
+        from tools.common import current_slug
+        slug = a.project or current_slug()
+        if not slug:
+            print("Ошибка: проект не выбран. Что сделать: укажите -p <проект> или python tools/project.py use <проект>.", file=sys.stderr)
+            return 2
+        bad = [f for f in a.files if not f.is_file() or not _SID.match(f.stem)]
+        if bad:
+            print(f"Ошибка: {bad[0]} — не файл источника вида materials/S-001.md. Что сделать: сначала ingest.py, "
+                  "затем передайте файлы из projects/<проект>/materials/.", file=sys.stderr)
+            return 2
+        if not llm.has_key("extract"):
+            print("НЕТ КЛЮЧА: --write требует ключ Yandex (EXTRACT_MODEL в .env). Без ключа извлечение — задача 10 (--emit-prompt).")
+            return 3
+        try:
+            return write_claims(slug, a.files)
+        except llm.NoKeyError as e:
+            print(f"НЕТ КЛЮЧА: {e}")
+            return 3
 
     keys = [k.strip() for k in a.models.split(",") if k.strip()]
     bad = [k for k in keys if k not in ROLES]
