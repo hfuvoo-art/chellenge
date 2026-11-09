@@ -68,7 +68,8 @@ def test_chat_json_repair_once(fake_llm, tmp_project):
     assert len(fake_llm.calls) == 2
     log = _log(tmp_project)
     assert any(e["kind"] == "repair" for e in log)
-    assert [e["category"] for e in log if e["kind"] == "llm"] == ["yandex", "retry"]
+    # У2: первый вызов с не-JSON тоже «retry», в «yandex» остаются только успешные первые вызовы
+    assert [e["category"] for e in log if e["kind"] == "llm"] == ["retry", "retry"]
 
 
 def test_chat_json_gives_up_after_repair(fake_llm, tmp_project):
@@ -119,10 +120,61 @@ def test_price_rub_null_prices_and_yandex_uri(tmp_path, monkeypatch):
     assert llm.price_rub("gpt://folder/yandexgpt/latest", u) == pytest.approx(3.0)
 
 
-def test_shipped_prices_yaml_has_no_invented_prices():
+def test_shipped_prices_yaml_respects_u12_invariant():
     cfg = yaml.safe_load(open(llm.ROOT / "config" / "prices.yaml", encoding="utf-8"))
-    assert cfg["as_of"] is None and cfg["sources"] == []
-    assert llm.price_rub("yandexgpt-lite", {"prompt_tokens": 1, "completion_tokens": 1}) is None
+    fx = cfg.get("usd_rub") or {}
+    prices = [v for m in (cfg.get("models") or {}).values() for v in m.values()]
+    prices += [fx.get("value"), (cfg.get("search") or {}).get("claude_usd_per_1k"), cfg.get("human_rub_per_hour")]
+    prices += list((cfg.get("claude_usd_per_mtok") or {}).values())
+    if any(v is not None for v in prices):
+        assert cfg["as_of"] is not None and cfg["sources"]
+    if fx.get("value") is not None:
+        assert fx.get("source") and fx.get("as_of")
+
+
+def test_chat_json_truncated_not_silently_accepted(fake_llm, tmp_project):
+    fake_llm.add('[{"a":1},{"a":2},{"a":', '[{"a":1},{"a":2}]')
+    obj, _ = llm.chat_json(MSG, role="extract", slug=tmp_project)
+    assert obj == [{"a": 1}, {"a": 2}]
+    assert len(fake_llm.calls) == 2
+    assert any(e["kind"] == "repair" for e in _log(tmp_project))
+    fake_llm.add('{"claims":[{"q":"x"},{"q":"y', '{"claims": []}')
+    obj, _ = llm.chat_json(MSG, role="extract", slug=tmp_project)
+    assert obj == {"claims": []}
+
+
+def test_chat_json_accepts_category_kwarg(fake_llm, tmp_project):
+    fake_llm.add('{"a":1}')
+    llm.chat_json(MSG, role="extract", slug=tmp_project, category="retry")
+    assert [e["category"] for e in _log(tmp_project) if e["kind"] == "llm"] == ["retry"]
+    fake_llm.add("мусор", '{"a":1}')
+    llm.chat_json(MSG, role="extract", slug=tmp_project, category="retry")
+    assert len([e for e in _log(tmp_project) if e["kind"] == "llm"]) == 3  # каждый вызов один раз
+
+
+def test_error_event_before_unavailable(fake_llm, tmp_project):
+    fake_llm.add(HttpError(400))
+    with pytest.raises(llm.LLMUnavailable):
+        llm.chat(MSG, role="extract", slug=tmp_project)
+    e = [e for e in _log(tmp_project) if e["kind"] == "error"][0]
+    assert e["status"] == 400 and e["error"] == "HttpError" and e["attempts"] == 1 and e["role"] == "extract"
+    assert "HTTP 400" not in str(e)
+
+
+def test_error_event_after_exhausted_retries(fake_llm, tmp_project):
+    fake_llm.add(HttpError(500), HttpError(500), HttpError(500))
+    with pytest.raises(llm.LLMUnavailable):
+        llm.chat(MSG, role="extract", slug=tmp_project)
+    e = [e for e in _log(tmp_project) if e["kind"] == "error"][0]
+    assert e["attempts"] == 3 and e["status"] == 500
+
+
+def test_truncated_flag_in_result_and_event(fake_llm, tmp_project):
+    fake_llm.add(("обрез", {"prompt_tokens": 10, "completion_tokens": 5, "truncated": True}), "ok")
+    r = llm.chat(MSG, role="extract", slug=tmp_project)
+    assert r.truncated is True and "truncated" not in r.usage
+    assert llm.chat(MSG, role="extract", slug=tmp_project).truncated is False
+    assert [e["truncated"] for e in _log(tmp_project) if e["kind"] == "llm"] == [True, False]
 
 
 def test_load_env_parses_file_without_overriding(tmp_path, monkeypatch):

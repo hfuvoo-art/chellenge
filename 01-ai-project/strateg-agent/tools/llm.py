@@ -20,7 +20,7 @@ RETRY_PAUSES = (2, 6)  # секунды; максимум 2 ретрая (Гло
 TIMEOUT_S = 60.0
 NO_KEY_MSG = "НЕТ КЛЮЧА: работаю в режиме без ключа (см. README)"
 
-# роль -> (переменная модели, префикс переменных критика или None)
+# роль -> переменная модели
 _ROLE_MODEL = {
     "extract": "EXTRACT_MODEL", "relevance": "EXTRACT_MODEL", "interview_coding": "EXTRACT_MODEL",
     "pro": "PRO_MODEL", "respond": "PRO_MODEL",
@@ -50,6 +50,7 @@ class LLMResult:
     rub: float | None = None
     latency_s: float = 0.0
     attempts: int = 1
+    truncated: bool = False
 
 
 def load_env() -> None:
@@ -128,7 +129,8 @@ def price_rub(model: str, usage: dict) -> float | None:
 
 
 def _create(role: str, model: str, messages: list, temperature: float, max_tokens: int) -> tuple[str, dict]:
-    """Единственная сетевая точка: один запрос без ретраев (ретраи наши)."""
+    """Единственная сетевая точка: один запрос без ретраев (ретраи наши).
+    В usage дополнительно лежит "truncated" (finish_reason == length); chat() вынимает его из usage."""
     import openai
 
     c = _conn(role)
@@ -140,11 +142,13 @@ def _create(role: str, model: str, messages: list, temperature: float, max_token
         model=model, messages=messages, temperature=temperature, max_tokens=max_tokens,
     )
     text = (resp.choices[0].message.content or "") if resp.choices else ""
+    truncated = bool(resp.choices) and resp.choices[0].finish_reason == "length"
     u = resp.usage
     usage = {
         "prompt_tokens": getattr(u, "prompt_tokens", 0) or 0,
         "completion_tokens": getattr(u, "completion_tokens", 0) or 0,
         "total_tokens": getattr(u, "total_tokens", 0) or 0,
+        "truncated": truncated,
     }
     return text, usage
 
@@ -164,10 +168,18 @@ def _log(slug, kind: str, **fields) -> None:
     log.event(slug, kind, **fields)
 
 
+def _emit_llm(slug, r: LLMResult, category: str, action_id) -> None:
+    """Одно событие llm на каждый вызов. Вызов после ретрая всегда «retry» (У2)."""
+    cat = category if r.attempts == 1 else "retry"
+    _log(slug, "llm", role=r.role, model=r.model, usage=r.usage, rub=r.rub, latency_s=r.latency_s,
+         attempts=r.attempts, category=cat, truncated=r.truncated, action_id=action_id)
+
+
 def chat(messages, *, role, slug=None, action_id=None, temperature=0.2, max_tokens=2000, model=None,
-         category: str = "yandex") -> LLMResult:
+         category: str = "yandex", _emit: bool = True) -> LLMResult:
     """Вызов модели с ≤2 ретраями (паузы 2 и 6 с на 429/5xx/таймаут) и записью в журнал.
-    category: «yandex» для успешного первого вызова; повторы, ремонты и эскалации идут как «retry» (У2)."""
+    category: «yandex» для успешного первого вызова; повторы, ремонты и эскалации идут как «retry» (У2).
+    _emit=False: событие llm пишет вызывающий (chat_json, после разбора ответа)."""
     name = _require_config(role, model)
     t0 = time.monotonic()
     for attempt in range(1, len(RETRY_PAUSES) + 2):
@@ -179,32 +191,34 @@ def chat(messages, *, role, slug=None, action_id=None, temperature=0.2, max_toke
         except Exception as e:  # noqa: BLE001
             status = getattr(e, "status_code", None)
             if not _retryable(e):
+                _log(slug, "error", role=role, model=name, status=status, error=type(e).__name__,
+                     attempts=attempt, action_id=action_id)
                 raise LLMUnavailable(f"модель «{name}» отклонила запрос ({type(e).__name__}, код {status}). Что сделать: проверьте ключ, модель и LLM_BASE_URL в .env.") from None
             if attempt > len(RETRY_PAUSES):
+                _log(slug, "error", role=role, model=name, status=status, error=type(e).__name__,
+                     attempts=attempt, action_id=action_id)
                 raise LLMUnavailable(f"модель «{name}» недоступна после {attempt} попыток ({type(e).__name__}, код {status}). Что сделать: повторите позже или задайте вопрос человеку.") from None
             pause = RETRY_PAUSES[attempt - 1]
             _log(slug, "retry", role=role, model=name, attempt=attempt, error=type(e).__name__, status=status,
                  pause_s=pause, action_id=action_id)
             time.sleep(pause)
     latency = round(time.monotonic() - t0, 3)
-    rub = price_rub(name, usage)
-    cat = category if attempt == 1 else "retry"
-    _log(slug, "llm", role=role, model=name, usage=usage, rub=rub, latency_s=latency, attempts=attempt,
-         category=cat, action_id=action_id)
-    return LLMResult(text=text, model=name, role=role, usage=usage, rub=rub, latency_s=latency, attempts=attempt)
+    usage = dict(usage)
+    truncated = bool(usage.pop("truncated", False))
+    r = LLMResult(text=text, model=name, role=role, usage=usage, rub=price_rub(name, usage),
+                  latency_s=latency, attempts=attempt, truncated=truncated)
+    if _emit:
+        _emit_llm(slug, r, category, action_id)
+    return r
 
 
 def _extract_json(text: str):
-    """Первый JSON-объект или массив в тексте (после снятия ```-ограждения); иначе ValueError."""
-    dec = json.JSONDecoder()
-    for i, ch in enumerate(text):
-        if ch in "{[":
-            try:
-                obj, _ = dec.raw_decode(text, i)
-            except ValueError:
-                continue
-            return obj
-    raise ValueError("JSON не найден")
+    """Только первое вхождение { или [: если оно не разбирается (обрезанный ответ), это ValueError, а не «кусок» JSON."""
+    starts = [k for k in (text.find("{"), text.find("[")) if k >= 0]
+    if not starts:
+        raise ValueError("JSON не найден")
+    obj, _ = json.JSONDecoder().raw_decode(text, min(starts))
+    return obj
 
 
 def _valid(obj, required_keys) -> bool:
@@ -214,15 +228,22 @@ def _valid(obj, required_keys) -> bool:
 
 
 def chat_json(messages, *, role, slug=None, action_id=None, required_keys=None, **kw):
-    """chat + разбор JSON (У1): один «ремонтный» повтор, затем LLMJSONError (эскалация — дело вызывающего)."""
-    r = chat(messages, role=role, slug=slug, action_id=action_id, **kw)
+    """chat + разбор JSON (У1): один «ремонтный» повтор, затем LLMJSONError (эскалация - дело вызывающего).
+    У2: событие llm первого вызова пишется после разбора: валидный JSON - категория вызывающего (по умолчанию
+    «yandex»), не-JSON - «retry»; ремонтный вызов всегда «retry». Каждый вызов пишется один раз, двойного счёта нет."""
+    first_cat = kw.pop("category", "yandex")
+    kw.pop("_emit", None)
+    r = chat(messages, role=role, slug=slug, action_id=action_id, _emit=False, **kw)
     try:
         obj = _extract_json(r.text)
         if _valid(obj, required_keys):
+            _emit_llm(slug, r, first_cat, action_id)
             return obj, r
     except ValueError:
         pass
-    _log(slug, "repair", role=role, model=r.model, action_id=action_id, reason="невалидный JSON")
+    _emit_llm(slug, r, "retry", action_id)
+    _log(slug, "repair", role=role, model=r.model, action_id=action_id,
+         reason="невалидный или обрезанный JSON", truncated=r.truncated)
     fix = list(messages) + [
         {"role": "assistant", "content": r.text},
         {"role": "user", "content": "Верни только JSON, без пояснений и ограждений ```."
