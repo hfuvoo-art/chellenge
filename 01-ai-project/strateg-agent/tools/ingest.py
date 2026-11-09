@@ -22,13 +22,17 @@ PATTERNS_FILE = ROOT / "rules" / "injection-patterns.yaml"
 MIN_HTML_CHARS = 1500
 UA = "Mozilla/5.0 (compatible; strateg-agent/1.0)"
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-TABLE_EXT = {".xlsx", ".xls", ".xlsm", ".csv"}
+TABLE_EXT = {".xlsx", ".xlsm", ".csv"}
+CELL_LOC_RE = re.compile(r"^.+!\$?[A-Za-z]{1,3}\$?\d+$")  # Лист!C14
 MARKER_RE = re.compile(r"^<!--\s*(p\.\d+|¶\d+)\s*-->\s*$")
 WARNING_HINTS = {
     "short-text": "текста мало или нет цифр (вероятно, страница строится JS). Что сделать: snap.py (если есть) или ручной обход: "
                   "Ctrl+P → сохранить PDF → `python tools/ingest.py page.pdf --found-by user --url <адрес>`.",
     "no-text-layer": "в PDF нет текстового слоя (скан). Что сделать: распознать текст (OCR) и добавить как docx/txt, "
                      "либо перепечатать нужные цифры вручную.",
+    "table-header-unknown": "у части ячеек шапка не распознана (помечены [заголовок?]). Что сделать: проверить шапку в Excel; "
+                            "факт по такой ячейке получает тип estimate, а не fact.",
+    "no-table": "в файле нет числовых ячеек (строк данных). Что сделать: проверить, что данные не картинкой и не текстом.",
     "image-needs-description": "изображение не содержит текста для проверки. Что сделать: описание добавляет ux-observer; "
                                "цитировать изображение как факт нельзя.",
 }
@@ -131,6 +135,23 @@ def _read_docx(path: Path):
     md, chars = _paragraph_md(paras)
     cp = d.core_properties
     return md, chars, (cp.title or "").strip() or None, _to_date(cp.modified or cp.created), (paras[0][:100] if paras else None)
+
+
+def _read_table(path: Path):
+    """Каждая ячейка данных — строка `Лист!C14 [измерения] = значение`; примечания — отдельные строки."""
+    from tools import tables
+    try:
+        cells, notes = tables.parse_table(path)
+    except Exception as e:  # битый файл не должен ронять сбор трассой
+        die(f"не удалось разобрать таблицу {path.name} ({type(e).__name__}). Что сделать: открой и пересохрани файл в Excel как .xlsx.")
+    lines = [_esc(tables.render(c)) for c in cells]
+    lines += [_esc(f"{ref} [примечание] {text}") for ref, text in notes]
+    warnings = []
+    if not cells:
+        warnings.append("no-table")
+    elif any(not c.header_ok for c in cells):
+        warnings.append("table-header-unknown")
+    return chr(10).join(lines), sum(len(x) for x in lines), warnings
 
 
 def _read_plain(path: Path):
@@ -336,8 +357,8 @@ def ingest_ex(slug, target, *, found_by: str, url: str | None = None, refresh: b
 
 def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tuple[str, bool]:
     ext = p.suffix.lower()
-    if ext in TABLE_EXT:
-        die("таблицы (xlsx/csv) пока не принимаются (разбор — задача 7). Что сделать: не добавляй таблицы через ingest.py.")
+    if ext == ".xls":
+        die("старый формат .xls не читается. Что сделать: открой в Excel и сохрани как .xlsx, затем повтори.")
     common = dict(found_by=found_by, url=url, path=p if as_local else None, sha=sha256_file(p), refresh=refresh)
     file_date = datetime.fromtimestamp(p.stat().st_mtime).date().isoformat() if as_local else None
 
@@ -349,6 +370,11 @@ def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tu
             return h, "header"
         return (file_date, "file") if file_date else (None, "none")
 
+    if ext in TABLE_EXT:
+        md, chars, kind_warn = _read_table(p)
+        as_of, src = when(None, md)
+        return _register(slug, kind=ext[1:] if ext != ".xlsm" else "xlsx", ext=ext[1:], original=p, md_body=md, chars=chars,
+                         title=p.stem, as_of=as_of, as_of_source=src, warnings=kind_warn, **common)
     if ext == ".pdf":
         md, chars, title, meta_date = _read_pdf(p)
         as_of, src = when(meta_date, md)
@@ -371,7 +397,7 @@ def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tu
         as_of, src = when(None)
         return _register(slug, kind="image", ext=ext.lstrip("."), original=p, md_body="", chars=0, title=None,
                          as_of=as_of, as_of_source=src, warnings=["image-needs-description"], **common)
-    die(f"формат «{ext or 'без расширения'}» не поддержан. Что сделать: pdf, docx, md, txt, html, png/jpg или URL.")
+    die(f"формат «{ext or 'без расширения'}» не поддержан. Что сделать: pdf, docx, xlsx, csv, md, txt, html, png/jpg или URL.")
 
 
 def _first_line(md: str) -> str | None:
@@ -385,7 +411,13 @@ def section(slug, sid: str, locator: str) -> str:
     p = project_path(slug) / "materials" / f"{sid}.md"
     if not p.is_file():
         raise ValueError(f"источника {sid} нет в проекте. Что сделать: проверь sources.yaml.")
-    for loc, body in _blocks(read_text(p)):
+    text = read_text(p)
+    if CELL_LOC_RE.match(locator):  # таблицы: локатор ячейки — начало строки
+        for line in text.splitlines():
+            if line.startswith(locator + " "):
+                return line.strip()
+        raise ValueError(f"в {sid} нет ячейки «{locator}». Что сделать: проверь адрес в {sid}.md (строки вида Лист!C14 [...] = значение).")
+    for loc, body in _blocks(text):
         if loc == locator:
             return body
     raise ValueError(f"в {sid} нет локатора «{locator}». Что сделать: проверь номер страницы (p.N) или абзаца (¶N) в {sid}.md.")
@@ -393,7 +425,7 @@ def section(slug, sid: str, locator: str) -> str:
 
 def main(argv=None) -> int:
     setup_stdio()
-    ap = argparse.ArgumentParser(description="Добавить источник (URL, PDF, DOCX, md/txt, html, изображение) в проект.")
+    ap = argparse.ArgumentParser(description="Добавить источник (URL, PDF, DOCX, xlsx/csv, md/txt, html, изображение) в проект.")
     ap.add_argument("target", help="URL или путь к файлу")
     ap.add_argument("--found-by", required=True, help='как найден: "search:<запрос>", "user" или "brief"')
     ap.add_argument("--url", help="исходный URL, если файл скачан вручную (например, страница, сохранённая в PDF)")
