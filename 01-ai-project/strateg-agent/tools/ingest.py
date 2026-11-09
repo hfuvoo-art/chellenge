@@ -151,7 +151,7 @@ def _read_table(path: Path):
         warnings.append("no-table")
     elif any(not c.header_ok for c in cells):
         warnings.append("table-header-unknown")
-    return chr(10).join(lines), sum(len(x) for x in lines), warnings
+    return chr(10).join(lines), sum(len(x) for x in lines), warnings, chr(10).join(t for _, t in notes)
 
 
 def _read_plain(path: Path):
@@ -183,6 +183,9 @@ def _html_meta_date(html: str) -> str | None:
 def _header_date(text: str) -> str | None:
     head = text[:3000]
     m = re.search(r"(?:актуально\s+на|по\s+состоянию\s+на|as\s+of)\s*:?\s*(\d{1,2})\.(\d{1,2})\.(\d{4})", head, re.IGNORECASE)
+    if m:
+        return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
+    m = re.search(r"последнее\s+обновление(?:\s+данных)?\s*:?\s*\|?\s*(\d{1,2})\.(\d{1,2})\.(\d{4})", head, re.IGNORECASE)
     if m:
         return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
     m = re.search(r"as[_ ]of\s*:\s*(\d{4}-\d{2}-\d{2})", head, re.IGNORECASE)
@@ -264,6 +267,8 @@ def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_
         (mdir / f"{sid}.{ext}").write_bytes(original)
     write_text_atomic(mdir / f"{sid}.md", header + "\n\n" + md_body + ("\n" if md_body else ""))
     entry: dict = {"id": sid, "kind": kind, "title": title or (path.name if path else place)}
+    if kind == "table":
+        entry["ext"] = ext  # xlsx | xlsm | csv: по нему analyze находит оригинал materials/<S-id>.<ext>
     if url:
         entry["url"] = url
     if path:
@@ -371,9 +376,9 @@ def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tu
         return (file_date, "file") if file_date else (None, "none")
 
     if ext in TABLE_EXT:
-        md, chars, kind_warn = _read_table(p)
-        as_of, src = when(None, md)
-        return _register(slug, kind=ext[1:] if ext != ".xlsm" else "xlsx", ext=ext[1:], original=p, md_body=md, chars=chars,
+        md, chars, kind_warn, notes_text = _read_table(p)
+        as_of, src = when(None, notes_text)  # дата обновления — в примечаниях (лист «Паспорт»), а не среди тысяч ячеек
+        return _register(slug, kind="table", ext=ext[1:], original=p, md_body=md, chars=chars,
                          title=p.stem, as_of=as_of, as_of_source=src, warnings=kind_warn, **common)
     if ext == ".pdf":
         md, chars, title, meta_date = _read_pdf(p)
@@ -413,6 +418,8 @@ def section(slug, sid: str, locator: str) -> str:
         raise ValueError(f"источника {sid} нет в проекте. Что сделать: проверь sources.yaml.")
     text = read_text(p)
     if CELL_LOC_RE.match(locator):  # таблицы: локатор ячейки — начало строки
+        sh, _, ref = locator.rpartition("!")
+        locator = f"{sh}!{ref.replace('$', '').upper()}"  # как в tables.get_cell
         for line in text.splitlines():
             if line.startswith(locator + " "):
                 return line.strip()

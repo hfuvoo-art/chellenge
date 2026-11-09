@@ -17,9 +17,9 @@ def add_cell_claim(slug, sid: str, locator: str, questions: list[str] | None = N
     src = next((s for s in ingest._load_sources(slug) if s["id"] == sid), None)
     if src is None:
         raise ValueError(f"источника {sid} нет в проекте. Что сделать: `python tools/ingest.py <файл.xlsx> --found-by user`.")
-    if src["kind"] not in ("xlsx", "csv"):
+    if src["kind"] != "table":
         raise ValueError(f"{sid} — {src['kind']}, а не таблица. Что сделать: для текста факты берёт extract.py.")
-    path = project_path(slug) / "materials" / f"{sid}.{src['kind']}"
+    path = project_path(slug) / "materials" / f"{sid}.{src['ext']}"
     if not path.is_file() or sha256_file(path) != src["sha256"]:
         raise ValueError(f"оригинал {sid} отсутствует или изменён. Что сделать: добавь таблицу заново через ingest.py.")
     cell = tables.get_cell(path, locator)
@@ -56,7 +56,8 @@ def main(argv=None) -> int:
     print(f"{cid}: {tables.render(cell)}")
     if not cell.header_ok:
         print(f"ВНИМАНИЕ: шапка ячейки не распознана ({tables.UNKNOWN_MARK}), записан estimate, а не fact. "
-              "Что сделать: проверить шапку в Excel и при необходимости исправить исходный файл.")
+              f"Что сделать: проверить шапку в Excel и исправить файл либо подтвердить толкование расчётом calc/{cid}.py, "
+              "иначе check.py даст FAIL по этому утверждению.")
     return 0
 
 

@@ -15,6 +15,7 @@ NOTE_RE = re.compile(r"^\s*(примечани|источник|прим\.|сн�
 YEAR_RE = re.compile(r"^\s*((?:19|20)\d{2})\s*(?:г\.?|год\w*)?\s*$", re.IGNORECASE)
 ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4}
 QUARTER_RE = re.compile(r"^\s*(?:(IV|III|II|I|[1-4])\s*[-–]?\s*(?:й\s*)?(?:кв(?:артал)?\.?)|q\s*([1-4]))\s*$", re.IGNORECASE)
+MISSING = {"н/д", "нет", "-", "—", "–", "…", "x", "х", "n/a", "na", "*"}  # «нет данных» в ячейке — не шапка
 NUM_RE = re.compile(r"^[+\-−]?\d+(?:[.,]\d+)?$")
 
 
@@ -106,7 +107,7 @@ def _col_letter(n: int) -> str:
 
 
 def _parse_grid(sheet: str, grid: dict, ghosts: set, nrows: int, ncols: int,
-                strings_numeric: bool) -> tuple[list[Cell], list[tuple[str, str]]]:
+                strings_numeric: bool, start: int = 1) -> tuple[list[Cell], list[tuple[str, str]]]:
     """grid[(строка, столбец)] с 1; ghosts — продолжения объединённых ячеек (не данные)."""
 
     def val(r, c):
@@ -131,7 +132,7 @@ def _parse_grid(sheet: str, grid: dict, ghosts: set, nrows: int, ncols: int,
         nums = [v for _, v in vs if _is_num(v)]
         if not nums or (strict and len(nums) * 2 < len(vs)):  # старт таблицы: ≥50 % числовых; дальше достаточно одной (н/д в строке)
             return False
-        return not (len(nums) >= 2 and all(_is_year_int(v) for v in nums))  # строка лет — шапка
+        return not (strict and len(nums) >= 2 and all(_is_year_int(v) for v in nums))  # строка лет в зоне шапки — шапка; в теле это данные
 
     notes: list[tuple[str, str]] = []
 
@@ -140,17 +141,41 @@ def _parse_grid(sheet: str, grid: dict, ghosts: set, nrows: int, ncols: int,
         if vs:
             notes.append((f"{sheet}!{_col_letter(vs[0][0])}{r}", " | ".join(_text(v) for _, v in vs)))
 
-    first = next((r for r in range(1, nrows + 1) if is_data_row(r)), None)
+    first = next((r for r in range(start, nrows + 1) if is_data_row(r)), None)
     if first is None:  # таблицы на листе нет: весь текст — примечания (паспорт, описание)
-        for r in range(1, nrows + 1):
+        for r in range(start, nrows + 1):
             add_note(r)
         return [], notes
+    first_cols = [c for c, v in row_vals(first) if _is_num(v)]
+    lead = [c for c in range(1, first_cols[0])]
+    left_hdr = {_text(val(r, c)) for r in range(start, first) for c in lead if val(r, c) is not None}
+
+    def starts_new_table(r):
+        """Шапка второй таблицы на том же листе: ≥2 текстов (не «н/д») или ≥2 лет без чисел-данных в числовых столбцах."""
+        vs = [(c, v) for c, v in row_vals(r) if c >= first_cols[0]]
+        if NOTE_RE.match(_text((row_vals(r) or [(0, "")])[0][1])) or len(vs) < 2:
+            return False
+        lbl = [_text(val(r, c)) for c in lead if val(r, c) is not None]
+        if all(isinstance(v, str) for _, v in vs):
+            return sum(1 for _, v in vs if _text(v).lower() not in MISSING) >= 2
+        if all(_is_year_int(v) for _, v in vs):  # годы числами: шапка, если слева пусто или стоит заголовок первой таблицы
+            return not lbl or all(x in left_hdr for x in lbl)
+        return False
+
     data_rows = [first]
+    split = None
     for r in range(first + 1, nrows + 1):
+        if starts_new_table(r):
+            split = r
+            break
         if is_data_row(r, strict=False):
             data_rows.append(r)
         else:
             add_note(r)  # примечания и пустое под таблицей данными не считаются
+    tail_cells: list[Cell] = []
+    if split:
+        tail_cells, tail_notes = _parse_grid(sheet, grid, ghosts, nrows, ncols, strings_numeric, start=split)
+        notes += tail_notes
     stat = {}
     for c in range(1, ncols + 1):
         nums = sum(1 for r in data_rows if _is_num(val(r, c)) and (r, c) not in ghosts)
@@ -158,9 +183,9 @@ def _parse_grid(sheet: str, grid: dict, ghosts: set, nrows: int, ncols: int,
         stat[c] = (nums, txts)
     num_cols = [c for c in range(1, ncols + 1) if stat[c][0] >= 1 and stat[c][0] >= stat[c][1]]
     if not num_cols:
-        return [], notes
+        return tail_cells, notes
     left = [c for c in range(1, ncols + 1) if c < num_cols[0] and stat[c][1] > stat[c][0]]
-    levels = [r for r in range(1, first) if any(val(r, c) is not None for c in range(1, ncols + 1))]
+    levels = [r for r in range(start, first) if any(val(r, c) is not None for c in range(1, ncols + 1))]
     htext = {(r, c): _text(val(r, c)) for r in levels for c in range(1, ncols + 1)}
     for r in levels[:-1]:  # верхние уровни протягиваем вправо: сгруппированная шапка без слияния
         cur = ""
@@ -226,7 +251,7 @@ def _parse_grid(sheet: str, grid: dict, ghosts: set, nrows: int, ncols: int,
                     norm = t
                 dims[names[lr]] = norm
             cells.append(Cell(sheet, f"{_col_letter(c)}{r}", dims, v if _is_num(v) else _text(v), ok))
-    return cells, notes
+    return cells + tail_cells, notes
 
 
 # ---------- файлы ----------

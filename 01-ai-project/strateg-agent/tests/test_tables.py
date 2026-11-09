@@ -111,9 +111,10 @@ def test_ingest_xlsx_writes_cell_lines(tmp_project, tmp_path):
     line = "Лист!B2 [Страна=Турция; Показатель=Цена] = 1 302 417"
     assert line in md.splitlines()
     assert ingest.section(tmp_project, sid, "Лист!B2") == line
+    assert ingest.section(tmp_project, sid, "Лист!$b$2") == line  # локатор нормализуется как в get_cell
     assert ingest.section(tmp_project, sid, "Лист!A3").startswith("Лист!A3 [примечание]")
     src = read_yaml(project_path(tmp_project) / "sources.yaml")["sources"][0]
-    assert src["kind"] == "xlsx" and src["warnings"] == []
+    assert src["kind"] == "table" and src["ext"] == "xlsx" and src["warnings"] == []
     assert (project_path(tmp_project) / "materials" / f"{sid}.xlsx").is_file()
     assert ingest.ingest(tmp_project, str(p), found_by="user") == sid  # повтор не плодит источники
 
@@ -125,3 +126,37 @@ def test_csv_like_sheet(tmp_path):
     assert [(c.ref, c.value) for c in cells] == [("B2", 1302417), ("C2", 12.5), ("B3", -3), ("C3", "н/д")]
     assert cells[0].sheet == "csv" and cells[0].dims == {"Страна": "Турция", "Год": "2023"}
     assert tables.get_cell(f, "csv!C2").value == 12.5
+
+
+def test_year_like_values_in_body_are_data(tmp_path):
+    p = make_wb(tmp_path / "t.xlsx", {"Л": [
+        ["Страна", "2023", "2024"],
+        ["Турция", 1, 2],
+        ["Греция", 1950, 2010],
+    ]})
+    cells = tables.parse_workbook(p)
+    assert [(c.ref, c.value) for c in cells] == [("B2", 1), ("C2", 2), ("B3", 1950), ("C3", 2010)]
+
+
+def test_two_tables_on_one_sheet(tmp_path):
+    p = make_wb(tmp_path / "t.xlsx", {"Л": [
+        ["Страна", "2023", "2024"],
+        ["Турция", 1, 2],
+        [None, None, None],
+        ["Страна", 2025, 2026],
+        ["Египет", 7, 8],
+    ]})
+    cells = tables.parse_workbook(p)
+    got = {c.ref: (c.dims["Страна"], c.dims["Год"], c.header_ok) for c in cells}
+    assert got == {"B2": ("Турция", "2023", True), "C2": ("Турция", "2024", True),
+                   "B5": ("Египет", "2025", True), "C5": ("Египет", "2026", True)}
+
+
+def test_ingest_as_of_from_passport_note(tmp_project, tmp_path):
+    p = make_wb(tmp_path / "t.xlsx", {
+        "Данные": [["Страна", "Цена"], ["Турция", 1]],
+        "Паспорт": [["Последнее обновление данных: ", "06.11.2026"]],
+    })
+    sid = ingest.ingest(tmp_project, str(p), found_by="user")
+    src = [s for s in read_yaml(project_path(tmp_project) / "sources.yaml")["sources"] if s["id"] == sid][0]
+    assert src["as_of"] == "2026-11-06" and src["as_of_source"] == "header"
