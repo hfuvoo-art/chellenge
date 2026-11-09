@@ -52,6 +52,6 @@
 Итог: Q1 «Растут ли продажи на самом деле и на сколько?»; Q2 «Кто покупает и зачем?»; Q3 «Чем заменяют eSIM (роуминг, местная SIM, Wi-Fi)?»; Q4 «Что мешает купить или установить?». Каждый с пометкой «от ответа зависит: …».
 
 ## Источники
-- Rumelt R. Good Strategy / Bad Strategy: диагноз до решения. https://www.goodstrategybadstrategy.com/
+- Rumelt R. Good Strategy / Bad Strategy: диагноз до решения. https://penguinrandomhouse.com/books/208668/good-strategy-bad-strategy-by-richard-rumelt
 - Torres T. Continuous Discovery Habits: от желаемого результата к вопросам. https://www.producttalk.org/
 - Fitzpatrick R. The Mom Test: вопросы о прошлом поведении, а не о мнениях. https://www.momtestbook.com/

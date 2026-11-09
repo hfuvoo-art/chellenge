@@ -55,4 +55,4 @@
 ## Источники
 - Klein G. Performing a Project Premortem. HBR, 2007. https://hbr.org/2007/09/performing-a-project-premortem
 - Kahneman D., Klein G. Conditions for Intuitive Expertise: A Failure to Disagree. American Psychologist, 2009. https://doi.org/10.1037/a0016755
-- Rumelt R. Good Strategy / Bad Strategy (диагноз, руководящая политика, согласованные действия). https://www.goodstrategybadstrategy.com/
+- Rumelt R. Good Strategy / Bad Strategy (диагноз, руководящая политика, согласованные действия). https://penguinrandomhouse.com/books/208668/good-strategy-bad-strategy-by-richard-rumelt

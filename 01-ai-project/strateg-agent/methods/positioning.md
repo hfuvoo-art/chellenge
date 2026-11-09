@@ -54,5 +54,5 @@
 ## Источники
 - Dunford A. Obviously Awesome (позиционирование относительно альтернатив). https://www.aprildunford.com/books
 - Christensen C. et al. Know Your Customers' «Jobs to Be Done». HBR, 2016. https://hbr.org/2016/09/know-your-customers-jobs-to-be-done
-- Ries A., Trout J. Positioning: The Battle for Your Mind. https://www.ries.com/
-- Реклама и честность обещаний: ФАС России, закон «О рекламе» № 38-ФЗ. https://fas.gov.ru/
+- Ries A., Trout J. Positioning: The Battle for Your Mind (обзор книги, Y. Brikman). https://www.ybrikman.com/blog/2019/11/13/positioning-the-battle-for-your-mind/
+- Реклама и честность обещаний: Федеральный закон «О рекламе» № 38-ФЗ. http://www.consultant.ru/document/cons_doc_LAW_58968/
