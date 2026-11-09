@@ -120,9 +120,9 @@ def test_suspicious_locator_matches_section_for_tables(rt_project, tmp_path):
     f = tmp_path / "rev.csv"
     with f.open("w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["Автор", "Оценка", "Отзыв"])
-        w.writerow(["Автор А", 5, "Хорошо"])
-        w.writerow(["Автор Б", 1, INJ])
+        w.writerow(["Источник", "Оценка", "Отзыв"])  # не «Автор»: колонки авторов теперь отбрасываются при ingest (red-team п.18)
+        w.writerow(["Форум А", 5, "Хорошо"])
+        w.writerow(["Форум Б", 1, INJ])
     sid = _ingest(rt_project, f)
     loc = _src(rt_project, sid)["suspicious"][0]
     assert loc == "csv!A3"  # строка без распознанной шапки: примечание с якорем строки
@@ -154,7 +154,6 @@ def test_pdf_metadata_title_scanned(rt_project, tmp_path):
     assert "ignore all previous" not in (s["title"] or "").lower() or s["suspicious"]
 
 
-@HOLE
 def test_review_csv_does_not_store_author_names_or_contacts(rt_project, tmp_path):
     """Правило safety.md: имена авторов, телефоны и почты не сохраняются. Сейчас строки уходят в materials/*.md и копия csv лежит рядом."""
     f = tmp_path / "rev.csv"

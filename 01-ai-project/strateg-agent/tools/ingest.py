@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tools import state  # noqa: E402
+from tools import reviews, state  # noqa: E402
 from tools.common import (  # noqa: E402
     ROOT, die, next_id, normalize_url, now_iso, project_path, read_text, read_yaml, setup_stdio, sha256_file, sha256_text,
     write_text_atomic, write_yaml_atomic,
@@ -254,7 +254,7 @@ def _entry_key(e: dict) -> str | None:
 
 
 def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_source, warnings,
-              found_by, url, path, sha, refresh) -> tuple[str, bool]:
+              found_by, url, path, sha, refresh, extra=None) -> tuple[str, bool]:
     """Возвращает (S-id, changed): changed=True, если содержимое изменилось, а новая версия не создана."""
     sources = _load_sources(slug)
     same = [s for s in sources if s["sha256"] == sha]
@@ -291,9 +291,12 @@ def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_
     entry.update({"found_by": found_by, "fetched_at": fetched_at, "sha256": sha, "as_of": as_of,
                   "as_of_source": as_of_source, "chars": chars, "warnings": warnings, "suspicious": suspicious,
                   "supersedes": supersedes})
+    if extra:
+        entry.update(extra)
     write_yaml_atomic(_sources_path(slug), {"sources": sources + [entry]})  # последним: обрыв раньше не оставляет «призрака»
     state.mark_done(slug, state.action_id("ingest", sid, sha), {"kind": kind})
-    event(slug, "ingest", id=sid, source_kind=kind, chars=chars, warnings=warnings, suspicious=suspicious, supersedes=supersedes)
+    event(slug, "ingest", id=sid, source_kind=kind, chars=chars, warnings=warnings, suspicious=suspicious, supersedes=supersedes,
+          **({"pii_removed": extra["pii_removed"]} if extra and "pii_removed" in extra else {}))
     return sid, False
 
 
@@ -389,6 +392,10 @@ def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tu
             return h, "header"
         return (file_date, "file") if file_date else (None, "none")
 
+    if ext == ".csv":
+        res = _ingest_csv(slug, p, common, when)
+        if res is not None:
+            return res
     if ext in TABLE_EXT:
         md, chars, kind_warn, notes_text = _read_table(p)
         as_of, src = when(None, notes_text)  # дата обновления — в примечаниях (лист «Паспорт»), а не среди тысяч ячеек
@@ -419,6 +426,66 @@ def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tu
     die(f"формат «{ext or 'без расширения'}» не поддержан. Что сделать: pdf, docx, xlsx, csv, md, txt, html, png/jpg или URL.")
 
 
+def _register_reviews(slug, rs, *, original, title, as_of, as_of_source, pii_removed, found_by, url, path, sha, refresh):
+    md, chars = reviews.render_md(rs)
+    return _register(slug, kind="reviews", ext="csv", original=original, md_body=md, chars=chars, title=title, as_of=as_of,
+                     as_of_source=as_of_source, warnings=[], found_by=found_by, url=url, path=path, sha=sha, refresh=refresh,
+                     extra={"pii_removed": pii_removed})
+
+
+def _ingest_csv(slug, p: Path, common: dict, when) -> tuple[str, bool] | None:
+    """CSV: ПДн убираются до записи в проект (в materials/ лежит только очищенное); шапка date,rating,version,text — это отзывы.
+    None — обычная таблица без ПДн, дальше идёт старый путь."""
+    raw = p.read_bytes()
+    rows = reviews.parse_csv_bytes(raw)
+    clean, removed = reviews.clean_rows(rows)
+    is_rev = reviews.is_reviews_header(clean)
+    if removed == 0 and not is_rev:
+        return None
+    changed = removed > 0 or rows != clean
+    cleaned_bytes = reviews.rows_to_bytes(clean) if changed else None
+    if changed:
+        common = {**common, "sha": hashlib.sha256(cleaned_bytes).hexdigest()}
+    as_of, src = when(None)
+    if is_rev:
+        return _register_reviews(slug, reviews.reviews_from_rows(clean), original=cleaned_bytes if changed else p,
+                                 title=p.stem, as_of=as_of, as_of_source=src, pii_removed=removed, **common)
+    cache = project_path(slug) / "cache"
+    cache.mkdir(exist_ok=True)
+    tmp = cache / "clean.csv"
+    tmp.write_bytes(cleaned_bytes)
+    try:
+        md, chars, kind_warn, _notes = _read_table(tmp)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return _register(slug, kind="table", ext="csv", original=cleaned_bytes, md_body=md, chars=chars, title=p.stem, as_of=as_of,
+                     as_of_source=src, warnings=kind_warn, extra={"pii_removed": removed}, **common)
+
+
+def ingest_reviews(slug, spec: str, *, since, until=None, found_by: str, refresh: bool = False, max_n: int = 2000) -> tuple[str, bool]:
+    """`gplay:<app_id>` → отзывы за период в проект. Сырые данные с авторами на диск не пишутся."""
+    _check_found_by(found_by)
+    kind, _, app_id = spec.partition(":")
+    if kind != "gplay" or not app_id.strip():
+        raise ValueError("--reviews: ожидается gplay:<app_id>, например gplay:ru.ivi.client. Что сделать: App Store не поддержан (RSS отдаёт ≤500 отзывов).")
+    if not since:
+        raise ValueError("для --reviews нужна --since ГГГГ-ММ-ДД. Что сделать: добавь начало окна, например --since 2026-09-01.")
+    try:
+        rs = reviews.fetch_gplay(app_id.strip(), since, until, max_n=max_n)
+    except Exception as e:  # сеть/разбор страницы: без трассы и без тела ответа
+        raise ValueError(f"не удалось получить отзывы Google Play ({type(e).__name__}). Что сделать: проверь сеть и app_id "
+                         "или скачай отзывы вручную и передай CSV: ingest.py файл.csv --found-by user.")
+    if not rs:
+        raise ValueError(f"за период {since}…{until or 'сегодня'} отзывов нет. Что сделать: проверь app_id и даты.")
+    clean, removed = reviews.clean_rows(reviews.reviews_to_rows(rs))
+    cleaned_bytes = reviews.rows_to_bytes(clean)
+    url = f"https://play.google.com/store/apps/details?id={app_id.strip()}"
+    title = f"Отзывы Google Play {app_id.strip()} {since}…{until or 'сегодня'}"
+    return _register_reviews(slug, reviews.reviews_from_rows(clean), original=cleaned_bytes, title=title,
+                             as_of=datetime.now().date().isoformat(), as_of_source="fetched", pii_removed=removed,
+                             found_by=found_by, url=url, path=None, sha=hashlib.sha256(cleaned_bytes).hexdigest(), refresh=refresh)
+
+
 def _first_line(md: str) -> str | None:
     for ln in md.splitlines():
         if ln.strip() and not MARKER_RE.match(ln.strip()):
@@ -447,18 +514,36 @@ def section(slug, sid: str, locator: str) -> str:
 def main(argv=None) -> int:
     setup_stdio()
     ap = argparse.ArgumentParser(description="Добавить источник (URL, PDF, DOCX, xlsx/csv, md/txt, html, изображение) в проект.")
-    ap.add_argument("target", help="URL или путь к файлу")
+    ap.add_argument("target", nargs="?", help="URL или путь к файлу (обязателен, если нет --reviews)")
+    ap.add_argument("--reviews", metavar="gplay:APP_ID", help="скачать отзывы Google Play, например gplay:ru.ivi.client")
+    ap.add_argument("--since", help="--reviews: начало окна, ГГГГ-ММ-ДД")
+    ap.add_argument("--until", help="--reviews: конец окна включительно, ГГГГ-ММ-ДД (по умолчанию — сегодня)")
+    ap.add_argument("--max-n", type=int, default=2000, help="--reviews: сколько отзывов просмотреть не глубже (по умолчанию 2000)")
     ap.add_argument("--found-by", required=True, help='как найден: "search:<запрос>", "user" или "brief"')
     ap.add_argument("--url", help="исходный URL, если файл скачан вручную (например, страница, сохранённая в PDF)")
     ap.add_argument("--refresh", action="store_true", help="создать новую версию источника (supersedes)")
     ap.add_argument("-p", "--project", help="имя проекта (по умолчанию текущий)")
     a = ap.parse_args(argv)
+    if not a.reviews and not a.target:
+        die("не указан источник. Что сделать: передай URL или путь к файлу, либо `--reviews gplay:<app_id> --since ГГГГ-ММ-ДД`.")
+    if a.reviews and a.target:
+        die("нельзя одновременно указать файл/URL и --reviews. Что сделать: запусти команды по отдельности.")
+    if a.reviews and not a.since:
+        die("для --reviews нужна --since ГГГГ-ММ-ДД. Что сделать: добавь начало окна, например --since 2026-09-01.")
     try:
-        sid, changed = ingest_ex(a.project, a.target, found_by=a.found_by, url=a.url, refresh=a.refresh)
+        if a.reviews:
+            sid, changed = ingest_reviews(a.project, a.reviews, since=a.since, until=a.until, found_by=a.found_by,
+                                          refresh=a.refresh, max_n=a.max_n)
+        else:
+            sid, changed = ingest_ex(a.project, a.target, found_by=a.found_by, url=a.url, refresh=a.refresh)
     except ValueError as e:
         die(str(e))
     s = next(x for x in _load_sources(a.project) if x["id"] == sid)
     print(f"{sid}: {s['kind']}, {s['chars']} симв., as_of={s['as_of'] or 'нет'} ({s['as_of_source']})")
+    if s["kind"] == "reviews" or "pii_removed" in s:
+        print(f"убрано ПДн: {s.get('pii_removed', 0)}")
+    if s["kind"] == "reviews":
+        print(section(a.project, sid, "¶1"))
     if changed:
         print(f"ВНИМАНИЕ: содержимое {sid} изменилось, использована старая версия. Что сделать: добавь --refresh.")
     for w in s["warnings"]:
