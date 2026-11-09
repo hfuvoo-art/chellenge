@@ -67,8 +67,9 @@ def _to_float(raw: str) -> tuple[float, int]:
     return float(t), dec
 
 
-def _unit_after(text: str, end: int) -> tuple[float, str | None]:
-    mult, pos, unit = 1.0, end, None
+def _unit_after(text: str, end: int) -> tuple[float, str | None, int]:
+    """(множитель, единица, позиция конца множителя); конец множителя нужен, чтобы raw включал «тыс.»."""
+    mult, pos, unit, mend = 1.0, end, None, end
     for _ in range(2):
         m = TOKEN_RE.match(text, pos)
         if not m:
@@ -77,12 +78,12 @@ def _unit_after(text: str, end: int) -> tuple[float, str | None]:
         pos = m.end()
         key = tok.rstrip(".") if tok != "п.п." else tok
         if key in MULT and mult == 1.0:
-            mult = MULT[key]
+            mult, mend = MULT[key], pos
             continue
         if key in UNITS:
             unit = UNITS[key]
         break
-    return mult, unit
+    return mult, unit, mend
 
 
 def _mask(text: str, m: re.Match, keep: str = "") -> str:
@@ -106,7 +107,7 @@ def parse_numbers(text: str) -> list[Num]:
         sign = -1.0 if m.group("sign") else 1.0
         if m.group("sign") == "-" and m.start() > 0 and t[m.start() - 1].isdigit():
             sign = 1.0
-        mult, unit = _unit_after(t, m.end())
+        mult, unit, mend = _unit_after(t, m.end())
         if unit is None and m.start() > 0 and t[m.start() - 1] in "$€":  # «$7»
             unit = t[m.start() - 1]
         for g, s in (("n1", sign), ("n2", 1.0)):
@@ -114,6 +115,8 @@ def parse_numbers(text: str) -> list[Num]:
             if raw is None:
                 continue
             v, dec = _to_float(raw)
+            if mult != 1.0:
+                raw = raw + t[m.end():mend]  # «1,5» + « тыс.»
             u = unit
             if mult == 1.0 and u in (None, "год") and float(v).is_integer() and YEAR_MIN <= v <= YEAR_MAX:
                 u = "год"

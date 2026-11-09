@@ -1,4 +1,5 @@
 # Тесты check.py проверки 1–4 и 11 (цитаты, числа, ячейки, ссылки, ключи): без них поддельная цитата или «не та» строка таблицы пройдёт в стратегию.
+import sys
 from pathlib import Path
 
 import pytest
@@ -61,6 +62,9 @@ def test_year_not_in_quote_checked_against_as_of():
     c = {"text": "в 2026 году выручка 5 млн", "quote": "выручка 5 млн"}
     assert "FAIL" not in _lv(check_numbers(c, c["quote"], "2026-11-09"))
     assert "FAIL" in _lv(check_numbers(c, c["quote"], "2024-01-01"))
+    shifted = {"text": "в 2024 году выручка 5 млн", "quote": "В 2023 году выручка 5 млн"}
+    fs = check_numbers(shifted, shifted["quote"], "2024-05-01")  # другой год в цитате: as_of не спасает
+    assert "FAIL" in _lv(fs) and any("другой год" in f.msg for f in fs)
 
 
 def test_year_without_as_of_fail():
@@ -173,3 +177,52 @@ def test_run_text_fact_ok_and_fail(tmp_project):
     (project_path(tmp_project) / "claims.jsonl").unlink()
     claims.add(tmp_project, _fact(sid, "¶1", "Рынок eSIM вырос на 15%", "Рынок eSIM в 2024 году вырос на 15%"))
     assert any(f.level == "FAIL" for f in run(tmp_project))
+
+
+# ---- правки по ревью задачи 8 ----
+
+def test_no_tool_module_shadows_stdlib():
+    root = Path(__file__).resolve().parent.parent
+    assert not ({p.stem for p in (root / "tools").glob("*.py")} & sys.stdlib_module_names)
+
+
+def test_run_rejects_invalid_fact(tmp_project):
+    import json
+    rows = [{"id": "C-001", "type": "fact", "text": "доля 5%", "status": "active", "extracted_by": "extract.py"},
+            {"id": "C-002", "type": "fact", "text": "x", "source": "S-001", "locator": "¶1", "quote": "x",
+             "status": "active", "extracted_by": "agent:main"}]
+    (project_path(tmp_project) / "claims.jsonl").write_text(
+        "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    fs = [f for f in run(tmp_project, {1}) if f.level == "FAIL"]
+    assert {f.target for f in fs} == {"C-001", "C-002"}
+
+
+def test_quote_truncated_after_negation_fail():
+    f = check_quote({"quote": "выросла на 12% за год"}, "Выручка не выросла на 12% за год.")
+    assert f.level == "FAIL" and "отрицан" in f.msg
+
+
+def test_short_ref_ids_checked(tmp_project):
+    (project_path(tmp_project) / "strategy.md").write_text("Опора [C-14].", encoding="utf-8")
+    assert {f.target for f in check_refs(tmp_project) if f.level == "FAIL"} == {"C-14"}
+
+
+def test_secret_target_is_relative(tmp_path):
+    (tmp_path / "a.md").write_text("k " + "AQV" + "N" + "x" * 30, encoding="utf-8")
+    assert [f.target for f in check_secrets(tmp_path) if f.level == "FAIL"] == ["a.md"]
+
+
+def test_usage_error_exit_code_3(capsys):
+    from tools.check import main
+    with pytest.raises(SystemExit) as e:
+        main(["--only", "99"])
+    assert e.value.code == 3
+    with pytest.raises(SystemExit) as e:
+        main(["--bogus"])
+    assert e.value.code == 3
+
+
+def test_secret_in_big_file_found(tmp_path):
+    key = "AQV" + "N" + "x" * 30
+    (tmp_path / "big.md").write_text("a\n" * 1_100_000 + "k " + key + "\n", encoding="utf-8")
+    assert [f.level for f in check_secrets(tmp_path)] == ["FAIL"]

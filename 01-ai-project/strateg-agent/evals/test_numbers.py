@@ -1,6 +1,6 @@
 # Eval чисел с единицами (docs/07 «check.py» п.2 + У9): без него «+3 п.п.» сойдёт за «3 %», а «7 $ за 15 ГБ» — за «15 $ за 3 ГБ».
 from tools.check import check_numbers, check_quote
-from tools.numbers import num_match, parse_numbers
+from tools.numparse import num_match, parse_numbers
 
 
 def _levels(fact: str, quote: str, as_of: str | None = "2024-05-01") -> set[str]:
@@ -83,3 +83,7 @@ def test_times_unit():
 def test_num_match_tolerance_by_record_precision():
     f = parse_numbers("44,5")[0]
     assert num_match(f, parse_numbers("44.5")) and not num_match(f, parse_numbers("44.7"))
+
+
+def test_raw_includes_multiplier():
+    assert parse_numbers("1,5 тыс. человек")[0].raw == "1,5 тыс."

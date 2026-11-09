@@ -6,6 +6,7 @@
   Задача 8 проверяет только существование файла внутри проекта; запуск и сверку значения делает задача 18.
 * observation — locator вида `файл#зона` (например `S-007.png#top-right`); файл ищется в `materials/` проекта
   (или по пути от корня проекта) и должен существовать, зона не пуста. extracted_by `ux-observer` допустим.
+* Коды выхода CLI: 0 — PASS, 1 — есть FAIL, 2 — есть WARN (FAIL нет), 3 — ошибка использования.
 * табличный fact (locator `Лист!C14`) — `dims` и `value` точно равны заново разобранной ячейке, текст содержит их.
 """
 from __future__ import annotations
@@ -23,11 +24,11 @@ from rapidfuzz import fuzz  # noqa: E402
 
 from tools import claims, ingest, tables  # noqa: E402
 from tools.common import die, project_path, setup_stdio, sha256_file  # noqa: E402
-from tools.numbers import count_negations, is_year, normalize_quote, num_match, parse_numbers  # noqa: E402
+from tools.numparse import count_negations, is_year, normalize_quote, num_match, parse_numbers  # noqa: E402
 
 FUZZY_WARN = 92
 CELL_RE = re.compile(r"^.+!\$?[A-Za-z]{1,3}\$?\d+$")
-REF_RE = re.compile(r"\bC-\d{3,}\b")
+REF_RE = re.compile(r"\bC-\d+\b")
 COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 REF_FILES = ("brief.md", "questions.md", "options.md", "critique.md", "strategy.md", "decisions.yaml", "product.yaml")
 SECRET_RES = {
@@ -37,7 +38,6 @@ SECRET_RES = {
 }
 SKIP_DIRS = {".venv", ".git", "__pycache__", ".pytest_cache", "node_modules"}
 SKIP_FILES = {".env"}
-MAX_SCAN_BYTES = 2_000_000
 
 
 @dataclass
@@ -61,6 +61,13 @@ def check_quote(c: dict, section_text: str) -> Finding:
     if not q:
         return _f("FAIL", 1, cid, "цитата пустая", "Что сделать: вставь дословную цитату из источника.")
     if q in s:
+        i = s.find(q)
+        while i != -1:  # цитата, обрезанная сразу после «не», сама отрицаний не содержит
+            before = s[:i].split()
+            if before and count_negations(before[-1].strip(",.;:()\"'")):
+                return _f("FAIL", 1, cid, f"перед цитатой в источнике стоит отрицание «{before[-1]}» (отрицание отрезано)",
+                          "Что сделать: включи отрицание в цитату, чтобы смысл не изменился.")
+            i = s.find(q, i + 1)
         return _f("OK", 1, cid, "цитата найдена дословно")
     al = fuzz.partial_ratio_alignment(q, s) if s else None
     if al is None or al.score < 50:
@@ -94,7 +101,11 @@ def check_numbers(c: dict, quote: str, as_of: str | None) -> list[Finding]:
             continue
         unit = f" {n.unit}" if n.unit and not is_year(n) else ""
         if is_year(n):
-            if year_as_of is None:
+            other = sorted({int(x.value) for x in qnums if is_year(x)})
+            if other:
+                out.append(_f("FAIL", 2, cid, f"год {n.raw}: в цитате другой год ({', '.join(map(str, other))})",
+                              "Что сделать: возьми год из цитаты."))
+            elif year_as_of is None:
                 out.append(_f("FAIL", 2, cid, f"год {n.raw} не в цитате, а у источника нет as_of",
                               "Что сделать: добавь год в цитату или проверь as_of в sources.yaml."))
             elif year_as_of != int(n.value):
@@ -193,19 +204,20 @@ def check_secrets(root) -> list[Finding]:
     for p in files:
         if not p.is_file() or p.name in SKIP_FILES or any(part in SKIP_DIRS for part in p.parts):
             continue
+        shown = p.relative_to(root).as_posix() if root.is_dir() else p.name
         try:
-            if p.stat().st_size > MAX_SCAN_BYTES:
-                continue
-            raw = p.read_bytes()
+            with p.open("rb") as fh:  # построчно: большие файлы не пропускаем и не грузим целиком
+                if b"\x00" in fh.read(8192):
+                    continue
+                fh.seek(0)
+                for i, raw in enumerate(fh, 1):
+                    line = raw.decode("utf-8", errors="ignore")
+                    for label, rx in SECRET_RES.items():
+                        if rx.search(line):  # сам ключ в сообщение не пишем
+                            out.append(_f("FAIL", 11, shown, f"строка {i}: похоже на {label}",
+                                          "Что сделать: удали секрет из файла, перевыпусти ключ, храни только в .env."))
         except OSError:
             continue
-        if b"\x00" in raw:
-            continue
-        for i, line in enumerate(raw.decode("utf-8", errors="ignore").splitlines(), 1):
-            for label, rx in SECRET_RES.items():
-                if rx.search(line):  # сам ключ в сообщение не пишем
-                    out.append(_f("FAIL", 11, p, f"строка {i}: похоже на {label}",
-                                  "Что сделать: удали секрет из файла, перевыпусти ключ, храни только в .env."))
     return out or [_f("OK", 11, str(root), "ключей не найдено")]
 
 
@@ -229,6 +241,10 @@ def _table_path(slug, sources, c):
 def _claim_findings(slug, c, sources, want) -> list[Finding]:
     cid, t = c["id"], c.get("type")
     out: list[Finding] = []
+    errs = claims.validate(c)
+    if errs:  # fact без источника или от агента не должен молча проходить мимо проверок
+        return [_f("FAIL", 1, cid, "утверждение не проходит правила реестра: " + "; ".join(errs),
+                   f"Что сделать: исправь запись (`claims.py show {cid}`) или отзови её.")] if 1 in want else []
     src = next((s for s in sources if s["id"] == c.get("source")), None)
     if t == "estimate":
         if 3 in want:
@@ -272,9 +288,17 @@ def run(slug, only=None) -> list[Finding]:
     return out
 
 
+class _Parser(argparse.ArgumentParser):
+    def error(self, message):  # ошибка использования — код 3, чтобы не путать с FAIL (1) и WARN (2)
+        self.print_usage(sys.stderr)
+        print(f"Ошибка: {message}. Что сделать: `python tools/check.py --help`.", file=sys.stderr)
+        sys.exit(3)
+
+
 def main(argv=None) -> int:
     setup_stdio()
-    ap = argparse.ArgumentParser(description="Проверка реестра утверждений: цитаты, числа с единицами, ячейки таблиц, ссылки, ключи.")
+    ap = _Parser(description="Проверка реестра утверждений: цитаты, числа с единицами, ячейки таблиц, ссылки, ключи.",
+                 epilog="Коды выхода: 0 — всё прошло, 1 — есть FAIL, 2 — есть WARN, 3 — ошибка использования.")
     ap.add_argument("-p", "--project", help="имя проекта (по умолчанию текущий)")
     ap.add_argument("--only", help="номера проверок через запятую, например 1,2,3,4,11")
     ap.add_argument("--repo", action="store_true", help="для проверки 11 просканировать и всю папку агента, а не только проект")
@@ -282,9 +306,9 @@ def main(argv=None) -> int:
     try:
         only = {int(x) for x in a.only.split(",") if x.strip()} if a.only else None
     except ValueError:
-        die("--only: нужны номера проверок через запятую. Что сделать: например `--only 1,2,3,4,11`.")
+        die("--only: нужны номера проверок через запятую. Что сделать: например `--only 1,2,3,4,11`.", code=3)
     if only and not only <= {1, 2, 3, 4, 11}:
-        die("--only: сейчас реализованы проверки 1, 2, 3, 4 и 11. Что сделать: укажи номера из этого списка.")
+        die("--only: сейчас реализованы проверки 1, 2, 3, 4 и 11. Что сделать: укажи номера из этого списка.", code=3)
     findings = run(a.project, only)
     if a.repo and (only is None or 11 in only):
         findings += check_secrets(Path(__file__).resolve().parent.parent)

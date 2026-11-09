@@ -90,7 +90,7 @@
     personas/     модельные респонденты для respond.py
     .claude/      skills/<шаг>/SKILL.md ×6 · agents/ux-observer.md · settings.json (4 хука)
     config/       prices.yaml
-    tools/        common state log project llm ingest tables reviews claims extract numbers check
+    tools/        common state log project llm ingest tables reviews claims extract numparse check
                   lock critic respond analyze impact review status export (.py) · hooks/ (4 скрипта)
     projects/     CURRENT · _template/ · esim-travel/ (задача №1) · subscription-churn/ (задача №2)
     evals/        cases/ test_numbers.py test_injection.py rubric.md blind.py vs-chat.md spike-extract.md …
@@ -378,7 +378,7 @@
   - строки-примечания под таблицей («Примечание», «Источник», «*») не считаются данными.
 - CLI: `analyze.py cell S-005 "Vyezd!C14" [--question Q1]` → `fact` с `quote = render(cell)`, `dims`, `value`, `extracted_by: analyze.py`.
 
-- [ ] **Шаг 1. Тесты** (xlsx генерируется в тесте через openpyxl):
+- [x] **Шаг 1. Тесты** (xlsx генерируется в тесте через openpyxl):
   - `test_header_above_first_numeric_row`;
   - `test_merged_header_expanded`;
   - `test_roman_quarters_normalized`;
@@ -389,16 +389,16 @@
   - `test_ingest_xlsx_writes_cell_lines`;
   - `test_csv_like_sheet`;
   - `test_analyze_cell_adds_deterministic_fact`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_tables.py tests/test_analyze.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS. На реальном xlsx из задачи 3 сверить глазами 5 случайных строк `render` с Excel.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: таблицы — разбор шапок, ячейки как строки, analyze cell`.
+- [x] **Шаг 2.** `python -m pytest tests/test_tables.py tests/test_analyze.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS. На реальном xlsx из задачи 3 сверить глазами 5 случайных строк `render` с Excel.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: таблицы — разбор шапок, ячейки как строки, analyze cell`.
 
-### Задача 8. numbers.py и check.py: проверки 1–4 и 11 (ключи)
+### Задача 8. numparse.py и check.py: проверки 1–4 и 11 (ключи)
 
 **docs/07:** «`check.py`», проверки 1–4 и часть проверки 11 про ключи. **Уточнения:** У9.
 
-**Файлы:** создать `tools/numbers.py`, `tools/check.py`, `evals/test_numbers.py`, `tests/test_check_claims.py`.
+**Файлы:** создать `tools/numparse.py`, `tools/check.py`, `evals/test_numbers.py`, `tests/test_check_claims.py`.
 
 **Интерфейсы:**
 - Использует: `claims.load`, `claims.active`, `ingest.section`, `tables.get_cell`, `as_of` из `sources.yaml`.
