@@ -84,3 +84,8 @@ def test_check11_fails_on_lock_mismatch(tmp_root):
     fs = check.check_lock(tmp_root)
     assert fs[0].level == "FAIL" and fs[0].check == 11 and "rules/a.md" in fs[0].msg
 
+
+
+def test_check_run_wires_lock_into_check11(tmp_project, monkeypatch):
+    monkeypatch.setattr(check.lock, "verify", lambda root: ["изменён: rules/a.md"])
+    assert any(f.level == "FAIL" and f.check == 11 for f in check.run(tmp_project, {11}))
