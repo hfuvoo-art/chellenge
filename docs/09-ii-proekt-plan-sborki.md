@@ -601,14 +601,14 @@
 - Google Play: `reviews(app_id, lang='ru', country='ru', sort=Sort.NEWEST, count=200, continuation_token=…)` до даты `since`; поля `at`, `score`, `reviewCreatedVersion`, `content`.
 - App Store RSS не делаем: он отдаёт не больше 500 последних отзывов, для сравнения двух окон этого мало.
 
-- [ ] **Шаг 1. Тесты** (библиотека подменена):
+- [x] **Шаг 1. Тесты** (библиотека подменена):
   - `test_gplay_paginates_until_since_drops_authors`: заголовок CSV ровно `date,rating,version,text`;
   - `test_reviews_md_has_window_counts`;
   - `test_reviews_dedup_by_text_date_hash`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_reviews.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS. Живой прогон по приложению из задачи 3, число отзывов по окнам — в `build-log.md`.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: отзывы Google Play без ПДн`.
+- [x] **Шаг 2.** `python -m pytest tests/test_reviews.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS. Живой прогон по приложению из задачи 3, число отзывов по окнам — в `build-log.md`.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: отзывы Google Play без ПДн`.
 
 ### Задача 13. check.py: проверки 5–10, подтверждение, лимит итераций, отчёт
 
