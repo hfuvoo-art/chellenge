@@ -7,6 +7,8 @@
 2. `docs/02-plan-dlya-claude-druga.md`: что сделано и что дальше. Отмечай там выполненные пункты `[x]` и важные решения в «Журнал решений».
 3. `docs/03-rabota-s-claude.md`: как устроена работа с Claude, скилами и репозиторием.
 
+ИИ-проект (МегаФон): работу начинай с `docs/08-ii-proekt-master-prompt.md`, прогресс отмечается галочками в `docs/09-ii-proekt-plan-sborki.md`. Агенты сборки и проверки лежат в `.claude/agents/`, описаны в `docs/10-ii-proekt-agenty.md`; `jury-auditor` подходит для всех трёх номинаций.
+
 Скилы команды лежат в `skills/` (zip для установки в `zips/`): `mgimo-brief-breakdown`, `ai-video-pipeline`, `remotion-montage`, `site-design`, `arena` (турнир агентов для идей; в Claude Code уже подключён через `.claude/skills/arena`).
 
 Правила:
