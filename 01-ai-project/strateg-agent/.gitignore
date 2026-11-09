@@ -1,0 +1,7 @@
+.env
+.venv/
+__pycache__/
+*.tmp
+projects/*/cache/
+# локальный указатель текущего проекта: у каждого пользователя свой
+projects/CURRENT
