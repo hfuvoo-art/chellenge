@@ -412,7 +412,7 @@
   - `check_refs(slug) -> list[Finding]`, `check_secrets(root) -> list[Finding]`;
   - `run(slug, only=None) -> list[Finding]`.
 
-- [ ] **Шаг 1. Тесты.**
+- [x] **Шаг 1. Тесты.**
   - `evals/test_numbers.py`: все 8 случаев docs/07 дословно и случаи Фокуса 5:
     - `test_pp_vs_percent_fail`: «+3 п.п.» против «на 3 %»;
     - `test_unicode_minus`: «−3,4 %» = «-3,4%»;
@@ -427,10 +427,10 @@
     - `test_estimate_needs_calc_script`; `test_observation_needs_file_and_zone`;
     - `test_refs_missing_or_retracted_fail`;
     - `test_secret_patterns_found`: `AQVN…`, `sk-…`, `Bearer …` в файле проекта → FAIL.
-- [ ] **Шаг 2.** `python -m pytest evals/test_numbers.py tests/test_check_claims.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать. Лучшее окно источника для сравнения отрицаний даёт rapidfuzz `partial_ratio_alignment`.
-- [ ] **Шаг 4.** pytest → PASS.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: check.py — цитаты, числа с единицами, ячейки, ссылки, ключи`.
+- [x] **Шаг 2.** `python -m pytest evals/test_numbers.py tests/test_check_claims.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать. Лучшее окно источника для сравнения отрицаний даёт rapidfuzz `partial_ratio_alignment`.
+- [x] **Шаг 4.** pytest → PASS.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: check.py — цитаты, числа с единицами, ячейки, ссылки, ключи`.
 
 ### Задача 9. Правила, промпты, rules.lock, eval инъекций
 
