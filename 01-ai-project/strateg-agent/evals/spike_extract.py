@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -12,10 +15,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from rapidfuzz import fuzz  # noqa: E402
 
 from tools import llm  # noqa: E402
-from tools.common import ROOT, setup_stdio, write_text_atomic  # noqa: E402
+from tools.common import ROOT, read_jsonl, setup_stdio, write_text_atomic  # noqa: E402
 
 MAX_PART = 12_000
 PARTIAL_MIN = 92
+MIN_QUOTE = 25  # символов после нормализации: короче - не цитата («ГБ», «рост», «12%» совпадают с чем угодно)
 PROMPT_PATH = ROOT / "prompts" / "extract.md"
 TABLE_PATH = ROOT / "evals" / "spike-extract.md"
 ROLES = {"lite": "extract", "pro": "pro"}
@@ -58,14 +62,34 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+_NUM = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def _nums(s: str) -> set[str]:
+    return {n.replace(",", ".") for n in _NUM.findall(s)}
+
+
 def check_quote(quote, part: str) -> str:
-    """«точно» | «partial» | «провал»: точное вхождение после нормализации пробелов, иначе partial_ratio ≥92."""
-    if not isinstance(quote, str) or not _norm(quote):
+    """«точно» | «partial» | «коротко» | «числа» | «провал».
+    Короче MIN_QUOTE → «коротко». Точное вхождение после нормализации пробелов → «точно».
+    Иначе partial_ratio ≥92 и те же числовые токены в цитате и в лучшем фрагменте части → «partial»;
+    числа разошлись → «числа»; ниже порога → «провал»."""
+    if not isinstance(quote, str):
         return "провал"
     q, p = _norm(quote), _norm(part)
+    if len(q) < MIN_QUOTE:
+        return "коротко"
     if q in p:
         return "точно"
-    return "partial" if fuzz.partial_ratio(q, p) >= PARTIAL_MIN else "провал"
+    al = fuzz.partial_ratio_alignment(q, p)
+    if al is None or al.score < PARTIAL_MIN:
+        return "провал"
+    a, b = al.dest_start, al.dest_end
+    while a > 0 and not p[a - 1].isspace():
+        a -= 1
+    while b < len(p) and not p[b].isspace():
+        b += 1
+    return "partial" if _nums(q) == _nums(p[a:b]) else "числа"
 
 
 def model_label(role: str) -> str:
@@ -81,17 +105,33 @@ def load_prompt() -> str:
     return re.sub(r"\A\s*<!--.*?-->\s*", "", t, flags=re.S).strip()
 
 
+def _journal_stats(slug: str) -> dict:
+    """₽ и счётчики из log.jsonl песочницы: все категории, включая ремонты и вызовы, закончившиеся LLMJSONError."""
+    ev = read_jsonl(Path(os.environ["STRATEG_PROJECTS_DIR"]) / slug / "log.jsonl")
+    llm_ev = [e for e in ev if e["kind"] == "llm"]
+    return {"calls": len(llm_ev), "rub": sum(e["rub"] for e in llm_ev if e.get("rub") is not None),
+            "rub_unknown": any(e.get("rub") is None for e in llm_ev),
+            "repairs": sum(1 for e in ev if e["kind"] == "repair"),
+            "retries": sum(1 for e in ev if e["kind"] == "retry"),
+            "truncated": sum(1 for e in llm_ev if e.get("truncated")),
+            "errors": sum(1 for e in ev if e["kind"] == "error")}
+
+
 def run_model(key: str, role: str, parts: list[tuple[str, int, int, str]], prompt: str, log=print) -> dict:
-    """Прогон одной модели по всем частям; сбои считаются и печатаются, не глотаются."""
+    """Прогон одной модели по всем частям в песочнице-проекте; сбои считаются и печатаются, не глотаются.
+    Требует STRATEG_PROJECTS_DIR на временную папку (её создаёт main)."""
+    slug = f"spike-{key}"
+    (Path(os.environ["STRATEG_PROJECTS_DIR"]) / slug).mkdir(parents=True, exist_ok=True)
     st = {"key": key, "role": role, "model": model_label(role), "parts": 0, "json_ok": 0, "unavail": 0,
-          "claims": 0, "точно": 0, "partial": 0, "провал": 0, "rub": 0.0, "rub_unknown": False, "secs": 0.0}
+          "claims": 0, "точно": 0, "partial": 0, "провал": 0, "коротко": 0, "числа": 0, "secs": 0.0}
     for name, i, n, text in parts:
         st["parts"] += 1
         user = f"Фрагмент {i} из {n} (источник: {name}).\n\n<<<ИСТОЧНИК\n{text}\nИСТОЧНИК>>>"
         t0 = time.monotonic()
         try:
             obj, r = llm.chat_json([{"role": "system", "content": prompt}, {"role": "user", "content": user}],
-                                   role=role, required_keys=["claims"], max_tokens=4000, temperature=0)
+                                   role=role, slug=slug, action_id=f"spike:{name}:{i}", required_keys=["claims"],
+                                   max_tokens=4000, temperature=0)
         except llm.LLMJSONError as e:
             st["secs"] += time.monotonic() - t0
             log(f"  [{key}] {name} {i}/{n}: НЕВАЛИДНЫЙ JSON: {e}")
@@ -103,19 +143,19 @@ def run_model(key: str, role: str, parts: list[tuple[str, int, int, str]], promp
             continue
         st["secs"] += time.monotonic() - t0
         st["json_ok"] += 1
-        if r.rub is None:
-            st["rub_unknown"] = True
-        else:
-            st["rub"] += r.rub
         claims = obj.get("claims")
         if not isinstance(claims, list):
             log(f"  [{key}] {name} {i}/{n}: «claims» не список, часть считается без утверждений")
             continue
         for c in claims:
             st["claims"] += 1
-            verdict = check_quote(c.get("quote") if isinstance(c, dict) else None, text)
-            st[verdict] += 1
+            v = check_quote(c.get("quote") if isinstance(c, dict) else None, text)
+            if v in ("коротко", "числа"):
+                st[v] += 1
+                v = "провал"
+            st[v] += 1
         log(f"  [{key}] {name} {i}/{n}: утверждений {len(claims)}, {r.latency_s:.1f} с")
+    st.update(_journal_stats(slug))
     return st
 
 
@@ -134,9 +174,10 @@ def render_table(results: list[dict], sources: list[tuple[str, int, int]] | None
 - Каждая часть каждой модели уходит с `prompts/extract.md` (v0) через `llm.chat_json` (температура 0, один ремонтный повтор по У1).
 - **% валидного JSON** = части с разобранным ответом (есть ключ `claims`) / все части. `LLMJSONError` и `LLMUnavailable` считаются провалом части.
 - Цитата сверяется с текстом той части, из которой извлечена, после нормализации пробелов:
-  **точно** — дословное вхождение; **partial** — не точно, но `rapidfuzz.fuzz.partial_ratio` ≥ 92; **провал** — остальное (в т.ч. пустая цитата).
+  **точно** — дословное вхождение; **partial** — не точно, но `rapidfuzz.fuzz.partial_ratio` ≥ 92 **и** множества числовых токенов цитаты и лучшего совпавшего фрагмента части равны (иначе провал: «чужие» числа); **провал** — остальное.
+  Минимальная длина цитаты `MIN_QUOTE` = 25 символов после нормализации: короче — провал, даже если вхождение точное («ГБ», «рост», «12%» встречаются в тексте всегда). Колонки «коротких» и «числа расходятся» — часть провалов, не отдельные категории.
   Проценты цитат считаются от всех утверждений модели: точно + partial + провал = 100 %.
-- ₽ — сумма `LLMResult.rub` по успешным вызовам (по `config/prices.yaml`); если цена неизвестна, «цена неизвестна». Секунды — среднее время на часть (с ремонтами и ретраями).
+- ₽, ремонты, ретраи, обрезанные ответы и ошибки берутся из `log.jsonl` временного проекта-песочницы (папка удаляется после прогона), по всем вызовам и категориям: первый вызов при ремонте и вызовы, закончившиеся `LLMJSONError`, тоже учтены. Цена по `config/prices.yaml`; если неизвестна — «цена неизвестна». Секунды — среднее время на часть (с ремонтами и ретраями).
 
 ## Правила решения (шаг 4)
 
@@ -154,8 +195,8 @@ def render_table(results: list[dict], sources: list[tuple[str, int, int]] | None
 
 
 def _table(results: list[dict]) -> str:
-    rows = ["| Модель | Частей | Валидный JSON | Утверждений | Точных | Partial ≥92 | Провалов | ₽ всего | ₽/часть | Сек/часть |",
-            "|---|---|---|---|---|---|---|---|---|---|"]
+    rows = ["| Модель | Частей | Валидный JSON | Утверждений | Точных | Partial ≥92 | Провалов | из них коротких / числа расходятся | ₽ (все вызовы) | ₽/часть | Ремонтов / обрезано / ошибок | Сек/часть |",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for s in results:
         n = s["claims"]
         if s["rub_unknown"]:
@@ -165,9 +206,10 @@ def _table(results: list[dict]) -> str:
             per = f"{s['rub'] / s['parts']:.3f} ₽" if s["parts"] else "—"
         secs = f"{s['secs'] / s['parts']:.1f}" if s["parts"] else "—"
         rows.append(f"| {s['key']} = {s['model']} | {s['parts']} | {_pct(s['json_ok'], s['parts'])} | {n} | "
-                    f"{_pct(s['точно'], n)} | {_pct(s['partial'], n)} | {_pct(s['провал'], n)} | {rub} | {per} | {secs} |")
+                    f"{_pct(s['точно'], n)} | {_pct(s['partial'], n)} | {_pct(s['провал'], n)} | {s['коротко']} / {s['числа']} | {rub} | {per} | "
+                    f"{s['repairs']} / {s['truncated']} / {s['errors']} | {secs} |")
     if not results:
-        rows.append("| — | — | — | — | — | — | — | — | — | — |")
+        rows.append("| — | — | — | — | — | — | — | — | — | — | — | — |")
     return "\n".join(rows)
 
 
@@ -210,6 +252,9 @@ def main(argv=None) -> int:
     print(f"Частей: {len(parts)} из {len(a.files)} файлов")
 
     results = []
+    tmp = tempfile.mkdtemp(prefix="spike-")  # песочница для log.jsonl; в репо ничего не пишем
+    old_env = os.environ.get("STRATEG_PROJECTS_DIR")
+    os.environ["STRATEG_PROJECTS_DIR"] = tmp
     try:
         for k in keys:
             print(f"Модель {k} ({model_label(ROLES[k])}):")
@@ -217,6 +262,12 @@ def main(argv=None) -> int:
     except llm.NoKeyError as e:
         print(f"НЕТ КЛЮЧА: {e}")
         return 3
+    finally:
+        if old_env is None:
+            os.environ.pop("STRATEG_PROJECTS_DIR", None)
+        else:
+            os.environ["STRATEG_PROJECTS_DIR"] = old_env
+        shutil.rmtree(tmp, ignore_errors=True)
     write_text_atomic(TABLE_PATH, render_table(results, sources, time.strftime("%d.%m.%Y %H:%M")))
     print(f"Таблица записана: {TABLE_PATH}")
     for s in results:
