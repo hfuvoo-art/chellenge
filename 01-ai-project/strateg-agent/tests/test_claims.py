@@ -115,3 +115,45 @@ def test_list_filters(tmp_project, capsys):
     claims.main(["-p", tmp_project, "list", "--status", "active"])
     out = capsys.readouterr().out
     assert b in out and a not in out
+
+
+def test_add_after_retract_does_not_resurrect(tmp_project):
+    cid = claims.add(tmp_project, _fact())
+    claims.set_status(tmp_project, cid, "retracted", reason="ошибка")
+    assert claims.add(tmp_project, _fact()) == cid
+    assert len(claims.load(tmp_project)) == 1
+    assert claims.get(tmp_project, cid)["status"] == "retracted"
+
+
+def test_add_duplicate_merges_questions(tmp_project, capsys):
+    a = claims.add(tmp_project, _fact(question=["Q1"]))
+    assert claims.add(tmp_project, _fact(question=["Q4", "Q1"])) == a
+    assert claims.get(tmp_project, a)["question"] == ["Q1", "Q4"]
+    claims.main(["-p", tmp_project, "list", "--question", "Q4"])
+    assert a in capsys.readouterr().out
+
+
+def test_status_reason_stored_and_shown(tmp_project, capsys):
+    a = claims.add(tmp_project, _fact())
+    claims.set_status(tmp_project, a, "disputed", by="user", reason="расходится с S-002")
+    c = claims.get(tmp_project, a)
+    assert c["status_reason"] == "расходится с S-002" and c["status_by"] == "user"
+    claims.main(["-p", tmp_project, "show", a])
+    assert "причина: расходится с S-002" in capsys.readouterr().out
+
+
+def test_set_status_guards_and_add_resets_links(tmp_project):
+    a = claims.add(tmp_project, _fact())
+    b = claims.add(tmp_project, _fact(text="другое", quote="иная цитата"))
+    c = claims.add(tmp_project, _fact(text="третье", quote="третья цитата"))
+    claims.set_status(tmp_project, a, "superseded", by=b, reason="новее")
+    with pytest.raises(ValueError):
+        claims.set_status(tmp_project, a, "superseded", by=c, reason="ещё раз")
+    claims.set_status(tmp_project, c, "retracted", reason="ошибка")
+    with pytest.raises(ValueError):
+        claims.set_status(tmp_project, b, "superseded", by=c, reason="x")
+    with pytest.raises(ValueError):
+        claims.set_status(tmp_project, b, "active", reason="")
+    d = claims.add(tmp_project, _concl("новое", id="C-077", status="retracted", supersedes="C-001"))
+    assert d == "C-004" and claims.get(tmp_project, d)["supersedes"] is None and claims.get(tmp_project, d)["status"] == "active"
+    assert claims.validate(_concl(type=["x"])) and claims.validate(_fact(locator="Л!C1", value=float("nan"), extracted_by="analyze.py"))

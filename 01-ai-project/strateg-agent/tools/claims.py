@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -35,7 +36,7 @@ def _writer(c: dict) -> str:
 def validate(c: dict) -> list[str]:
     errs: list[str] = []
     t = c.get("type")
-    if t not in TYPES:
+    if not isinstance(t, str) or t not in TYPES:
         errs.append(f"type: должен быть один из {sorted(TYPES)}")
     if not str(c.get("text") or "").strip():
         errs.append("text: пустая формулировка")
@@ -50,7 +51,7 @@ def validate(c: dict) -> list[str]:
                 errs.append(f"{f}: fact без {f} не бывает")
         if not any(who == w or who.startswith(w + ":") for w in FACT_WRITERS):
             errs.append("extracted_by: fact пишут только extract.py, analyze.py и user; ответ агента — conclusion, hypothesis или forecast")
-    elif is_agent and t in TYPES and t not in AGENT_TYPES:
+    elif is_agent and isinstance(t, str) and t in TYPES and t not in AGENT_TYPES:
         errs.append(f"type: агент пишет только {sorted(AGENT_TYPES)}, а не {t}")
     has_cell = bool(CELL_RE.match(str(c.get("locator") or "")))
     for f in ("dims", "value"):
@@ -59,8 +60,8 @@ def validate(c: dict) -> list[str]:
     if c.get("dims") is not None and not (isinstance(c["dims"], dict) and all(isinstance(k, str) for k in c["dims"])):
         errs.append("dims: нужен объект {измерение: значение}")
     v = c.get("value")
-    if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float))):
-        errs.append("value: нужно число")
+    if v is not None and (isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)):
+        errs.append("value: нужно конечное число")
     return errs
 
 
@@ -89,38 +90,52 @@ def add(slug: str | None, c: dict) -> str:
     if errs:
         raise ValueError("утверждение отклонено: " + "; ".join(errs))
     existing = load(slug)
-    for e in existing:  # повторный запуск шага не плодит дубликаты
-        if e.get("status") in ("active", "disputed") and _same(e, c):
+    for e in existing:  # повторный запуск шага не плодит дубликаты; отозванное не воскресает
+        if _same(e, c):
+            merged = list(e.get("question") or [])
+            merged += [q for q in (c.get("question") or []) if q not in merged]
+            if merged != (e.get("question") or []):
+                e["question"] = merged
+                _save(slug, existing)
+                event(slug, "claim_questions", id=e["id"], question=merged)
             return e["id"]
-    rec = dict(c)
+    rec = {k: v for k, v in c.items() if k not in ("id", "status", "supersedes", "status_reason", "status_by")}
     rec["id"] = next_id("C", [e["id"] for e in existing])
     rec["status"] = "active"
     rec.setdefault("question", [])
-    rec.setdefault("supersedes", None)
+    rec["supersedes"] = None
     append_jsonl(_path(slug), rec)
     event(slug, "claim_add", id=rec["id"], type=rec["type"], extracted_by=_writer(rec))
     return rec["id"]
 
 
+def _save(slug: str | None, items: list[dict]) -> None:
+    write_text_atomic(_path(slug), "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in items))
+
+
 def set_status(slug: str | None, cid: str, status: str, *, by: str | None = None, reason: str) -> None:
     if status not in STATUSES:
         raise ValueError(f"статус должен быть один из {list(STATUSES)}")
-    if status in ("retracted", "disputed") and not (reason or "").strip():
-        raise ValueError(f"для статуса {status} нужна причина (--reason)")
+    if not (reason or "").strip():
+        raise ValueError(f"для смены статуса на {status} нужна причина (--reason)")
     if status == "superseded" and not by:
         raise ValueError("для superseded нужно указать, чем заменено (--by C-nnn)")
     items = load(slug)
-    ids = {c["id"] for c in items}
-    if cid not in ids:
+    byid = {c["id"]: c for c in items}
+    if cid not in byid:
         raise KeyError(f"утверждения {cid} нет. Что сделать: `python tools/claims.py list`.")
-    if status == "superseded" and (by not in ids or by == cid):
-        raise ValueError(f"заменяющего утверждения {by} нет или оно совпадает с {cid}")
-    for c in items:
-        if c["id"] == cid:
-            c["status"] = status
-        elif status == "superseded" and c["id"] == by:
-            c["supersedes"] = cid
-    write_text_atomic(_path(slug), "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in items))
+    if status == "superseded":
+        if byid[cid]["status"] == "superseded":
+            raise ValueError(f"{cid} уже заменено ({byid[cid].get('status_by')}). Что сделать: менять статус нового утверждения, а не повторять supersede.")
+        if by not in byid or by == cid:
+            raise ValueError(f"заменяющего утверждения {by} нет или оно совпадает с {cid}")
+        if byid[by]["status"] in ("retracted", "superseded"):
+            raise ValueError(f"{by} имеет статус {byid[by]['status']} и не может заменять. Что сделать: указать действующее утверждение.")
+    c = byid[cid]
+    c["status"], c["status_reason"], c["status_by"] = status, reason, by
+    if status == "superseded":
+        byid[by]["supersedes"] = cid
+    _save(slug, items)
     event(slug, "claim_status", id=cid, status=status, by=by, reason=reason)
 
 
@@ -183,7 +198,10 @@ def main(argv=None) -> int:
                     continue
                 print(_line(c))
         elif a.cmd == "show":
-            print(json.dumps(get(slug, a.id), ensure_ascii=False, indent=2))
+            c = get(slug, a.id)
+            print(json.dumps(c, ensure_ascii=False, indent=2))
+            if c.get("status_reason"):
+                print(f"причина: {c['status_reason']}")
         elif a.cmd == "search":
             for c in search(slug, a.text, a.type, a.limit):
                 print(_line(c))
