@@ -233,7 +233,7 @@
 - CLI: `llm.py ping [--role extract|pro|critic]` → `LLM OK · <модель> · <N> ток. · <₽ | цена неизвестна> · <с>`. Без ключа → `НЕТ КЛЮЧА: работаю в режиме без ключа (см. README)`, код 3.
 - `config/prices.yaml`: `as_of`, `sources` (URL), `usd_rub {value, as_of, source}`, `models {<имя>: {input_per_1k_rub, output_per_1k_rub}}`, `claude_usd_per_mtok {…}`, `search {claude_usd_per_1k, cursor: included}`, `human_rub_per_hour` — допущение команды с пояснением.
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_chat_logs_usage_and_rub`: usage 1000/500 при тестовых ценах 0,2 и 0,4 ₽ за 1k → `rub == 0.4`; в `log.jsonl` событие `llm` с `role`, `model`, `usage`, `rub`, `action_id`;
   - `test_retries_twice_then_unavailable` (Фокус 3): три ошибки 429 подряд → `LLMUnavailable`, 2 события `retry`, `time.sleep` подменён;
   - `test_chat_json_strips_fence`: ответ ```` ```json {"claims": []} ``` ```` → объект без второго вызова;
@@ -241,10 +241,10 @@
   - `test_chat_json_gives_up_after_repair`: мусор дважды → `LLMJSONError`;
   - `test_no_key_error_has_hint`;
   - `test_unknown_price_none_and_logged`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_llm.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать. Ретраи срабатывают на 429, 5xx и таймаут: паузы 2 и 6 с, максимум 2. Ключи и заголовки в журнал не пишутся никогда.
+- [x] **Шаг 2.** `python -m pytest tests/test_llm.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать. Ретраи срабатывают на 429, 5xx и таймаут: паузы 2 и 6 с, максимум 2. Ключи и заголовки в журнал не пишутся никогда.
 - [ ] **Шаг 4.** pytest → PASS. С настоящим `.env`: `python tools/llm.py ping --role extract` и `--role pro` → `LLM OK …` (без ключа — код 3 и подсказка). Результат и цену записать в `build-log.md`.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: llm.py с учётом токенов и ₽, цены, ping`.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: llm.py с учётом токенов и ₽, цены, ping`.
 
 ### Задача 3. Проверки дня 0 и решения (человек + Claude, без кода)
 
@@ -347,7 +347,7 @@
   - Флаг `--write -p <slug>` добавляется в задаче 9b: записывает утверждения через `claims.add` с `extracted_by: extract.py:spike`.
 - Ответ модели: `{"claims":[{"text","type":"fact|estimate|forecast","quote","locator","question":["Q1"]}]}`.
 
-- [ ] **Шаг 1. Тексты.** Сохранить в `evals/spike/` как текст 2 источника задачи №1: PDF-отчёт (через `pypdf`, одна команда) и страницу тарифов (через trafilatura или копированием).
+- [x] **Шаг 1. Тексты.** Сохранить в `evals/spike/` как текст 2 источника задачи №1: PDF-отчёт (через `pypdf`, одна команда) и страницу тарифов (через trafilatura или копированием).
 - [ ] **Шаг 2. Прогон:** `python evals/spike_extract.py evals/spike/*.md --models lite,pro`.
 - [ ] **Шаг 3. Таблица** в `evals/spike-extract.md` по каждой модели: % валидного JSON, % точных цитат, % с partial ≥92, % провалов, ₽ и секунды на часть.
 - [ ] **Шаг 4. Решение.**
