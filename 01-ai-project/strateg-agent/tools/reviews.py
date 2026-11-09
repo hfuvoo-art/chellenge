@@ -10,16 +10,22 @@ from datetime import date, datetime
 
 HEADER = ["date", "rating", "version", "text"]
 PAGE = 200
-_PII_KEYS = ("author", "автор", "username", "userid", "reviewid", "phone", "телефон", "email", "почта", "фио", "reviewer",
-             "contact", "контакт", "profile", "профиль", "пользовател", "имя")
-_PII_EXACT = {"name", "user", "mail", "тел"}
+def _norm(h: str) -> str:
+    return re.sub(r"[\s_-]+", "", h.strip().lower())
+
+
+# только точные заголовки: подстрочное совпадение ломало бы обычные таблицы («Имя тарифа», «Количество пользователей»)
+_PII_EXACT = {_norm(x) for x in (
+    "author", "автор", "имя автора", "автор отзыва", "reviewer", "user", "username", "userid", "user_name", "user name",
+    "phone", "телефон", "email", "e-mail", "почта", "mail", "reviewid", "review id", "id отзыва", "фио", "контакт")}
+_NAME_COLS = {"name", "имя"}  # только если CSV распознан как отзывы
+_REVIEW_HINTS = {"text", "отзыв", "content", "comment"}
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _PHONE_RE = re.compile(
     r"\+\d[\d\s().-]{8,}\d"
     r"|(?<![\d-])[78][\s-]?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}(?!\d)"
     r"|(?<!\d)\(\d{3}\)[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}(?!\d)"
     r"|(?<![\d-])\d{3}-\d{3}-\d{2}-\d{2}(?!\d)")
-_NUM_RE = re.compile(r"^[\s\d.,+\-−]+$")
 
 
 @dataclass(frozen=True)
@@ -116,9 +122,14 @@ def parse_csv_bytes(raw: bytes) -> list[list[str]]:
     return list(csv.reader(io.StringIO(text, newline=""), delimiter=delim))
 
 
-def is_pii_header(h: str) -> bool:
-    n = re.sub(r"[^a-zа-яё0-9]", "", h.lower())
-    return n in _PII_EXACT or any(k in n for k in _PII_KEYS)
+def _looks_like_reviews(headers: list[str]) -> bool:
+    n = [_norm(h) for h in headers]
+    return [h.strip() for h in headers] == HEADER or any(x in _REVIEW_HINTS for x in n)
+
+
+def is_pii_header(h: str, reviewish: bool = False) -> bool:
+    n = _norm(h)
+    return n in _PII_EXACT or (reviewish and n in _NAME_COLS)
 
 
 def mask_pii(text: str) -> tuple[str, int]:
@@ -139,7 +150,8 @@ def clean_rows(rows: list[list[str]]) -> tuple[list[list[str]], int]:
     """Убирает колонки автора/имени/телефона/почты по заголовкам и маскирует телефоны и почты в ячейках. Возвращает (строки, N убранного ПДн)."""
     if not rows:
         return rows, 0
-    drop = {i for i, h in enumerate(rows[0]) if is_pii_header(h)}
+    reviewish = _looks_like_reviews(rows[0])
+    drop = {i for i, h in enumerate(rows[0]) if is_pii_header(h, reviewish)}
     removed = sum(1 for r in rows[1:] for i in drop if i < len(r) and r[i].strip())
     out = []
     for ri, r in enumerate(rows):
@@ -147,7 +159,7 @@ def clean_rows(rows: list[list[str]]) -> tuple[list[list[str]], int]:
         for i, c in enumerate(r):
             if i in drop:
                 continue
-            if ri > 0 and not _NUM_RE.match(c):
+            if ri > 0:
                 c, k = mask_pii(c)
                 removed += k
             new.append(c)

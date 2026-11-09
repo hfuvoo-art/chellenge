@@ -148,3 +148,26 @@ def test_cli_requires_target_or_reviews(tmp_project, capsys):
     assert "--reviews" in capsys.readouterr().err
     with pytest.raises(SystemExit):
         ingest.main(["--reviews", "gplay:a.b.c", "--found-by", "user"])  # нет --since
+
+
+def test_plain_table_keeps_name_and_user_columns(tmp_project, tmp_path):
+    f = tmp_path / "t.csv"
+    f.write_text("Name;Цена, руб;Трафик, ГБ\nБазовый;300;10\nМакс;500;50\n", encoding="utf-8")
+    sid, _ = ingest.ingest_ex(tmp_project, str(f), found_by="user")
+    s = next(x for x in ingest._load_sources(tmp_project) if x["id"] == sid)
+    md = read_text(project_path(tmp_project) / "materials" / f"{sid}.md")
+    assert "Базовый" in md and "Макс" in md and s.get("pii_removed", 0) == 0
+    rows, n = reviews.clean_rows([["Количество пользователей", "Имя тарифа", "Контактный центр", "Профиль нагрузки"], ["5", "A", "B", "C"]])
+    assert rows[0] == ["Количество пользователей", "Имя тарифа", "Контактный центр", "Профиль нагрузки"] and n == 0
+
+
+def test_name_column_dropped_in_reviews_csv():
+    rows, n = reviews.clean_rows([["name", "date", "rating", "version", "text"], ["Иван", "2026-09-01", "5", "", "ок"]])
+    assert rows[0] == reviews.HEADER and n == 1
+
+
+def test_single_number_cell_masked_but_indicators_not():
+    rows, n = reviews.clean_rows([["x"], ["89991234567"], ["+7 999 123 45 67"], ["2 907 971"], ["+3,4 %"], ["2026"],
+                                  ["1 234 567 890"], ["3 456 789 012"]])
+    assert [r[0] for r in rows[1:]] == ["[телефон]", "[телефон]", "2 907 971", "+3,4 %", "2026", "1 234 567 890", "3 456 789 012"]
+    assert n == 2
