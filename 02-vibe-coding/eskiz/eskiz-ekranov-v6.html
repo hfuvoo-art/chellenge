@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#eef1f6;--card:#fff;--label:#10131a;--sec:#555b68;--ter:#8a8f9c;--sep:#e4e7ee;
+ --brand:#1f4fd8;--brand-soft:#e8eefc;
+ --ok:#1a8a47;--ok-soft:#e3f5ea;--warn:#b25e00;--warn-bg:#fff4e2;--warn-line:#ffb347;--bad:#c9302c;--bad-soft:#fde8e7}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,-apple-system,sans-serif;background:#0d0f14;color:var(--label);padding:64px 60px 52px;width:1320px;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+h1{font-size:40px;font-weight:700;letter-spacing:-.03em;text-align:center;color:#fff}
+.sub{color:#9da1ae;font-size:18px;margin:10px 0 44px;text-align:center;font-weight:500}
+.row{display:flex;gap:44px;justify-content:center}
+.col{display:flex;flex-direction:column;gap:18px;align-items:center}
+.cap{color:#e6e7ee;font-weight:600;font-size:16px}
+.phone{width:360px;height:760px;border-radius:50px;overflow:hidden;position:relative;background:var(--bg);box-shadow:0 0 0 9px #1c1c1f,0 0 0 10px #3a3a3e,0 40px 90px rgba(0,0,0,.6);isolation:isolate}
+.phone:before{content:"";position:absolute;inset:0 0 auto 0;height:240px;background:linear-gradient(180deg,#dfe7fb,rgba(238,241,246,0));z-index:-1}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:104px;height:30px;background:#000;border-radius:20px;z-index:9}
+.status{display:flex;justify-content:space-between;padding:15px 28px 0 30px;font-size:14px;font-weight:600;height:44px}
+.bat{display:inline-block;width:24px;height:11px;border:1.5px solid #000;border-radius:3.5px;position:relative;vertical-align:-1px}
+.bat:after{content:"";position:absolute;inset:1.5px;right:5px;background:#000;border-radius:1.5px}
+
+/* liquid glass: only controls */
+.glass{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.42));backdrop-filter:url(#lens) blur(12px) saturate(180%);-webkit-backdrop-filter:blur(12px) saturate(180%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 0 -1px 2px rgba(255,255,255,.5),0 8px 26px rgba(16,19,26,.14),0 0 0 .5px rgba(16,19,26,.08)}
+.glass:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(90% 70% at 20% 0%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%)}
+.glass>*{position:relative;z-index:1}
+
+.head{display:flex;justify-content:space-between;align-items:center;padding:4px 16px 0 20px;height:44px}
+.btn-g{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--label)}
+.pillbtn{height:36px;padding:0 14px;border-radius:18px;display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--brand)}
+.date{font-size:13px;font-weight:600;color:var(--sec)}
+.large{font-size:34px;font-weight:800;letter-spacing:-.035em;padding:0 20px 12px}
+.wrap{padding:0 14px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border-radius:22px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,19,26,.05),0 4px 14px rgba(16,19,26,.04)}
+.eyebrow{font-size:13px;font-weight:700;color:var(--brand)}
+h3{font-size:22px;font-weight:700;letter-spacing:-.025em;margin:3px 0 2px}
+.t1{font-size:15.5px;font-weight:600}
+.t2{font-size:13.5px;color:var(--sec);margin-top:2px}
+.alert{margin-top:12px;display:flex;gap:10px;align-items:center;background:var(--warn-bg);border-left:4px solid var(--warn-line);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;color:#5a3300}
+.alert s{color:#8a6a40;font-weight:500}
+.hero{box-shadow:0 0 0 2px var(--brand),0 8px 22px rgba(31,79,216,.16)}
+.sh{font-size:13px;font-weight:700;color:var(--sec);text-transform:uppercase;letter-spacing:.02em;padding:6px 6px 0}
+.cell{display:flex;align-items:center;gap:12px;padding:11px 0}
+.cell+.cell{border-top:1px solid var(--sep)}
+.g{flex:1;min-width:0}
+.ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none}
+.ic svg{width:18px;height:18px}
+.badge{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.b-bad{color:var(--bad);background:var(--bad-soft)}
+.b-ok{color:var(--ok);background:var(--ok-soft)}
+.b-brand{color:var(--brand);background:var(--brand-soft)}
+.b-warn{color:var(--warn);background:var(--warn-bg)}
+.val{font-size:16px;font-weight:700}
+.chev{color:var(--ter);font-size:20px}
+.time{font-size:13px;font-weight:700;color:var(--sec);width:44px}
+
+.tabwrap{position:absolute;left:12px;right:12px;bottom:22px;display:flex;gap:10px;align-items:center;z-index:8}
+.tabbar{flex:1;height:64px;border-radius:32px;display:flex;justify-content:space-around;align-items:center;padding:0 5px}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:#3a3f4b;width:67px;height:54px;justify-content:center;border-radius:27px}
+.tabbar div.on{color:var(--brand);background:rgba(255,255,255,.75);box-shadow:inset 0 1px 0 #fff,0 2px 8px rgba(16,19,26,.1)}
+.tabbar svg{width:24px;height:24px}
+.fab{width:64px;height:64px;border-radius:50%;display:grid;place-items:center}
+.fab svg{width:26px;height:26px}
+.fab.on{background:linear-gradient(180deg,rgba(47,96,235,.92),rgba(31,79,216,.92))}
+.home{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:120px;height:5px;border-radius:3px;background:#000;z-index:10}
+.fade{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,rgba(238,241,246,0),rgba(238,241,246,.55));z-index:7;pointer-events:none}
+.concept{font-size:12px;color:var(--sec);font-weight:600;text-align:center;padding:4px 0 0}
+
+.ring{position:relative;width:88px;height:88px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring .n{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;font-weight:800;letter-spacing:-.03em}
+.seg{display:flex;padding:3px;margin:0 14px 10px;border-radius:999px}
+.seg div{flex:1;text-align:center;font-size:13.5px;font-weight:600;padding:7px 0;border-radius:999px;color:#3a3f4b}
+.seg .on{background:#fff;color:var(--label);box-shadow:0 2px 8px rgba(16,19,26,.12)}
+.dotc{width:10px;height:10px;border-radius:50%;flex:none}
+.prio{background:var(--bad-soft);box-shadow:none;border-left:4px solid var(--bad)}
+.bub{max-width:84%;padding:10px 14px;border-radius:20px;font-size:14.5px;line-height:1.4}
+.me{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:6px}
+.bot{align-self:flex-start;background:#fff;border-bottom-left-radius:6px;box-shadow:0 1px 2px rgba(16,19,26,.05)}
+.src{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--sep);color:var(--brand);font-size:12.5px;font-weight:700}
+.row2{display:flex;justify-content:space-between;padding:8px 0;font-size:14.5px}
+.row2+.row2{border-top:1px solid var(--sep)}
+.row2 span{color:var(--sec)}
+.cta{margin-top:12px;text-align:center;font-weight:700;font-size:16px;padding:13px;border-radius:14px;color:#fff;background:var(--brand)}
+.steps{display:flex;gap:6px;margin-top:10px}
+.steps i{height:5px;flex:1;border-radius:3px;background:var(--sep)}
+.steps i.on{background:var(--ok)}
+.week{display:flex;justify-content:space-between;padding:0 4px}
+.week div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--sec);width:40px;padding:6px 0;border-radius:12px}
+.week b{font-size:16px;color:var(--label)}
+.week .on{background:var(--brand);color:#dfe6ff}
+.week .on b{color:#fff}
+.week i{width:5px;height:5px;border-radius:50%;background:var(--warn-line)}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><filter id="lens" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="1" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="10" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+<h1>Деканат, который отвечает</h1>
+<div class="sub">Эскиз v6 · стекло только у панели и кнопок, цвет только для смысла · концепт, данные вымышленные</div>
+<div class="row">
+
+<!-- 1 -->
+<div class="col"><div class="phone">
+ <div class="island"></div>
+ <div class="status"><span>9:41</span><span class="bat"></span></div>
+ <div class="head"><span class="date">Вторник, 10 ноября</span><div class="btn-g glass">АС</div></div>
+ <div class="large">Сегодня</div>
+ <div class="wrap">
+  <div class="card hero">
+   <div class="eyebrow">Через 25 мин · 10:40–12:10</div>
+   <h3>Мировая экономика</h3>
+   <div class="t2">Семинар · доц. Морозов И. В.</div>
+   <div class="alert"><svg width="18" height="18" viewBox="0 0 24 24" fill="#e08600"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg><span>Новая аудитория: <s>214</s> → <b>405</b></span></div>
+  </div>
+  <div class="card" style="padding:4px 16px">
+   <div class="cell"><span class="time">12:40</span><div class="g"><div class="t1">Английский язык</div><div class="t2">ауд. 118 · Петрова А. С.</div></div></div>
+   <div class="cell"><span class="time">14:20</span><div class="g"><div class="t1" style="color:var(--sec);text-decoration:line-through">Теория МО</div><div class="t2">ауд. 301 · лекция</div></div><span class="badge b-bad">Отменена</span></div>
+  </div>
+  <div class="card" style="padding:4px 16px">
+   <div class="cell"><div class="ic" style="background:var(--ok-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="#1a8a47" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="g"><div class="t1">Справка готова</div><div class="t2">Скачать PDF с QR-кодом</div></div><span class="chev">›</span></div>
+   <div class="cell"><div class="ic" style="background:var(--warn-bg)"><svg viewBox="0 0 24 24" fill="none" stroke="#b25e00" stroke-width="2.4"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div><div class="g"><div class="t1">Эссе: история дипломатии</div><div class="t2">До 12 ноября, 23:59</div></div><span class="badge b-warn">2 дня</span></div>
+   <div class="cell"><div class="ic" style="background:var(--brand-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="#1f4fd8" stroke-width="2.2"><path d="M4 5h16v11H9l-5 4z"/></svg></div><div class="g"><div class="t1">Деканат: продление сессии</div><div class="t2">Объявление · 2 ч назад</div></div><span class="chev">›</span></div>
+  </div>
+  <div class="concept">Концепт для конкурса · не официальный сервис</div>
+ </div>
+ <div class="fade"></div>
+ <div class="tabwrap">
+  <div class="tabbar glass">
+   <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2.5 11h2.5v9h5.5v-6h3v6H19v-9h2.5z"/></svg>Сегодня</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Расписание</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="12" width="3.5" height="8" rx="1"/><rect x="10.25" y="6" width="3.5" height="14" rx="1"/><rect x="16.5" y="9" width="3.5" height="11" rx="1"/></svg>Учёба</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3.5h7l5 5v12H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M14 3.5v5h5"/></svg>Заявки</div>
+  </div>
+  <div class="fab glass"><svg viewBox="0 0 24 24" fill="#1f4fd8"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z"/></svg></div>
+ </div><div class="home"></div>
+</div><div class="cap">Сегодня</div></div>
+
+<!-- 2 -->
+<div class="col"><div class="phone">
+ <div class="island"></div>
+ <div class="status"><span>9:41</span><span class="bat"></span></div>
+ <div class="head"><span></span><div class="pillbtn glass">Сессия</div></div>
+ <div class="large">Как дела</div>
+ <div class="seg glass"><div class="on">Семестр</div><div>Сессия</div><div>Все годы</div></div>
+ <div class="wrap">
+  <div class="card" style="display:flex;gap:16px;align-items:center">
+   <div class="ring"><svg width="88" height="88"><circle cx="44" cy="44" r="36" stroke="#e9ecf2" stroke-width="10" fill="none"/><circle cx="44" cy="44" r="36" stroke="#1a8a47" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="31"/></svg><div class="n">4,6</div></div>
+   <div><div class="t1">Средний балл</div><div class="t2">+0,2 к прошлому семестру</div><span class="badge b-ok" style="display:inline-block;margin-top:8px">Стипендия сохраняется</span></div>
+  </div>
+  <div class="card prio" style="display:flex;gap:12px;align-items:center">
+   <div class="g"><div class="t1" style="color:#7a1512">Сначала: 2 практические по праву</div><div class="t2" style="color:#7a3a37">Без них нет допуска к зачёту 20 декабря</div></div><span class="chev" style="color:#c9302c">›</span>
+  </div>
+  <div class="sh">Дисциплины</div>
+  <div class="card" style="padding:2px 16px">
+   <div class="cell"><span class="dotc" style="background:var(--ok)"></span><div class="g t1">Мировая экономика</div><span class="val">5</span></div>
+   <div class="cell"><span class="dotc" style="background:var(--ok)"></span><div class="g t1">Английский язык</div><span class="val">5</span></div>
+   <div class="cell"><span class="dotc" style="background:#e08600"></span><div class="g t1">Теория МО</div><span class="val">4</span></div>
+   <div class="cell"><span class="dotc" style="background:var(--bad)"></span><div class="g t1">Международное право</div><span class="badge b-bad">Риск</span></div>
+   <div class="cell"><span class="dotc" style="background:var(--ok)"></span><div class="g t1">История дипломатии</div><span class="val">зачёт</span></div>
+  </div>
+ </div>
+ <div class="fade"></div>
+ <div class="tabwrap">
+  <div class="tabbar glass">
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5 3.5 11v9h6v-6h5v6h6v-9z"/></svg>Сегодня</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Расписание</div>
+   <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="12" width="3.5" height="8" rx="1"/><rect x="10.25" y="6" width="3.5" height="14" rx="1"/><rect x="16.5" y="9" width="3.5" height="11" rx="1"/></svg>Учёба</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3.5h7l5 5v12H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M14 3.5v5h5"/></svg>Заявки</div>
+  </div>
+  <div class="fab glass"><svg viewBox="0 0 24 24" fill="#1f4fd8"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z"/></svg></div>
+ </div><div class="home"></div>
+</div><div class="cap">Как у меня дела</div></div>
+
+<!-- 3 -->
+<div class="col"><div class="phone">
+ <div class="island"></div>
+ <div class="status"><span>9:41</span><span class="bat"></span></div>
+ <div class="head"><span></span><div class="pillbtn glass">История</div></div>
+ <div class="large">Помощник</div>
+ <div class="wrap">
+  <div class="bub me">Заболела и пропустила зачёт по праву. Что делать?</div>
+  <div class="bub bot">Пересдать можно до 20 декабря. Нужны справка о болезни и заявление. Я заполнил заявление, проверьте.
+   <div class="src"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 3.5h7l5 5v12H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/></svg>Положение об аттестации, п. 4.2</div></div>
+  <div class="card">
+   <div class="t2" style="font-weight:700;text-transform:uppercase;font-size:12px;margin:0 0 4px">Заявление на пересдачу</div>
+   <div class="row2"><span>Дисциплина</span><b>Межд. право</b></div>
+   <div class="row2"><span>Причина</span><b>Болезнь</b></div>
+   <div class="row2"><span>Группа</span><b>МО-2-04</b></div>
+   <div class="cta">Отправить в деканат</div>
+  </div>
+  <div class="card">
+   <div style="display:flex;justify-content:space-between;align-items:center"><span class="t1">Заявка № 1042</span><span class="badge b-brand">В работе</span></div>
+   <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+   <div class="t2" style="margin-top:8px">Подана · В работе · Готово</div>
+  </div>
+ </div>
+ <div class="fade"></div>
+ <div class="tabwrap">
+  <div class="tabbar glass">
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5 3.5 11v9h6v-6h5v6h6v-9z"/></svg>Сегодня</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Расписание</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="12" width="3.5" height="8" rx="1"/><rect x="10.25" y="6" width="3.5" height="14" rx="1"/><rect x="16.5" y="9" width="3.5" height="11" rx="1"/></svg>Учёба</div>
+   <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3.5h7l5 5v12H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M14 3.5v5h5"/></svg>Заявки</div>
+  </div>
+  <div class="fab glass on"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z"/></svg></div>
+ </div><div class="home"></div>
+</div><div class="cap">ИИ-помощник и заявка</div></div>
+
+</div></body></html>
