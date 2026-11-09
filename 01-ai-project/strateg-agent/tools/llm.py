@@ -17,7 +17,7 @@ from tools.common import ROOT, current_slug, read_yaml, setup_stdio  # noqa: E40
 ENV_FILE: Path = ROOT / ".env"
 PRICES_PATH: Path = ROOT / "config" / "prices.yaml"
 RETRY_PAUSES = (2, 6)  # секунды; максимум 2 ретрая (Глобальное ограничение 10)
-TIMEOUT_S = 60.0
+TIMEOUT_S = 180.0  # по умолчанию; переопределяется LLM_TIMEOUT_S в .env (Alice Flash на части 6 тыс. символов отвечает ~70 с)
 NO_KEY_MSG = "НЕТ КЛЮЧА: работаю в режиме без ключа (см. README)"
 
 # роль -> переменная модели
@@ -136,7 +136,7 @@ def _create(role: str, model: str, messages: list, temperature: float, max_token
     c = _conn(role)
     client = openai.OpenAI(
         base_url=c["base_url"], api_key=c["api_key"], project=c["project"] or None,
-        timeout=TIMEOUT_S, max_retries=0,
+        timeout=float(os.environ.get("LLM_TIMEOUT_S") or TIMEOUT_S), max_retries=0,
     )
     resp = client.chat.completions.create(
         model=model, messages=messages, temperature=temperature, max_tokens=max_tokens,
