@@ -1,4 +1,4 @@
-# rules.lock: sha256 запертых файлов (rules/**, prompts/**, AGENTS.md, tools/check.py, tools/lock.py) и история правок; без него подмену правил или проверяющего никто не заметит. Запираемый файл (У6): это обнаружение, а не запрет.
+# rules.lock: sha256 запертых файлов (rules/**, prompts/**, methods/**, AGENTS.md, CLAUDE.md, tools/check.py, tools/lock.py) и история правок; без него подмену правил или проверяющего никто не заметит. Запираемый файл (У6): это обнаружение, а не запрет.
 from __future__ import annotations
 
 import argparse
@@ -11,8 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from tools.common import ROOT, current_slug, now_iso, projects_dir, read_yaml, setup_stdio, write_yaml_atomic  # noqa: E402
 
 LOCK_NAME = "rules.lock"
-LOCKED_DIRS = ("rules", "prompts")
-LOCKED_FILES = ("AGENTS.md", "tools/check.py", "tools/lock.py")
+LOCKED_DIRS = ("rules", "prompts", "methods")
+LOCKED_FILES = ("AGENTS.md", "CLAUDE.md", "tools/check.py", "tools/lock.py")
 IGNORED_PARTS = {"__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".tmp"}
 
@@ -82,7 +82,7 @@ def last_update(root) -> dict | None:
 
 def main(argv=None) -> int:
     setup_stdio()
-    ap = argparse.ArgumentParser(description="Проверка и обновление rules.lock (правила, промпты, AGENTS.md, check.py, lock.py).",
+    ap = argparse.ArgumentParser(description="Проверка и обновление rules.lock (правила, промпты, методики, AGENTS.md, CLAUDE.md, check.py, lock.py).",
                                  epilog="Коды выхода: 0 — OK, 1 — файлы не совпадают с rules.lock, 3 — ошибка использования.")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--verify", action="store_true", help="сверить файлы с rules.lock")

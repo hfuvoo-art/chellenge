@@ -15,7 +15,10 @@ def tmp_root(tmp_path):
     (root / "tools").mkdir()
     (root / "rules" / "a.md").write_text("правило\n", encoding="utf-8")
     (root / "prompts" / "p.md").write_text("промпт\n", encoding="utf-8")
+    (root / "methods").mkdir()
+    (root / "methods" / "m.md").write_text("методика\n", encoding="utf-8")
     (root / "AGENTS.md").write_text("агент\n", encoding="utf-8")
+    (root / "CLAUDE.md").write_text("инструкции\n", encoding="utf-8")
     (root / "tools" / "check.py").write_text("# check\n", encoding="utf-8")
     (root / "tools" / "lock.py").write_text("# lock\n", encoding="utf-8")
     (root / "tools" / "other.py").write_text("# не запирается\n", encoding="utf-8")
@@ -25,7 +28,7 @@ def tmp_root(tmp_path):
 
 def test_lock_compute_scope(tmp_root):
     files = lock.compute(tmp_root)
-    assert set(files) == {"rules/a.md", "prompts/p.md", "AGENTS.md", "tools/check.py", "tools/lock.py"}
+    assert set(files) == {"rules/a.md", "prompts/p.md", "methods/m.md", "AGENTS.md", "CLAUDE.md", "tools/check.py", "tools/lock.py"}
 
 
 def test_lock_verify_detects_change(tmp_root):

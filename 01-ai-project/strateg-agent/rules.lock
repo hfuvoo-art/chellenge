@@ -9,9 +9,18 @@ files:
   prompts/extract.md: b81ffcb65983c4a4dec5afc2b64058de04baa48e8c65e6c76251beb87df07d1e
   prompts/interview-coding.md: 775efdb80287943424b320670a3239a7f83f11500febdd97d30acfa81613f4f9
   prompts/respondent.md: 3d0eca4e4601a50118c1d22ed470143f12ac61a7daf9aa40e3c42cd042d34161
+  methods/framing.md: e62cc87c7da0ed62dc6959c3c9af87adc848c30d3b015d0ee2976a08ae84d9fd
+  methods/interview-guide.md: ea59182fe2489bbb1c48b4bbffdcf3b1deb1abd1f0ece5960d5e088fbd449f12
+  methods/jtbd.md: 27e4b19e36ae4e7895c87de57d215f142c3aa5f0ee36389940b127fba3925ec1
+  methods/options-premortem.md: 9348798c2173d1ed8d822e2571f9ffdbe64ca1a7d80b857697657c20237ba46a
+  methods/positioning.md: 0f174c8176e746ede50b16f87ef2433fb6791274cf2d64b538d7c3529373b037
+  methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
+  methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
+  methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
   AGENTS.md: be64d6d13b0b70535b6dc62754ccb7c208d5a165a485bdd08ee276c52cdddc74
+  CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: 72b445163a693ae318566a5844ff745dec6e4765cc3fd8fa2b8190a6db1a5d91
-  tools/lock.py: f0b264aa4eb217f9387f895943997c24c8ff49b38b4ba64b48d58904e3848e6c
+  tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
 history:
 - updated_at: '2026-11-09T19:38:15+03:00'
   reason: 'задача 9: правила, промпты, rules.lock'
@@ -29,3 +38,16 @@ history:
   - rules/style.md
   - tools/check.py
   - tools/lock.py
+- updated_at: '2026-11-09T19:51:43+03:00'
+  reason: 'red-team после задачи 9: methods/ и CLAUDE.md под замок'
+  changed:
+  - tools/lock.py
+  - CLAUDE.md
+  - methods/framing.md
+  - methods/interview-guide.md
+  - methods/jtbd.md
+  - methods/options-premortem.md
+  - methods/positioning.md
+  - methods/test-plan.md
+  - methods/unit-economics.md
+  - methods/ux-review.md

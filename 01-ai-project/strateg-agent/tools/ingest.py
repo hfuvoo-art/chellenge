@@ -75,6 +75,20 @@ def scan_injections(text: str) -> list[str]:
     return out
 
 
+def scan_table_injections(text: str) -> list[str]:
+    """Для таблиц/CSV: локатор ячейки `Лист!A5` строки, где сработал паттерн (тот же, что понимает section())."""
+    pats = _patterns()
+    out: list[str] = []
+    for line in text.splitlines():
+        m = re.match(r"^(.+!\$?[A-Za-z]{1,3}\$?\d+) ", line)
+        if m and any(p.search(line) for p in pats):
+            sh, _, ref = m.group(1).rpartition("!")
+            loc = f"{sh}!{ref.replace('$', '').upper()}"
+            if loc not in out:
+                out.append(loc)
+    return out
+
+
 # ---------- чтение форматов ----------
 
 def _to_date(value) -> str | None:
@@ -260,7 +274,7 @@ def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_
     fetched_at = now_iso()
     place = url or (path.name if path else "")
     header = f"<!-- {sid} | {place} | {fetched_at} | {sha} | {as_of or 'none'} -->"
-    suspicious = scan_injections(md_body) if md_body else []
+    suspicious = (scan_table_injections(md_body) if kind == "table" else scan_injections(md_body)) if md_body else []
     if isinstance(original, Path):
         shutil.copyfile(original, mdir / f"{sid}.{ext}")
     else:
@@ -420,9 +434,9 @@ def section(slug, sid: str, locator: str) -> str:
     if CELL_LOC_RE.match(locator):  # таблицы: локатор ячейки — начало строки
         sh, _, ref = locator.rpartition("!")
         locator = f"{sh}!{ref.replace('$', '').upper()}"  # как в tables.get_cell
-        for line in text.splitlines():
-            if line.startswith(locator + " "):
-                return line.strip()
+        hits = [ln.strip() for ln in text.splitlines() if ln.startswith(locator + " ")]  # ячейка + её примечание делят адрес
+        if hits:
+            return chr(10).join(hits)
         raise ValueError(f"в {sid} нет ячейки «{locator}». Что сделать: проверь адрес в {sid}.md (строки вида Лист!C14 [...] = значение).")
     for loc, body in _blocks(text):
         if loc == locator:
