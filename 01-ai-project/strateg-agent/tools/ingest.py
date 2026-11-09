@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools import state  # noqa: E402
 from tools.common import (  # noqa: E402
-    ROOT, die, next_id, normalize_url, now_iso, project_path, read_text, read_yaml, setup_stdio, sha256_file,
+    ROOT, die, next_id, normalize_url, now_iso, project_path, read_text, read_yaml, setup_stdio, sha256_file, sha256_text,
     write_text_atomic, write_yaml_atomic,
 )
 from tools.log import event  # noqa: E402
@@ -82,8 +82,13 @@ def _to_date(value) -> str | None:
     return m.group(0) if m else None
 
 
+def _esc(text: str) -> str:
+    """Источник не должен подделывать наши маркеры <!-- ¶N -->."""
+    return text.replace("<!--", "<! --")
+
+
 def _paragraph_md(paragraphs: list[str]) -> tuple[str, int]:
-    md = "\n\n".join(f"<!-- ¶{i} -->\n{p}" for i, p in enumerate(paragraphs, 1))
+    md = "\n\n".join(f"<!-- ¶{i} -->\n{_esc(p)}" for i, p in enumerate(paragraphs, 1))
     return md, sum(len(p) for p in paragraphs)
 
 
@@ -99,7 +104,7 @@ def _read_pdf(path: Path):
         except Exception:
             as_of = None
         title = (meta.title or "").strip() or None
-    md = "\n\n".join(f"<!-- p.{i} -->\n{t}" for i, t in enumerate(pages, 1))
+    md = "\n\n".join(f"<!-- p.{i} -->\n{_esc(t)}" for i, t in enumerate(pages, 1))
     return md, sum(len(t) for t in pages), title, as_of
 
 
@@ -191,33 +196,39 @@ def _load_sources(slug) -> list[dict]:
     return ((read_yaml(p) if p.is_file() else None) or {}).get("sources") or []
 
 
+def _path_key(path: Path) -> str:
+    """Ключ дедупликации по пути: хэш, чтобы абсолютный путь компьютера не попадал в sources.yaml."""
+    return sha256_text(path.resolve().as_posix().lower())[:16]
+
+
 def _location_key(url: str | None, path: Path | None) -> str:
     if url:
         return "url:" + normalize_url(url)
-    return "path:" + path.resolve().as_posix().lower()
+    return "path:" + _path_key(path)
 
 
 def _entry_key(e: dict) -> str | None:
     if e.get("url"):
         return "url:" + normalize_url(e["url"])
-    if e.get("path"):
-        return "path:" + str(e["path"]).lower()
+    if e.get("path_key"):
+        return "path:" + e["path_key"]
     return None
 
 
 def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_source, warnings,
-              found_by, url, path, sha, refresh) -> str:
+              found_by, url, path, sha, refresh) -> tuple[str, bool]:
+    """Возвращает (S-id, changed): changed=True, если содержимое изменилось, а новая версия не создана."""
     sources = _load_sources(slug)
     same = [s for s in sources if s["sha256"] == sha]
     if same:  # то же содержимое — тот же источник
-        return same[0]["id"]
+        return same[0]["id"], False
     prev = [s for s in sources if _entry_key(s) == _location_key(url, path)]
     supersedes = None
     if prev:
         latest = prev[-1]
         if not refresh:
             event(slug, "ingest_changed", id=latest["id"], note="содержимое изменилось; для новой версии нужен --refresh")
-            return latest["id"]
+            return latest["id"], True
         supersedes = latest["id"]
     sid = next_id("S", [s["id"] for s in sources])
     mdir = project_path(slug) / "materials"
@@ -235,14 +246,15 @@ def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_
     if url:
         entry["url"] = url
     if path:
-        entry["path"] = path.resolve().as_posix()
+        entry["path"] = path.name
+        entry["path_key"] = _path_key(path)
     entry.update({"found_by": found_by, "fetched_at": fetched_at, "sha256": sha, "as_of": as_of,
                   "as_of_source": as_of_source, "chars": chars, "warnings": warnings, "suspicious": suspicious,
                   "supersedes": supersedes})
     write_yaml_atomic(_sources_path(slug), {"sources": sources + [entry]})  # последним: обрыв раньше не оставляет «призрака»
     state.mark_done(slug, state.action_id("ingest", sid, sha), {"kind": kind})
     event(slug, "ingest", id=sid, source_kind=kind, chars=chars, warnings=warnings, suspicious=suspicious, supersedes=supersedes)
-    return sid
+    return sid, False
 
 
 def _check_found_by(found_by: str) -> None:
@@ -250,7 +262,7 @@ def _check_found_by(found_by: str) -> None:
         raise ValueError('found_by: ожидается "search:<запрос>", "user" или "brief"')
 
 
-def _ingest_html(slug, html: str, *, url: str, found_by: str, refresh: bool) -> str:
+def _ingest_html(slug, html: str, *, url: str, found_by: str, refresh: bool) -> tuple[str, bool]:
     _check_found_by(found_by)
     raw = html.encode("utf-8")
     md, chars, title, text = _read_html(html)
@@ -261,14 +273,14 @@ def _ingest_html(slug, html: str, *, url: str, found_by: str, refresh: bool) -> 
         src = "header"
     if not as_of:
         src = "none"
-    warnings = ["short-text"] if chars < MIN_HTML_CHARS or not re.search(r"\d", md) else []
+    warnings = ["short-text"] if chars < MIN_HTML_CHARS or not re.search(r"\d", text) else []
     return _register(slug, kind="html", ext="html", original=raw, md_body=md, chars=chars, title=title, as_of=as_of,
                      as_of_source=src, warnings=warnings, found_by=found_by, url=url, path=None,
                      sha=hashlib.sha256(raw).hexdigest(), refresh=refresh)
 
 
 def ingest_html_text(slug, html: str, *, url: str, found_by: str) -> str:
-    return _ingest_html(slug, html, url=url, found_by=found_by, refresh=False)
+    return _ingest_html(slug, html, url=url, found_by=found_by, refresh=False)[0]
 
 
 def _fetch(url: str) -> tuple[bytes, str]:
@@ -294,6 +306,11 @@ def _kind_from_bytes(data: bytes, ctype: str, url: str) -> str:
 
 
 def ingest(slug, target, *, found_by: str, url: str | None = None, refresh: bool = False) -> str:
+    return ingest_ex(slug, target, found_by=found_by, url=url, refresh=refresh)[0]
+
+
+def ingest_ex(slug, target, *, found_by: str, url: str | None = None, refresh: bool = False) -> tuple[str, bool]:
+    """Как ingest, но возвращает ещё признак changed (см. _register)."""
     _check_found_by(found_by)
     target = str(target)
     if re.match(r"^https?://", target, re.IGNORECASE):
@@ -317,10 +334,10 @@ def ingest(slug, target, *, found_by: str, url: str | None = None, refresh: bool
     return _ingest_file(slug, p, found_by=found_by, url=url, refresh=refresh, as_local=True)
 
 
-def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> str:
+def _ingest_file(slug, p: Path, *, found_by, url, refresh, as_local: bool) -> tuple[str, bool]:
     ext = p.suffix.lower()
     if ext in TABLE_EXT:
-        die("таблицы (xlsx/csv) принимает tables.py, а не ingest.py. Что сделать: `python tools/tables.py <файл>`.")
+        die("таблицы (xlsx/csv) пока не принимаются (разбор — задача 7). Что сделать: не добавляй таблицы через ingest.py.")
     common = dict(found_by=found_by, url=url, path=p if as_local else None, sha=sha256_file(p), refresh=refresh)
     file_date = datetime.fromtimestamp(p.stat().st_mtime).date().isoformat() if as_local else None
 
@@ -384,11 +401,13 @@ def main(argv=None) -> int:
     ap.add_argument("-p", "--project", help="имя проекта (по умолчанию текущий)")
     a = ap.parse_args(argv)
     try:
-        sid = ingest(a.project, a.target, found_by=a.found_by, url=a.url, refresh=a.refresh)
+        sid, changed = ingest_ex(a.project, a.target, found_by=a.found_by, url=a.url, refresh=a.refresh)
     except ValueError as e:
         die(str(e))
     s = next(x for x in _load_sources(a.project) if x["id"] == sid)
     print(f"{sid}: {s['kind']}, {s['chars']} симв., as_of={s['as_of'] or 'нет'} ({s['as_of_source']})")
+    if changed:
+        print(f"ВНИМАНИЕ: содержимое {sid} изменилось, использована старая версия. Что сделать: добавь --refresh.")
     for w in s["warnings"]:
         print(f"ВНИМАНИЕ [{w}]: {warning_hint(w)}")
     if s["suspicious"]:
