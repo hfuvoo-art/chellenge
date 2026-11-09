@@ -1,0 +1,21 @@
+{
+  "name": "tonka-smoky-pomegranate",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "kadry": "remotion render SmokyPomegranate out/kadry --sequence --every-nth-frame=90 --image-format=jpeg",
+    "render": "remotion render SmokyPomegranate out/smoky-pomegranate.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.540",
+    "@remotion/google-fonts": "^4.0.540",
+    "@remotion/media": "^4.0.540",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.540"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}
