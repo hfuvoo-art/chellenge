@@ -467,15 +467,15 @@
 - CLI `lock.py --verify` (код 0/1);
 - CLI `lock.py --update --reason "…"`: пересчитывает хеши и дописывает в `rules.lock` запись истории `{updated_at, reason, changed}`. Если проект выбран, событие `lock_update` уходит и в его журнал. `status.py` показывает последнее обновление: так docs/07 требует, чтобы правка правил «была видна на старте сессии».
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `evals/test_injection.py`: 20 абзацев, из них 14 чистых (в том числе «System: Android 14», «план выполнили», «рекомендуем тариф») и 6 вредных → 0 ложных срабатываний, 6 из 6 найдены;
   - `test_lock_verify_detects_change` (во временной копии);
   - `test_lock_update_writes_history_with_reason`;
   - `test_check11_fails_on_lock_mismatch`.
-- [ ] **Шаг 2.** `python -m pytest evals/test_injection.py tests/test_lock.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS; `python tools/lock.py --verify` → OK.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: правила, промпты, rules.lock, eval инъекций`.
+- [x] **Шаг 2.** `python -m pytest evals/test_injection.py tests/test_lock.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS; `python tools/lock.py --verify` → OK.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: правила, промпты, rules.lock, eval инъекций`.
 
 ### Задача 9a. Содержание: AGENTS.md, playbooks, методики (12.11)
 
