@@ -284,7 +284,7 @@
   - запись в `sources.yaml`: `{id, kind: pdf|docx|html|md|txt|image|table|reviews, title, url|path, found_by, fetched_at, sha256, as_of, as_of_source: meta|header|file|none, chars, warnings: [], suspicious: [], supersedes: null}`.
 - CLI: `ingest.py <url|путь> --found-by "search:<запрос>"|user|brief [--url URL] [--refresh] [-p slug]`.
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_pdf_page_markers`: 2 страницы → `<!-- p.1 -->`, `<!-- p.2 -->`;
   - `test_docx_paragraph_markers`: пустые абзацы не нумеруются;
   - `test_html_markers_and_as_of_from_meta`: `article:modified_time` → `as_of`, `as_of_source: meta`;
@@ -294,13 +294,13 @@
   - `test_scanned_pdf_flagged` (Фокус 4): нет текстового слоя → `chars: 0`, `warnings: [no-text-layer]`;
   - `test_short_html_flagged` (Фокус 4): <1500 символов или нет цифр → `warnings: [short-text]` и подсказка «snap.py или ручной обход»;
   - `test_section_by_locator`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_ingest.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать:
+- [x] **Шаг 2.** `python -m pytest tests/test_ingest.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать:
   - PDF — pypdf по страницам; DOCX — python-docx по абзацам; HTML — trafilatura (`extract(..., include_tables=True, with_metadata=True)`);
   - `as_of` берётся только из метаданных, шапки или файла, **не от LLM**;
   - ключ дедупликации — `normalize_url` или путь плюс sha256.
-- [ ] **Шаг 4.** pytest → PASS. Вручную прогнать 1 PDF и 1 URL задачи №1 и проверить глазами `sources.yaml` и `S-00x.md`.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: ingest.py — PDF, DOCX, сайты, маркеры, дедупликация, флаги инъекций`.
+- [x] **Шаг 4.** pytest → PASS. Вручную прогнать 1 PDF и 1 URL задачи №1 и проверить глазами `sources.yaml` и `S-00x.md`.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: ingest.py — PDF, DOCX, сайты, маркеры, дедупликация, флаги инъекций`.
 
 ### Задача 5. claims.py: реестр утверждений
 
