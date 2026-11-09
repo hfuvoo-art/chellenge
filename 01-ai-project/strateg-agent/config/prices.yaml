@@ -1,0 +1,19 @@
+# Цены и курс для учёта стоимости (tools/llm.py, status.py): без файла ₽ не считаются.
+# Заполняется в задаче 3 только с официальных страниц, с датой и URL (У12). Неизвестное остаётся null:
+# тогда вызов пишется в журнал с rub: null, а статус показывает жёлтую строку.
+as_of: null
+sources: []          # URL официальных страниц с ценами
+usd_rub:
+  value: null
+  as_of: null
+  source: null       # курс ЦБ РФ
+models:              # ₽ за 1000 токенов; ключ — имя модели без gpt://<folder_id>/ и /latest
+  yandexgpt-lite: {input_per_1k_rub: null, output_per_1k_rub: null}
+  yandexgpt: {input_per_1k_rub: null, output_per_1k_rub: null}
+claude_usd_per_mtok:  # $ за 1 млн токенов модели среды (для ручной оценки)
+  input: null
+  output: null
+search:
+  claude_usd_per_1k: null   # $ за 1000 поисковых запросов Claude
+  cursor: included          # в Cursor поиск входит в подписку
+human_rub_per_hour: null    # допущение команды: ставка человека в ₽/час; пояснение (откуда число) вписать вместе со значением
