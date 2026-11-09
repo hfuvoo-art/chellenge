@@ -47,6 +47,14 @@ def _is_num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
+_MISSING_NORM = {re.sub(r"[.\s]", "", m) for m in MISSING} | {"нетданных", "нд", "конф"}
+
+
+def _is_missing(v) -> bool:
+    """«н/д», «н.д.», «нет данных», «конф.» и т. п. — пропуск, а не заголовок."""
+    return re.sub(r"[.\s]", "", _text(v).lower()) in _MISSING_NORM
+
+
 def _is_year_int(v) -> bool:
     return _is_num(v) and float(v).is_integer() and 1900 <= v <= 2100
 
@@ -150,17 +158,30 @@ def _parse_grid(sheet: str, grid: dict, ghosts: set, nrows: int, ncols: int,
     lead = [c for c in range(1, first_cols[0])]
     left_hdr = {_text(val(r, c)) for r in range(start, first) for c in lead if val(r, c) is not None}
 
+    def own_vals(r):  # без продолжений объединённых ячеек: строка-группа «Азия» на всю ширину — одна ячейка
+        return [(c, v) for c, v in row_vals(r) if (r, c) not in ghosts]
+
     def starts_new_table(r):
-        """Шапка второй таблицы на том же листе: ≥2 текстов (не «н/д») или ≥2 лет без чисел-данных в числовых столбцах."""
-        vs = [(c, v) for c, v in row_vals(r) if c >= first_cols[0]]
-        if NOTE_RE.match(_text((row_vals(r) or [(0, "")])[0][1])) or len(vs) < 2:
+        """Шапка второй таблицы на том же листе.
+
+        Нужен явный признак начала блока: над строкой пусто или примечание, либо подпись слева
+        совпадает с заголовком первой таблицы. Сама строка в числовых столбцах — ≥2 текстов-заголовков
+        (не «нет данных» и не числа, записанные текстом) или ≥2 лет числами.
+        """
+        own = own_vals(r)
+        vs = [(c, v) for c, v in own if c >= first_cols[0]]
+        if not own or NOTE_RE.match(_text(own[0][1])) or len(vs) < 2:
             return False
         lbl = [_text(val(r, c)) for c in lead if val(r, c) is not None]
+        prev = own_vals(r - 1)
+        signal = not prev or bool(NOTE_RE.match(_text(prev[0][1]))) or (bool(lbl) and all(x in left_hdr for x in lbl))
+        if not signal:
+            return False
         if all(isinstance(v, str) for _, v in vs):
-            return sum(1 for _, v in vs if _text(v).lower() not in MISSING) >= 2
-        if all(_is_year_int(v) for _, v in vs):  # годы числами: шапка, если слева пусто или стоит заголовок первой таблицы
-            return not lbl or all(x in left_hdr for x in lbl)
-        return False
+            if any(parse_number(v) is not None for _, v in vs):
+                return False
+            return sum(1 for _, v in vs if not _is_missing(v)) >= 2
+        return all(_is_year_int(v) for _, v in vs)
 
     data_rows = [first]
     split = None

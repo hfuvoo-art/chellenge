@@ -152,6 +152,30 @@ def test_two_tables_on_one_sheet(tmp_path):
                    "B5": ("Египет", "2025", True), "C5": ("Египет", "2026", True)}
 
 
+def _dims_below(cells, ref):
+    c = next(c for c in cells if c.ref == ref)
+    return (c.dims.get("Страна"), c.dims.get("Год"), c.header_ok)
+
+
+def test_body_rows_do_not_start_new_table(tmp_path):
+    """Строка-группа (объединённая), «нет данных», числа текстом и годы без подписи в теле — не шапка новой таблицы."""
+    p = make_wb(tmp_path / "t.xlsx", {"Л": [
+        ["Страна", "2023", "2024"],
+        ["Турция", 1, 2],
+        ["Азия", None, None],
+        ["Египет", 3, 4],
+        ["Греция", "нет данных", "н.д."],
+        ["Кипр", 5, 6],
+        ["Мальта", "1 302 417", "1 400 000"],
+        ["ОАЭ", 7, 8],
+        [None, 1999, 2001],
+        ["Катар", 9, 10],
+    ]}, merges={"Л": ["A3:C3"]})
+    cells = tables.parse_workbook(p)
+    for ref, country in [("B4", "Египет"), ("B6", "Кипр"), ("B8", "ОАЭ"), ("B10", "Катар")]:
+        assert _dims_below(cells, ref) == (country, "2023", True), ref
+
+
 def test_ingest_as_of_from_passport_note(tmp_project, tmp_path):
     p = make_wb(tmp_path / "t.xlsx", {
         "Данные": [["Страна", "Цена"], ["Турция", 1]],
