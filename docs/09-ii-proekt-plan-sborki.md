@@ -192,7 +192,7 @@
   - `brief.md` — `Вопрос`, `Цель`, `Получатель`, `Ограничения`, `Доступные данные`, `Белый список доменов`, `Точка 1`;
   - `strategy.md` — заголовки из задачи 13.
 
-- [ ] **Шаг 1. Тесты (должны упасть):**
+- [x] **Шаг 1. Тесты (должны упасть):**
   - `test_write_text_atomic_utf8_no_tmp_left`: «Привет ₽» читается обратно, в папке нет `*.tmp`;
   - `test_jsonl_roundtrip_cyrillic`;
   - `test_next_id`: `next_id("C", ["C-001", "C-009"]) == "C-010"`, `next_id("C", []) == "C-001"`, `next_id("C", ["C-999"]) == "C-1000"`;
@@ -200,14 +200,14 @@
   - `test_mark_done_idempotent_persisted`;
   - `test_project_new_copies_template_sets_current`;
   - `test_cli_survives_ascii_console` (Фокус 1): `subprocess` запускает `python tools/project.py list` с `PYTHONIOENCODING=ascii` → код 0, в stderr нет `UnicodeEncodeError`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_common.py tests/test_state.py tests/test_project.py -q` → FAIL (модулей нет).
-- [ ] **Шаг 3.** Реализовать интерфейсы.
+- [x] **Шаг 2.** `python -m pytest tests/test_common.py tests/test_state.py tests/test_project.py -q` → FAIL (модулей нет).
+- [x] **Шаг 3.** Реализовать интерфейсы.
   - Каждый CLI начинается с `sys.path.insert(0, str(ROOT))` и `setup_stdio()`.
   - `pytest.ini`: `testpaths = tests evals`, `pythonpath = .`.
   - `.gitignore`: `.env`, `.venv/`, `__pycache__/`, `*.tmp`, `projects/*/cache/`.
   - Первая строка каждого файла — комментарий «зачем и что сломается без него»: из этих строк собирается таблица в README.
-- [ ] **Шаг 4.** Тот же pytest → PASS. Затем `python tools/project.py new demo && python tools/project.py list` → в списке есть `demo`, в `projects/CURRENT` записано `demo`. Удалить `projects/demo`.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: каркас strateg-agent, состояние, журнал, проекты`.
+- [x] **Шаг 4.** Тот же pytest → PASS. Затем `python tools/project.py new demo && python tools/project.py list` → в списке есть `demo`, в `projects/CURRENT` записано `demo`. Удалить `projects/demo`.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: каркас strateg-agent, состояние, журнал, проекты`.
 
 ### Задача 2. llm.py, цены, ping
 
@@ -254,8 +254,8 @@
 
 **Порядок.** Часть 1 — 9.11, первым делом: кабинет и вопросы организаторам, цены, ключ (`llm.py ping` после задачи 2). Часть 2 — 10.11: данные, отзывы, страницы тарифов, вторая среда.
 
-- [ ] **Цены** (У12): Yandex lite и pro, Claude API (модель среды), веб-поиск, курс ЦБ, ставка часа человека → `prices.yaml` с датой и URL.
-- [ ] **Каталог AI Studio:** есть ли модель другого семейства для `CRITIC_MODEL` на маршруте OpenCode.
+- [x] **Цены** (У12): Yandex lite и pro, Claude API (модель среды), веб-поиск, курс ЦБ, ставка часа человека → `prices.yaml` с датой и URL.
+- [x] **Каталог AI Studio:** есть ли модель другого семейства для `CRITIC_MODEL` на маршруте OpenCode.
 - [ ] **Данные задачи №1:** 1 xlsx выездов граждан РФ по странам и кварталам (fedstat, ЕМИСС или Росстат). Если такого нет, взять запасной открытый ряд (например, статистику UN Tourism) и записать замену в журнал. Убедиться, что структура «страна × квартал» читается: шапка над первой числовой строкой.
 - [ ] **Отзывы:** `google-play-scraper` по 1–2 подписочным приложениям. Нужны **2 окна по ≥150 отзывов**; по итогам выбрать приложение для задачи №2.
 - [ ] **Страницы тарифов eSIM** (2 шт.) через trafilatura: есть ли ≥1500 символов и цифры. Если нет, это кандидат на P2 `snap.py` или ручной обход (Ctrl+P → PDF).

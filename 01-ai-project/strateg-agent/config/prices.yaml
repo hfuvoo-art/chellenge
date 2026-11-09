@@ -1,19 +1,28 @@
 # Цены и курс для учёта стоимости (tools/llm.py, status.py): без файла ₽ не считаются.
-# Заполняется в задаче 3 только с официальных страниц, с датой и URL (У12). Неизвестное остаётся null:
+# Заполняется только с официальных страниц, с датой и URL (У12). Неизвестное остаётся null:
 # тогда вызов пишется в журнал с rub: null, а статус показывает жёлтую строку.
-as_of: null
-sources: []          # URL официальных страниц с ценами
+as_of: "2026-11-09"
+sources:
+  - https://aistudio.yandex.ru/docs/ru/ai-studio/pricing                  # Yandex AI Studio, ₽ с НДС, синхронный режим
+  - https://aistudio.yandex.ru/docs/ru/ai-studio/concepts/generation/models # имена моделей (URI)
+  - https://platform.claude.com/docs/en/about-claude/pricing               # Claude API, $ без НДС
+  - https://www.cbr.ru/currency_base/daily/                                # курс ЦБ РФ
 usd_rub:
-  value: null
-  as_of: null
-  source: null       # курс ЦБ РФ
-models:              # ₽ за 1000 токенов; ключ — имя модели без gpt://<folder_id>/ и /latest
-  yandexgpt-lite: {input_per_1k_rub: null, output_per_1k_rub: null}
-  yandexgpt: {input_per_1k_rub: null, output_per_1k_rub: null}
-claude_usd_per_mtok:  # $ за 1 млн токенов модели среды (для ручной оценки)
-  input: null
-  output: null
+  value: 82.1386
+  as_of: "2026-11-07"   # курс установлен ЦБ с 07.11.2026
+  source: https://www.cbr.ru/currency_base/daily/
+models:              # ₽ за 1000 токенов с НДС, синхронный режим; ключ — имя модели без gpt://<folder_id>/
+  aliceai-llm-flash: {input_per_1k_rub: 0.1, output_per_1k_rub: 0.2}   # роль extract (вместо Lite 5, см. ниже)
+  yandexgpt-5.1: {input_per_1k_rub: 0.8, output_per_1k_rub: 0.8}       # YandexGPT Pro 5.1: роли pro, critic
+  yandexgpt-5-pro: {input_per_1k_rub: 1.2, output_per_1k_rub: 1.2}     # YandexGPT Pro 5
+  yandexgpt-5-lite: {input_per_1k_rub: 0.2, output_per_1k_rub: 0.2}    # YandexGPT Lite 5: отключение 15.11.2026
+  qwen3.6-35b-a3b: {input_per_1k_rub: 0.2, output_per_1k_rub: 0.3}     # критик другого семейства (маршрут OpenCode)
+claude_usd_per_mtok:  # $ за 1 млн токенов модели среды (для ручной оценки), без кеша
+  claude-opus-5-5: {input: 4, output: 20}
+  claude-sonnet-5-5: {input: 2, output: 10}
+  claude-haiku-5-5: {input: 0.10, output: 0.50}   # промпт до 100 000 токенов
 search:
-  claude_usd_per_1k: null   # $ за 1000 поисковых запросов Claude
-  cursor: included          # в Cursor поиск входит в подписку
-human_rub_per_hour: null    # допущение команды: ставка человека в ₽/час; пояснение (откуда число) вписать вместе со значением
+  claude_usd_per_1k: 10        # веб-поиск Claude API, плюс токены результатов
+  yandex_rub_per_1k: 915       # веб-поиск AI Studio, ₽ с НДС
+  cursor: included             # в Cursor поиск входит в подписку
+human_rub_per_hour: 1000       # ДОПУЩЕНИЕ команды: условная ставка младшего аналитика; только для статьи «человек»
