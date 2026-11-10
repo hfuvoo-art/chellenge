@@ -22,10 +22,10 @@
 Через 3–5 минут сайт откроется по адресу `https://<IP-машины>.sslip.io`. IP виден в карточке машины.
 
 ## Надёжный способ: одна команда в Cloud Shell
-Поле «Метаданные» в форме сохраняет только первую строку многострочного текста (10.11 так и вышло: машина поднялась пустой). Поэтому машину лучше создавать из Cloud Shell (кнопка `>_` в консоли):
+Поле «Метаданные» в форме сохраняет только первую строку многострочного текста (10.11 так и вышло: машина поднялась пустой). Ещё одна находка 10.11: в user-data стираются выражения со знаком доллара, поэтому адрес сайта вписывается в Caddyfile командой sed, а не переменной. Поэтому машину лучше создавать из Cloud Shell (кнопка `>_` в консоли):
 
 ```
-curl -fsSL https://raw.githubusercontent.com/hfuvoo-art/chellenge/claude/project-thread-hfs6t6/02-vibe-coding/server/cloud-init.yaml -o ci.yaml && yc compute instance create --name dekanat --zone ru-central1-d --platform standard-v3 --cores 2 --core-fraction 20 --memory 2 --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2404-lts,size=20,type=network-hdd --network-interface subnet-name=default-ru-central1-d,nat-ip-version=ipv4,nat-address=84.201.147.107 --metadata-from-file user-data=ci.yaml
+curl -fsSL https://raw.githubusercontent.com/hfuvoo-art/chellenge/claude/project-thread-hfs6t6/02-vibe-coding/server/cloud-init.yaml -o ci.yaml && sed -i 's/DOMAIN_HERE/84.201.147.107.sslip.io/' ci.yaml && yc compute instance create --name dekanat --zone ru-central1-d --platform standard-v3 --cores 2 --core-fraction 20 --memory 2 --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2404-lts,size=20,type=network-hdd --network-interface subnet-name=default-ru-central1-d,nat-ip-version=ipv4,nat-address=84.201.147.107 --metadata-from-file user-data=ci.yaml
 ```
 
 ## Текущая машина

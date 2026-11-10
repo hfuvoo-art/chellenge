@@ -2,6 +2,8 @@
 # Вставляется в поле «Пользовательские данные» (user-data) при создании ВМ в Yandex Cloud.
 # Ставит Docker и запускает: сайт (образ из GHCR), Caddy с HTTPS на адресе <IP>.sslip.io и
 # watchtower, который раз в 5 минут подтягивает новую версию сайта. Секретов здесь нет.
+# DOMAIN_HERE заменяется на <IP>.sslip.io командой создания ВМ (см. vykladka-yandex-cloud.md).
+# Знак доллара в этом файле не использовать: при передаче в ВМ переменные со знаком доллара стираются.
 users:
   - name: dekanat
     sudo: ALL=(ALL) NOPASSWD:ALL
@@ -35,17 +37,18 @@ write_files:
       volumes:
         dekanat-data:
         caddy-data:
+  - path: /opt/dekanat/.env
+    content: |
+      # Ключи YandexGPT (по желанию): строки LLM_* из app/.env.example
   - path: /opt/dekanat/Caddyfile
     content: |
-      {$DOMAIN} {
+      DOMAIN_HERE {
         encode zstd gzip
         header Strict-Transport-Security "max-age=31536000"
         reverse_proxy app:3000
       }
 runcmd:
   - curl -fsSL https://get.docker.com | sh
-  # Адрес сайта: DOMAIN_HERE подставляет команда создания ВМ; если не подставлен, берём IP из метаданных.
-  - D="DOMAIN_HERE"; case "$D" in *.*) ;; *) IP=$(curl -s -H Metadata-Flavor:Google http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip); D="${IP}.sslip.io";; esac; test -f /opt/dekanat/.env || echo "DOMAIN=$D" > /opt/dekanat/.env
   - cd /opt/dekanat && docker compose up -d
   # Для диагностики: состояние и логи видны в «Последовательном порте».
-  - sleep 60; cd /opt/dekanat && cat .env && docker compose ps -a && docker compose logs --tail 15
+  - sleep 60; cd /opt/dekanat && head -1 Caddyfile && docker compose ps -a && docker compose logs --tail 15
