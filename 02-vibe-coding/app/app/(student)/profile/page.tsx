@@ -9,7 +9,7 @@ export default async function ProfilePage() {
     <>
       <div className="topbar"><Link href="/" className="pillbtn glass"><IconBack /> Сегодня</Link></div>
       <div style={{ display: "flex", gap: 14, alignItems: "center", padding: "6px 6px 16px" }}>
-        <div aria-hidden style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--brand)", color: "#fff", display: "grid", placeItems: "center", fontSize: 22, fontWeight: 800 }}>{u.first_name[0]}{u.last_name[0]}</div>
+        <div aria-hidden style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--brand-fill)", color: "#fff", display: "grid", placeItems: "center", fontSize: 22, fontWeight: 800 }}>{u.first_name[0]}{u.last_name[0]}</div>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>{u.last_name} {u.first_name}</h1>
           <div className="t2">{u.middle_name}</div>

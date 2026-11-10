@@ -31,7 +31,7 @@ export const IconSpark = (p: P) => (
 export const IconBell = (p: P) => (
   <svg viewBox="0 0 24 24" {...stroke(p)} aria-hidden><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2.2 2.2 0 0 0 4 0" /></svg>
 );
-export const IconWarn = ({ color = "#e08600" }: P) => (
+export const IconWarn = ({ color = "var(--warn-mid)" }: P) => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill={color} aria-hidden><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z" /></svg>
 );
 export const IconCheck = (p: P) => (

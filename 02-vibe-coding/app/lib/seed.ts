@@ -204,6 +204,13 @@ export function seed(db: Database.Database, now = new Date()): void {
       [["submitted", null, "Студент", iso(addDays(today, -2), "18:12")], ["in_progress", null, "Учебный офис", iso(addDays(today, -1), "10:02")]]);
     mkReq(1038, alina, "cert_study", "Справка об обучении", { place: "По месту требования", copies: 1, format: "Электронная (PDF с QR-кодом)" },
       [["submitted", null, "Студент", iso(addDays(today, -1), "20:41")], ["in_progress", null, "Учебный офис", iso(today, "09:05")], ["ready", "Справка готова. Откройте её по кнопке ниже: внутри QR-код для проверки, файл можно сохранить как PDF.", "Учебный офис", iso(today, "09:30")]], true);
+    // Переписка по заявке: один вопрос с ответом и один вопрос, который ждёт ответа офиса.
+    const addMsg = db.prepare("INSERT INTO request_messages (request_id,author,author_name,text,created_at) VALUES (?,?,?,?,?)");
+    const idOf = (n: number) => (db.prepare("SELECT id FROM requests WHERE number = ?").get(n) as { id: number }).id;
+    addMsg.run(idOf(1027), "student", "Тимур А.", "Здравствуйте! Можно ли перенести пересдачу на неделю раньше?", iso(addDays(today, -10), "16:20"));
+    addMsg.run(idOf(1027), "staff", "Ирина Б., учебный офис", "Добрый день! Раньше нельзя: комиссия собирается один раз. Дата в заявке окончательная.", iso(addDays(today, -9), "10:15"));
+    addMsg.run(idOf(1031), "student", "Тимур А.", "Здравствуйте! Справку можно будет забрать в пятницу после 16:00?", iso(addDays(today, -1), "12:30"));
+
     // Одна новая заявка, чтобы очередь учебного офиса не была пустой при первом входе.
     mkReq(1041, timur, "cert_study", "Справка об обучении", { place: "Работодателю", copies: 2, format: "Бумажная" },
       [["submitted", null, "Студент", iso(addDays(today, -1), "21:15")]]);

@@ -46,7 +46,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
         {msgs.length === 0 && (
           <div className="card">
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <div className="ic" style={{ background: "var(--brand)", color: "#fff" }}><IconSpark /></div>
+              <div className="ic" style={{ background: "var(--brand-fill)", color: "#fff" }}><IconSpark /></div>
               <div className="t1">Спросите о пересдачах, справках, стипендии или о своих оценках</div>
             </div>
             <div className="t2" style={{ marginTop: 8 }}>Помощник видит только ваши данные и положения вуза, показывает пункт, на который опирается (его можно раскрыть и прочитать), и может заполнить заявление. Отправляете его вы.</div>

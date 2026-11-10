@@ -113,6 +113,12 @@ export function requestOf(studentId: number, number: number): (RequestRow & { ev
   return { ...r, events };
 }
 
+export type RequestMessage = { id: number; author: "student" | "staff"; author_name: string; text: string; created_at: string };
+/** Переписка по заявке. Вызывать только после проверки, что заявка принадлежит студенту (requestOf) или что это сотрудник. */
+export function messagesOfRequest(requestId: number): RequestMessage[] {
+  return getDb().prepare("SELECT id,author,author_name,text,created_at FROM request_messages WHERE request_id = ? ORDER BY id").all(requestId) as RequestMessage[];
+}
+
 export type Notification = { id: number; kind: string; title: string; body: string; link: string | null; created_at: string; read_at: string | null };
 export function notificationsOf(userId: number, limit = 50): Notification[] {
   return getDb().prepare("SELECT id,kind,title,body,link,created_at,read_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?").all(userId, limit) as Notification[];

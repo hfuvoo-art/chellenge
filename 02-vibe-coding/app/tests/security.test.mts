@@ -150,3 +150,12 @@ test("вопрос про повышенную стипендию ведёт к 
   const found = searchArticles("Как получить повышенную стипендию?");
   assert.equal(found[0]?.action, "scholarship_plus");
 });
+
+test("переписка по заявке привязана к заявке, а чужую заявку студент не находит", () => {
+  const timurReq = db.prepare("SELECT id, number FROM requests WHERE number = 1031").get() as { id: number; number: number };
+  const msgs = data.messagesOfRequest(timurReq.id);
+  assert.ok(msgs.length >= 1 && msgs.every((m) => m.author === "student" || m.author === "staff"));
+  // Страница и действие сначала ищут заявку по номеру И владельцу: для alina заявки Тимура не существует.
+  assert.equal(data.requestOf(alina, timurReq.number), null);
+  assert.equal(db.prepare("SELECT id FROM requests WHERE number = ? AND student_id = ?").get(timurReq.number, alina), undefined);
+});

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconBack, IconCheck } from "@/components/icons";
 import { requireStudent } from "@/lib/auth";
-import { requestOf } from "@/lib/data";
+import RequestChat from "@/components/RequestChat";
+import { messagesOfRequest, requestOf } from "@/lib/data";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { relativeTime } from "@/lib/time";
 
@@ -18,6 +19,7 @@ export default async function RequestPage({ params, searchParams }: { params: Pr
   if (!r) notFound();
   const rt = requestType(r.type);
   const details = JSON.parse(r.details) as Record<string, string>;
+  const messages = messagesOfRequest(r.id).map((m) => ({ ...m, when: relativeTime(m.created_at) }));
   const step = { submitted: 1, in_progress: 2, ready: 3, rejected: 3 }[r.status];
 
   return (
@@ -47,6 +49,9 @@ export default async function RequestPage({ params, searchParams }: { params: Pr
         <div className="card">
           {rt?.fields.map((f) => details[f.name] ? <div className={`kv ${details[f.name].length > 28 ? "long" : ""}`} key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
         </div>
+
+        <div className="sh">Вопрос учебному офису</div>
+        <RequestChat side="student" target={r.number} messages={messages} closed={r.status === "ready" || r.status === "rejected"} />
 
         <div className="sh">История</div>
         <div className="card">

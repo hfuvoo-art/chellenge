@@ -24,7 +24,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ nu
         <Link href={`/requests/${r.number}`} className="pillbtn glass"><IconBack /> Заявка</Link>
         <PrintButton />
       </div>
-      <article className="card" style={{ marginTop: 10, padding: 22 }}>
+      <article className="card paper" style={{ marginTop: 10, padding: 22 }}>
         <div className="t2" style={{ textAlign: "center", fontWeight: 700, color: "var(--bad)" }}>ОБРАЗЕЦ · КОНЦЕПТ ДЛЯ КОНКУРСА · НЕ ЯВЛЯЕТСЯ ДОКУМЕНТОМ</div>
         <h1 style={{ fontSize: 22, textAlign: "center", margin: "14px 0 4px" }}>СПРАВКА № {r.number}</h1>
         <div className="t2" style={{ textAlign: "center" }}>выдана {humanDate(issued, false)} {issued.slice(0, 4)} г.</div>

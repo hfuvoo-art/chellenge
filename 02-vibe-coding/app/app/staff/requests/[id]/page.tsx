@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconBack } from "@/components/icons";
+import RequestChat from "@/components/RequestChat";
 import StatusForm from "@/components/StatusForm";
 import { requireStaff } from "@/lib/auth";
-import { studySummary, type RequestEvent, type RequestRow } from "@/lib/data";
+import { messagesOfRequest, studySummary, type RequestEvent, type RequestRow } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { relativeTime } from "@/lib/time";
@@ -22,6 +23,8 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
   const details = JSON.parse(r.details) as Record<string, string>;
   // Сводка по учёбе нужна офису, чтобы решить по пересдаче или стипендии, не открывая другие системы.
   const sum = studySummary(r.student_id);
+  const messages = messagesOfRequest(r.id).map((m) => ({ ...m, when: relativeTime(m.created_at) }));
+  const waiting = messages.length > 0 && messages[messages.length - 1].author === "student";
   return (
     <>
       <Link href="/staff" className="pillbtn glass"><IconBack /> Очередь</Link>
@@ -50,6 +53,8 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
             <div className="t1" style={{ marginBottom: 10 }}>Статус: {STATUS_LABEL[r.status]}</div>
             <StatusForm id={r.id} status={r.status} />
           </div>
+          <div className="sh" style={{ paddingTop: 0 }}>Переписка со студентом {waiting && <span className="badge b-warn">Ждёт ответа</span>}</div>
+          <RequestChat side="staff" target={r.id} messages={messages} />
           <div className="card">
             <ol className="timeline">
               {events.map((e) => <li key={e.id} className={e.status === "rejected" ? "rejected" : ""}><div className="t1">{STATUS_LABEL[e.status]}</div><div className="t2">{e.actor} · {relativeTime(e.created_at)}</div>{e.comment && <div className="t2">{e.comment}</div>}</li>)}

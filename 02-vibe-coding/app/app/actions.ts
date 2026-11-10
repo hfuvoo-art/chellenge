@@ -106,6 +106,32 @@ function notify(userId: number, kind: string, title: string, body: string, link:
   getDb().prepare("INSERT INTO notifications (user_id,kind,title,body,link,created_at) VALUES (?,?,?,?,?,?)").run(userId, kind, title, body, link, nowIso());
 }
 
+/** Сообщение по заявке. Студент пишет только в свою заявку (ищем по номеру И владельцу), сотрудник в любую. */
+export async function sendRequestMessageAction(_: FormState, form: FormData): Promise<FormState> {
+  const text = String(form.get("text") ?? "").trim().slice(0, 500);
+  if (text.length < 2) return { error: "Напишите сообщение" };
+  const db = getDb();
+  const now = nowIso();
+  if (form.get("side") === "staff") {
+    const staff = await requireStaff();
+    const r = db.prepare("SELECT id, number, student_id, title FROM requests WHERE id = ?").get(Number(form.get("id"))) as { id: number; number: number; student_id: number; title: string } | undefined;
+    if (!r) return { error: "Заявка не найдена" };
+    db.prepare("INSERT INTO request_messages (request_id,author,author_name,text,created_at) VALUES (?,?,?,?,?)").run(r.id, "staff", `${staff.first_name} ${staff.last_name[0]}., учебный офис`, text, now);
+    notify(r.student_id, "request", `Ответ учебного офиса по заявке № ${r.number}`, text.length > 120 ? `${text.slice(0, 120)}…` : text, `/requests/${r.number}#chat`);
+    revalidatePath("/staff");
+    return { ok: "Ответ отправлен. Студент получил уведомление." };
+  }
+  const user = await requireStudent();
+  const r = db.prepare("SELECT id FROM requests WHERE number = ? AND student_id = ?").get(Number(form.get("number")), user.id) as { id: number } | undefined;
+  if (!r) return { error: "Заявка не найдена" };
+  // Защита от спама: не больше 10 сообщений студента по одной заявке за час.
+  const recent = (db.prepare("SELECT COUNT(*) AS n FROM request_messages WHERE request_id = ? AND author = 'student' AND created_at > ?").get(r.id, new Date(Date.now() - 3600_000).toISOString()) as { n: number }).n;
+  if (recent >= 10) return { error: "Слишком много сообщений за час. Дождитесь ответа учебного офиса." };
+  db.prepare("INSERT INTO request_messages (request_id,author,author_name,text,created_at) VALUES (?,?,?,?,?)").run(r.id, "student", `${user.first_name} ${user.last_name[0]}.`, text, now);
+  revalidatePath("/requests");
+  return { ok: "Сообщение отправлено. Ответ придёт в уведомления." };
+}
+
 const NEXT_STATUS: Record<string, string[]> = {
   submitted: ["in_progress", "rejected"],
   in_progress: ["ready", "rejected"],
