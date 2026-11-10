@@ -302,7 +302,10 @@ def test_third_fail_waits_for_human(proj):
     edit(proj, "strategy.md", "### Аудитория и ситуация\n", "### Аудитория и ситуация\nАбонент перед сменой телефона.\n")
     assert check.main(["-p", proj, "--only", "6"]) == 0
     st = state.load(proj)
-    assert st["waiting"] is None and not st.get("check_fails")
+    assert st["waiting"]["point"] == "check" and not st.get("check_fails")  # PASS сам ожидание не снимает
+    assert "лимит итераций был исчерпан" in report(proj).lower()
+    state.resolve_human(proj, "check", "разобрали с человеком", 3)
+    assert state.load(proj)["waiting"] is None
 
 
 def test_fail_streak_not_reset_by_unrelated_pass(proj):
@@ -346,3 +349,130 @@ def test_help_in_russian(capsys):
     assert e.value.code == 0
     out = capsys.readouterr().out
     assert "--confirm" in out and "--minutes" in out and "итерац" in out
+
+
+# ---- правки по ревью (круг 1) ----
+
+TEMPLATE = Path(__file__).resolve().parent.parent / "projects" / "_template"
+Q_FULL = "Доля пользователей eSIM среди абонентов выросла на 12% за 2025 год.\", \"extracted_by"
+
+
+@pytest.mark.parametrize("before,quote", [
+    ("Это не подтверждается: доля выросла на 12%.", "подтверждается: доля выросла на 12%."),
+    ("Доля не... выросла на 12%.", "выросла на 12%."),
+    ("Доля не. выросла на 12%.", "выросла на 12%."),
+    ("It does not. works well in 12%.", "works well in 12%."),
+])
+def test_negation_before_quote_still_fails_review1(proj, before, quote):
+    _write_s001(proj, before)
+    edit(proj, "claims.jsonl", Q_FULL, quote + "\", \"extracted_by")
+    edit(proj, "claims.jsonl", "выросла на 12% за 2025 год\", \"type", "выросла на 12%\", \"type")
+    assert "FAIL" in levels([f for f in run(proj, {1}) if f.target == "C-001"])
+
+
+def test_answer_word_boundary_still_ok(proj):
+    _write_s001(proj, "Нет! Доля пользователей eSIM среди абонентов выросла на 12% за 2025 год.")
+    assert levels([f for f in run(proj, {1}) if f.target == "C-001"]) == {"OK"}
+
+
+def test_basis_synthetic_plus_agent_conclusion_fails(proj):
+    set_thesis(proj, "- Т1: Перенос номера непонятен [C-003], [C-004].")
+    f = fails(check_basis(proj))
+    assert f and "synthetic" in f[0].msg
+
+
+def test_basis_only_conclusion_ok(proj):
+    set_thesis(proj, "- Т1: Сложность активации мешает сильнее цены [C-004].")
+    assert not fails(check_basis(proj))
+
+
+def test_template_comments_are_not_content(proj):
+    text = (TEMPLATE / "strategy.md").read_text(encoding="utf-8")
+    assert "<!--" in text and "Т1" in text and "→ F-1" in text and "Узнать так" in text
+    (project_path(proj) / "strategy.md").write_text(text, encoding="utf-8")
+    assert any("пуст" in f.msg for f in fails(check_strategy_sections(proj)))
+    assert fails(check_basis(proj)) and fails(check_promises_static(proj)) and fails(check_unknowns(proj))
+
+
+@pytest.mark.parametrize("line", [
+    "- Подключите eSIM за 3 минуты → F-1",
+    "- «Подключите eSIM за 3 минуты» → **F-1**",
+    "- «Подключите eSIM за 3 минуты» → F-1 (в приложении)",
+    "- «Подключите eSIM за 3 минуты» → F-1, срок не нужен",
+    "- «Подключите eSIM за 3 минуты» -> F-1.",
+])
+def test_promise_format_variants_accepted(proj, line):
+    edit(proj, "strategy.md", "- «Подключите eSIM за 3 минуты» → F-1", line)
+    res = check_promises_static(proj)
+    assert not fails(res), [f.msg for f in res]
+
+
+def test_promise_intro_prose_ok_but_no_promise_fails(proj):
+    edit(proj, "strategy.md", "### Обещания → функции продукта\n", "### Обещания → функции продукта\nОбещания нашей коммуникации:\n")
+    assert not fails(check_promises_static(proj))
+    p = project_path(proj) / "strategy.md"
+    t = p.read_text(encoding="utf-8")
+    a, b = t.index("- «Подключите"), t.index("## План проверки")
+    p.write_text(t[:a] + "\n" + t[b:], encoding="utf-8")
+    assert any("нет ни одного обещания" in f.msg for f in fails(check_promises_static(proj)))
+
+
+@pytest.mark.parametrize("thesis", [
+    "1. Барьер перехода — сложность активации [C-002].",
+    "Т1 — Барьер перехода — сложность активации [C-002].",
+    "- **Т1:** Барьер перехода — сложность активации [C-002].",
+])
+def test_thesis_format_variants_accepted(proj, thesis):
+    set_thesis(proj, thesis)
+    res = check_basis(proj)
+    assert not fails(res) and "тезисов 1" in res[0].msg, [f.msg for f in res]
+
+
+def test_ref_line_outside_thesis_is_checked(proj):
+    set_thesis(proj, "- Т1: Барьер — активация [C-002].\n\nПеренос номера непонятен [C-003].")
+    f = fails(check_basis(proj))
+    assert f and "synthetic" in f[0].msg
+
+
+def test_yaml_comment_refs_ignored_fresh_template_passes(tmp_path, monkeypatch):
+    monkeypatch.setenv("STRATEG_PROJECTS_DIR", str(tmp_path / "projects"))
+    shutil.copytree(TEMPLATE, tmp_path / "projects" / "fresh")
+    assert check.main(["-p", "fresh", "--only", "1,2,3,4"]) == 0
+
+
+def test_yaml_real_ref_still_checked(proj):
+    edit(proj, "decisions.yaml", "decisions: []", "decisions: []\nnote: см. C-099")
+    assert any(f.check == 4 and f.target == "C-099" for f in fails(run(proj, {4})))
+
+
+def test_missing_project_exit_3(tmp_path, monkeypatch):
+    monkeypatch.setenv("STRATEG_PROJECTS_DIR", str(tmp_path / "projects"))
+    (tmp_path / "projects").mkdir()
+    assert rc(["-p", "nope", "--only", "1"]) == 3
+
+
+def test_full_run_skips_doc_checks_on_early_step(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])  # п.11 проверяется отдельно
+    monkeypatch.setenv("STRATEG_PROJECTS_DIR", str(tmp_path / "projects"))
+    shutil.copytree(TEMPLATE, tmp_path / "projects" / "fresh")
+    (tmp_path / "projects" / "fresh" / "log.jsonl").touch()
+    assert check.main(["-p", "fresh", "--only", "1,2,3,4,11"]) == 0
+    capsys.readouterr()
+    assert check.main(["-p", "fresh"]) == 0
+    out = capsys.readouterr().out
+    assert "пропущено: проверки 5, 6, 7, 8, 9, 10" in out and "шаг 0" in out
+    assert "пропущено" in report("fresh")
+    assert check.main(["-p", "fresh", "--only", "5"]) == 1  # явный --only выполняет всегда
+
+
+def test_full_run_step4_runs_options_only(proj, capsys, monkeypatch):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    st = state.load(proj)
+    st["step"] = {"n": 4, "name": "options"}
+    state.save(proj, st)
+    edit(proj, "strategy.md", "## Чего мы не знаем", "## Чего мы не знаем?")  # п.6 сломан, но на шаге 4 не запускается
+    check.main(["-p", proj, "--only", "1,2,3,4,5"])
+    capsys.readouterr()
+    rc_ = check.main(["-p", proj])
+    out = capsys.readouterr().out
+    assert "пропущено: проверки 6, 7, 8, 9, 10" in out and "FAIL" not in out.split("Итого")[0]

@@ -82,8 +82,11 @@ def check_quote(c: dict, section_text: str) -> Finding:
         while i != -1:  # цитата, обрезанная сразу после «не», сама отрицаний не содержит
             before = s[:i].split()
             tok = before[-1].rstrip("\"')»”") if before else ""
-            # «Нет. Рынок вырос…»: слово перед точкой/!/? — конец прошлого предложения, а не отрицание цитаты
-            if tok and tok[-1] not in ".!?…" and count_negations(tok.strip(",;:()\"'«»")):
+            # «Нет. Рынок вырос…»: границей предложения считается только слово-ответ «нет/no» с точкой/!/?;
+            # «не. выросла», «не… подтверждается», «does not. works» остаются отрицанием
+            word = tok.strip(",;:()\"'«».!?…*")
+            boundary = bool(tok) and tok[-1] in ".!?" and not tok.endswith("..") and word in ("нет", "no")
+            if tok and count_negations(word) and not boundary:
                 return _f("FAIL", 1, cid, f"перед цитатой в источнике стоит отрицание «{before[-1]}» (отрицание отрезано)",
                           "Что сделать: включи отрицание в цитату, чтобы смысл не изменился.")
             i = s.find(q, i + 1)
@@ -203,6 +206,8 @@ def check_refs(slug) -> list[Finding]:
         if not p.is_file():
             continue
         text = COMMENT_RE.sub("", p.read_text(encoding="utf-8"))
+        if name.endswith(".yaml"):
+            text = re.sub(r"(?m)#.*$", "", text)  # примеры [C-001] в комментариях шаблонов не ссылки
         for cid in sorted(set(REF_RE.findall(text))):
             st = status.get(cid)
             if st is None:
@@ -256,10 +261,11 @@ OPT_HEAD_RE = re.compile(r"^##\s+(O\d+)\s*(?:[·•|:–—-]\s*([A-Za-z_]+))?\s
 OPT_LABELS = ("суть", "что даёт", "чего стоит", "возражения", "что заставит передумать", "выбрано")
 HEAD_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 BULLET_RE = re.compile(r"^\s*[-*•]\s+(.*)$")
-THESIS_RE = re.compile(r"^\s*[-*]\s*(?:\*\*)?[ТT](\d+)(?:\*\*)?\s*[:.)]\s*(.*)$")
-PROMISE_RE = re.compile(r"^\s*[-*]\s*[«\"](.+?)[»\"]\s*(?:→|->)\s*(F-\d+)\s*[.;]?\s*$")
+THESIS_RE = re.compile(r"^\s*(?:[-*]\s*)?(?:(?:\*\*)?[ТT](\d+)(?:\*\*)?\s*(?:[:.)]|[—–-])|(\d+)[.)]\s)\s*(.*)$")
+PROMISE_RE = re.compile(r"^\s*[-*]\s*[«\"]?(.+?)[»\"]?\s*(?:→|->)\s*\*{0,2}(F-\d+)\*{0,2}(?:\s*[(,;—–].*)?\s*[.;]?\s*$")
 UNKNOWN_RE = re.compile(r"не знаем.+потому что.+узнать", re.DOTALL)
 FEATURE_STATUSES = ("exists", "planned")
+STRONG_TYPES = ("fact", "observation", "estimate", "interview")  # основание тезиса, не написанное агентом и не синтетика
 TIME_WORDS = re.compile(r"недел|месяц|мес\b|квартал|кв\b|день|дн|год|лет|сутки|\d")
 # (уровень, заголовок, лист): лист — раздел без подразделов, его содержимое должно быть непустым
 STRATEGY_SECTIONS = (
@@ -445,6 +451,9 @@ def check_promises_static(slug) -> list[Finding]:
     for ln in sec["lines"]:
         if not ln.strip():
             continue
+        is_item = bool(BULLET_RE.match(ln)) or "→" in ln or "->" in ln
+        if not is_item:
+            continue  # вводная строка-проза
         m = PROMISE_RE.match(ln)
         if not m:
             out.append(_f("FAIL", 7, "strategy.md", f"строка не в формате «…» → F-n: {ln.strip()[:60]}",
@@ -463,7 +472,10 @@ def check_promises_static(slug) -> list[Finding]:
         elif f["status"] == "planned" and not str(f.get("available_from") or "").strip():
             out.append(_f("FAIL", 7, fid, f"{fid} planned, но не указан срок (available_from)",
                           "Что сделать: впиши available_from (например 2027-Q1) или убери обещание."))
-    return out or [_f("OK", 7, "strategy.md", f"обещаний {n}, у всех есть функция" if n else "обещаний нет")]
+    if n == 0 and not out:
+        out.append(_f("FAIL", 7, "strategy.md", f"в разделе «{PROMISES}» нет ни одного обещания",
+                      "Что сделать: добавь строки `- «обещание» → F-1` (или заведи функцию и обещание)."))
+    return out or [_f("OK", 7, "strategy.md", f"обещаний {n}, у всех есть функция")]
 
 
 def check_test_plan(slug) -> list[Finding]:
@@ -507,13 +519,16 @@ def _is_suspicious(c: dict, susp: dict[str, set[str]]) -> bool:
 
 
 def _theses(section_lines) -> list[tuple[str, str]]:
+    """Тезисы «- Т1: …», «1. …», «Т1 — …»; любая другая строка со ссылкой [C-…] тоже проверяется как тезис."""
     out: list[list[str]] = []
     for ln in section_lines:
         m = THESIS_RE.match(ln)
         if m:
-            out.append([f"Т{m.group(1)}", m.group(2).strip()])
+            out.append([f"Т{m.group(1) or m.group(2)}", m.group(3).strip()])
         elif out and ln.strip() and ln[:1].isspace() and not BULLET_RE.match(ln):
             out[-1][1] += " " + ln.strip()
+        elif REF_RE.search(ln):
+            out.append([f"строка «{ln.strip()[:30]}»", ln.strip()])
     return [(a, b) for a, b in out]
 
 
@@ -536,8 +551,9 @@ def check_basis(slug) -> list[Finding]:
             out.append(_f("FAIL", 9, tid, "у тезиса нет ссылок на действующие утверждения [C-…]",
                           "Что сделать: подкрепи тезис утверждением (`claims.py search`) или убери."))
             continue
-        strong = [c for c in cs if c.get("type") != "synthetic" and not _is_suspicious(c, susp)]
-        if not strong:
+        strong = [c for c in cs if c.get("type") in STRONG_TYPES and not _is_suspicious(c, susp)]
+        weak = any(c.get("type") == "synthetic" or _is_suspicious(c, susp) for c in cs)
+        if weak and not strong:
             kinds = []
             if any(c.get("type") == "synthetic" for c in cs):
                 kinds.append("synthetic")
@@ -545,7 +561,7 @@ def check_basis(slug) -> list[Finding]:
                 kinds.append("абзацы suspicious")
             out.append(_f("FAIL", 9, tid, f"тезис опирается только на {' и '.join(kinds)}",
                           "Что сделать: найди подтверждение в реальном источнике или пометь тезис как гипотезу."))
-        elif all(c.get("type") == "interview" for c in strong) and \
+        elif strong and all(c.get("type") == "interview" for c in strong) and \
                 len({c.get("respondent") or c.get("source") or c["id"] for c in strong}) < 2:
             out.append(_f("FAIL", 9, tid, "тезис опирается только на interview одного респондента (n=1)",
                           "Что сделать: добавь второго респондента или другой тип источника, либо пометь тезис как гипотезу."))
@@ -640,14 +656,12 @@ def _track_iterations(slug, findings: list[Finding], ran: set[int]) -> int:
             state.wait_human(slug, "check", f"Не прошло проверку: {len(lines)} замечаний после {count} итераций исправления.\n" + "\n".join(lines))
         return count
     if prev and set(prev.get("checks", [])) <= ran:
-        st.pop("check_fails", None)
-        if (st.get("waiting") or {}).get("point") == "check":
-            st["waiting"] = None
+        st.pop("check_fails", None)  # ожидание человека (point=check) снимает только state.resolve_human
         state.save(slug, st)
     return 0
 
 
-def write_report(slug, findings: list[Finding], ran: set[int], iteration: int) -> Path:
+def write_report(slug, findings: list[Finding], ran: set[int], iteration: int, skipped: str = "") -> Path:
     code = _verdict(findings)
     verdict = {0: "PASS", 1: "FAIL", 2: "WARN (есть неподтверждённые предупреждения)"}[code]
     lines = ["# Отчёт проверки (check.py)", "", f"Проект: {project_path(slug).name}. Запуск: {now_iso()}.",
@@ -668,6 +682,10 @@ def write_report(slug, findings: list[Finding], ran: set[int], iteration: int) -
     lines += ["", "## Итерации исправления",
               f"Подряд запусков с FAIL: {iteration} из {MAX_ITERATIONS}."
               + (" Лимит исчерпан: решение за человеком (state.yaml, waiting)." if iteration >= MAX_ITERATIONS else "")]
+    if iteration >= MAX_ITERATIONS or (state.load(slug).get("waiting") or {}).get("point") == "check":
+        lines += ["", "Лимит итераций был исчерпан: ожидание человека не снимается автоматически (`state.resolve_human`)."]
+    if skipped:
+        lines += ["", skipped]
     p = project_path(slug) / "check-report.md"
     write_text_atomic(p, "\n".join(lines) + "\n")
     return p
@@ -762,9 +780,10 @@ def main(argv=None) -> int:
                              "Пишет check-report.md в папку проекта.",
                  epilog="Коды выхода: 0 — всё прошло (PASS), 1 — есть FAIL, 2 — есть неподтверждённые WARN, 3 — ошибка использования. "
                         "Исправлять и перезапускать можно не больше 3 итераций: после 3-го подряд FAIL проект ждёт человека "
-                        "(блок «Не прошло проверку: …»). Ранние шаги, где стратегии ещё нет: --only 1,2,3,4,11.")
+                        "(блок «Не прошло проверку: …»). На ранних шагах проверки документов пропускаются с пометкой «пропущено».")
     ap.add_argument("-p", "--project", help="имя проекта (по умолчанию текущий)")
-    ap.add_argument("--only", help="номера проверок через запятую, например 1,5 (по умолчанию все: 1–11)")
+    ap.add_argument("--only", help="номера проверок через запятую, например 1,5; с --only выполняются всегда. Без --only: все 1–11, но п.5 пропускается "
+                                  "на шагах до 4, п.6–10 на шагах до 5 (в выводе и отчёте строка «пропущено»)")
     ap.add_argument("--confirm", action="append", metavar="C-014",
                     help="подтвердить WARN по утверждению (человек сверил цитату вручную); нужен --minutes; можно повторять")
     ap.add_argument("--minutes", type=float, help="сколько минут ушло на подтверждение (идут в статью «человек»)")
@@ -776,7 +795,10 @@ def main(argv=None) -> int:
         die("--only: нужны номера проверок через запятую. Что сделать: например `--only 1,5`.", code=3)
     if only and not only <= set(CHECKS):
         die("--only: есть проверки 1–11. Что сделать: укажи номера из этого диапазона.", code=3)
-    slug = project_path(a.project).name
+    try:
+        slug = project_path(a.project).name
+    except SystemExit:  # project_path уже объяснил, что делать; для CLI это ошибка использования
+        sys.exit(3)
     if a.confirm:
         if a.minutes is None or not math.isfinite(a.minutes) or a.minutes < 0:
             die("--confirm требует --minutes <минуты ≥0>. Что сделать: например `--confirm C-014 --minutes 2`.", code=3)
@@ -793,12 +815,22 @@ def main(argv=None) -> int:
                 die(f"у {cid} нет предупреждения WARN, подтверждать нечего. Что сделать: `python tools/check.py` и возьми id из строки [WARN].", code=3)
             print(f"{cid}: WARN подтверждён, {a.minutes:g} мин записано в журнал." if confirm(slug, cid, a.minutes)
                   else f"{cid}: уже подтверждено, минуты не добавлены.")
-    findings = run(slug, only)
+    ran = set(only) if only else set(CHECKS)
+    skipped = ""
+    if only is None:  # без --only: проверки документов ждут своего шага (ранний запуск не должен краснеть)
+        n_step = (state.load(slug).get("step") or {}).get("n", 0)
+        cut = {n for n in range(5, 11) if n_step < (4 if n == 5 else 5)}
+        if cut:
+            ran -= cut
+            skipped = (f"пропущено: проверки {', '.join(map(str, sorted(cut)))}: шаг {n_step} (нужны с шага 4 для п.5 и с шага 5 для п.6–10). "
+                       "Это не подтверждение стратегии: перед точкой 3 запусти без пропусков (`--only 5,6,7,8,9,10`).")
+    findings = run(slug, ran)
     if a.repo and (only is None or 11 in only):
         findings += check_secrets(Path(__file__).resolve().parent.parent)
-    ran = set(only) if only else set(CHECKS)
     iteration = _track_iterations(slug, findings, ran)
-    report_path = write_report(slug, findings, ran, iteration)
+    report_path = write_report(slug, findings, ran, iteration, skipped)
+    if skipped:
+        print(skipped)
     for f in findings:
         if f.level != "OK":
             print(f"[{f.level}] п.{f.check} {f.target}: {f.msg}" + (f" {f.hint}" if f.hint else ""))
