@@ -11,12 +11,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools import check, claims, ingest, llm, state  # noqa: E402
-from tools.common import ROOT, project_path, read_text, setup_stdio  # noqa: E402
+from tools.common import ROOT, project_path, read_jsonl, read_text, setup_stdio  # noqa: E402
 from tools.log import event  # noqa: E402
 from tools.numparse import normalize_quote  # noqa: E402
 
 PART_LIMIT = 12_000
 PROMPT_PATH = ROOT / "prompts" / "extract.md"
+DROP_ESCALATE_SHARE = 0.5  # отброшено больше этой доли утверждений части: часть уходит на pro
 MIN_QUOTE = 25  # символов после нормализации: короче — не цитата
 EST_PROMPT_TOKENS = 1500  # системный промпт + вопросы
 EST_OUT_TOKENS = 1000
@@ -49,6 +50,7 @@ class ExtractReport:
     escalations: int = 0
     rub: float | None = 0.0  # None: цена хотя бы одного вызова неизвестна (У12)
     pending: list[int] = field(default_factory=list)  # части без результата (ждут человека или модель среды)
+    dropped_quotes: int = 0  # отброшено поштучно (цитата не прошла проверку 1)
     emitted: list[Path] = field(default_factory=list)  # пути для ответа модели среды
     action_ids: dict[int, str] = field(default_factory=dict)
 
@@ -90,7 +92,8 @@ def _units(md: str) -> list[tuple[str, str | None, str | None]]:
 
 
 def split_parts(md: str, limit: int = PART_LIMIT) -> list[Part]:
-    """Части ≤limit символов по абзацам; следующая часть начинается с последнего абзаца предыдущей (перекрытие 1 абзац)."""
+    """Части ≤limit символов по абзацам; следующая часть начинается с последнего абзаца предыдущей (перекрытие 1 абзац).
+    Ограничения: если последний абзац и следующий вместе не влезают в limit, перекрытия нет; абзац длиннее limit режется жёстко."""
     units: list[tuple[str, str | None, str | None]] = []
     for text, a, b in _units(md):
         while len(text) > limit:  # абзац длиннее части: режем жёстко
@@ -156,6 +159,8 @@ def _source(slug: str, sid: str) -> tuple[str, dict]:
 
 def _label(text: str, suspicious) -> str:
     """Подозрительные абзацы помечаются в промпте; в цитату метка не попадает (цитата сверяется с исходным текстом)."""
+    # разделители промпта внутри текста источника обезвреживаются (цитата сверяется с исходником, не с промптом)
+    text = text.replace("ИСТОЧНИК>>>", "ИСТОЧНИК> >>").replace("<<<ИСТОЧНИК", "< <<ИСТОЧНИК")
     sus = {str(x) for x in (suspicious or [])}
     if not sus:
         return text
@@ -198,23 +203,35 @@ def _segments(part: Part) -> list[tuple[str | None, str]]:
     return [(mk, "\n".join(ls).strip()) for mk, ls in segs if "".join(ls).strip()]
 
 
-def _find_locator(quote: str, part: Part, model_loc: str) -> str | None:
-    """Локатор определяет код: маркер того абзаца, где цитата найдена дословно (проверка 1). Не нашлась — None."""
-    if len(normalize_quote(quote)) < MIN_QUOTE:
-        return None
-    for marker, body in _segments(part):
-        if check.check_quote({"id": "?", "quote": quote}, body).level == "OK":
-            return marker or model_loc or None
-    return None
+def _find_locator(quote: str, part: Part, model_loc: str) -> tuple[str | None, str]:
+    """Локатор определяет код: маркер того абзаца, где цитата найдена дословно (проверка 1). (локатор | None, причина отказа).
+    Короче MIN_QUOTE принимается, только если после нормализации равна целому абзацу («Цена: 650 ₽ в месяц»)."""
+    nq = normalize_quote(quote)
+    segs = _segments(part)
+    if len(nq) < MIN_QUOTE:
+        for marker, body in segs:
+            if nq and normalize_quote(body) == nq:
+                return (marker or model_loc or None), ""
+        return None, f"цитата короче {MIN_QUOTE} символов и не равна целому абзацу"
+    reason = "цитаты нет в тексте части"
+    for marker, body in segs:
+        f = check.check_quote({"id": "?", "quote": quote}, body)
+        if f.level == "OK":
+            return (marker or model_loc or None), ""
+        if "цитаты нет в указанном разделе" not in f.msg:
+            reason = f.msg
+    return None, reason
 
 
-def _screen(items, part: Part, codes: list[str], who: str) -> tuple[list[dict], int, int]:
-    """(принятые, отброшено табличных, не прошли проверку). Табличных fact LLM не создаёт; цитата — дословно в одном абзаце."""
+def _screen(items, part: Part, codes: list[str], who: str) -> tuple[list[dict], int, list[str]]:
+    """(принятые, отброшено табличных, причины отбора). Поштучно: дословная цитата в одном абзаце проходит, остальные отбрасываются.
+    Табличных fact LLM не создаёт."""
     ok: list[dict] = []
-    tables = bad = 0
+    tables = 0
+    rejected: list[str] = []
     for c in items:
         if not isinstance(c, dict):
-            bad += 1
+            rejected.append("элемент ответа не объект")
             continue
         quote = str(c.get("quote") or "").strip()
         model_loc = str(c.get("locator") or "").strip()
@@ -229,13 +246,28 @@ def _screen(items, part: Part, codes: list[str], who: str) -> tuple[list[dict], 
                 text = ESTIMATE_PREFIX + text
         elif t != "forecast":
             t = "fact"
-        loc = _find_locator(quote, part, model_loc)
-        if not text or loc is None:
-            bad += 1
+        loc, why = _find_locator(quote, part, model_loc)
+        if loc is None:
+            rejected.append(f"«{quote[:60]}»: {why}")
+            continue
+        if not text:
+            rejected.append(f"«{quote[:60]}»: пустой text")
             continue
         q = [x for x in (c.get("question") or []) if isinstance(x, str) and (x in codes if codes else re.fullmatch(r"Q\d+", x))]
         ok.append({"type": t, "text": text, "locator": loc, "quote": quote, "question": q or codes[:1] or ["Q1"], "extracted_by": who})
-    return ok, tables, bad
+    return ok, tables, rejected
+
+
+def _dedup(items: list[dict]) -> list[dict]:
+    """Одна цитата — одно утверждение (первое); вопросы объединяются."""
+    out: dict[str, dict] = {}
+    for it in items:
+        k = normalize_quote(it["quote"])
+        if k in out:
+            out[k]["question"] = list(dict.fromkeys(out[k]["question"] + it["question"]))
+        else:
+            out[k] = {**it, "question": list(it["question"])}
+    return list(out.values())
 
 
 def _commit(slug: str, sid: str, items: list[dict]) -> int:
@@ -244,7 +276,7 @@ def _commit(slug: str, sid: str, items: list[dict]) -> int:
     by_quote = {(e.get("source"), normalize_quote(e.get("quote") or "")): e for e in existing}
     known = {e["id"] for e in existing}
     added = 0
-    for it in items:
+    for it in _dedup(items):
         e = by_quote.get((sid, normalize_quote(it["quote"])))
         if e is not None:
             merged = [q for q in dict.fromkeys(list(e.get("question") or []) + it["question"])]
@@ -257,28 +289,51 @@ def _commit(slug: str, sid: str, items: list[dict]) -> int:
     return added
 
 
-def _try(slug, sid, role, system, user, aid, category, part, codes, report):
-    """Один ярус: (принятые утверждения | None, отброшено табличных, причина провала)."""
+@dataclass
+class Tier:
+    valid: bool = False  # получен разобранный ответ со списком claims
+    accepted: list[dict] = field(default_factory=list)
+    tables: int = 0
+    rejected: list[str] = field(default_factory=list)
+    weak: bool = False  # ответ валиден, но принято 0 при непустом или отброшено больше DROP_ESCALATE_SHARE
+    why: str = ""
+
+
+def _try(slug, role, system, user, aid, category, part, codes) -> Tier:
+    """Один ярус: вызов модели и поштучный отбор утверждений; в журнал — claims_dropped."""
     try:
         obj, r = llm.chat_json([{"role": "system", "content": system}, {"role": "user", "content": user}],
                                role=role, slug=slug, action_id=aid, required_keys=["claims"],
                                category=category, max_tokens=4000, temperature=0)
     except llm.LLMJSONError:
-        return None, 0, "ответ не JSON даже после ремонта"
+        return Tier(why="ответ не JSON даже после ремонта")
     except llm.LLMUnavailable as e:
-        return None, 0, f"модель недоступна: {e}"
+        return Tier(why=f"модель недоступна: {e}")
     except llm.NoKeyError as e:
-        return None, 0, f"роль «{role}» не настроена: {e}"
-    if r.rub is None:
-        report.rub = None
-    elif report.rub is not None:
-        report.rub += r.rub
+        return Tier(why=f"роль «{role}» не настроена: {e}")
     if not isinstance(obj.get("claims"), list):
-        return None, 0, "«claims» не список"
-    ok, tables, bad = _screen(obj["claims"], part, codes, f"extract.py:{_model_label(role)}")
-    if bad:
-        return None, 0, f"цитата не прошла проверку 1: {bad} из {len(obj['claims'])}"
-    return ok, tables, ""
+        return Tier(why="«claims» не список")
+    ok, tables, rej = _screen(obj["claims"], part, codes, f"extract.py:{_model_label(role)}")
+    t = Tier(valid=True, accepted=ok, tables=tables, rejected=rej)
+    seen = len(ok) + len(rej)
+    if seen and (not ok or len(rej) > DROP_ESCALATE_SHARE * seen):
+        t.weak = True
+        t.why = f"принято {len(ok)} из {seen}: цитаты не прошли проверку 1"
+    if rej:
+        event(slug, "claims_dropped", action_id=aid, role=role, count=len(rej), reasons=rej[:5])
+    return t
+
+
+def _rub_for(slug, aids) -> float | None:
+    """₽ по событиям llm этих action_id (включая неудачные ярусы, ремонты и эскалации); None, если цена хоть одного неизвестна."""
+    want = set(aids)
+    total = 0.0
+    for e in read_jsonl(project_path(slug) / "log.jsonl"):
+        if e.get("kind") == "llm" and e.get("action_id") in want:
+            if e.get("rub") is None:
+                return None
+            total += e["rub"]
+    return round(total, 6)
 
 
 # ---------- режим без ключа ----------
@@ -289,7 +344,11 @@ def _prompt_paths(slug: str, aid: str) -> tuple[Path, Path]:
     return base / f"{stem}.json", base / f"{stem}.prompt.txt"
 
 
-def _emit(slug, sid, part, system, user, aid, *, show_prompt: bool) -> Path:
+def _qflags(questions) -> str:
+    return "".join(f" --question {q}" for q in (questions or []))
+
+
+def _emit(slug, sid, part, system, user, aid, *, show_prompt: bool, questions=None) -> Path:
     from tools.common import write_text_atomic
     ans, prm = _prompt_paths(slug, aid)
     write_text_atomic(prm, f"{system}\n\n---\n\n{user}\n")
@@ -297,12 +356,13 @@ def _emit(slug, sid, part, system, user, aid, *, show_prompt: bool) -> Path:
         print(f"=== ПРОМПТ (источник {sid}, часть {part.idx}) ===\n{system}\n\n---\n\n{user}\n=== КОНЕЦ ПРОМПТА ===")
     print(f"Промпт части {part.idx}: {prm}\n"
           f"Что сделать: модель среды читает промпт, кладёт ответ (один JSON-объект) в {ans}, затем: "
-          f"python tools/extract.py {sid} --apply \"{ans}\" --part {part.idx}")
+          f"python tools/extract.py {sid}{_qflags(questions)} --apply \"{ans}\" --part {part.idx}")
     return ans
 
 
 def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] | None = None) -> int:
-    """Применяет ответ модели среды к части: те же проверки, что у ответа Yandex. Возвращает число новых утверждений."""
+    """Применяет ответ модели среды к части: те же проверки, что у ответа Yandex, поштучно. Возвращает число новых утверждений.
+    Прошедшие принимаются, отклонённые перечисляются; принято 0 при непустом ответе — отказ, часть не done."""
     md, ent = _source(slug, sid)
     parts = split_parts(md, PART_LIMIT)
     if not 1 <= part_idx <= len(parts):
@@ -311,6 +371,9 @@ def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] 
     qs = _questions(slug, questions)
     codes = [q for q, _ in qs]
     aid = _aid(sid, part, qs)
+    if state.is_done(slug, aid):
+        print(f"Часть {part_idx} уже применена: ничего не записано.")
+        return 0
     p = Path(path)
     if not p.is_file():
         raise ValueError(f"файла ответа {p} нет. Что сделать: положите JSON ответа модели в этот файл и повторите.")
@@ -321,12 +384,16 @@ def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] 
     if not isinstance(obj, dict) or not isinstance(obj.get("claims"), list):
         event(slug, "apply_rejected", action_id=aid, reason="не JSON с ключом claims")
         raise ValueError(f"ответ в {p.name} — не JSON-объект с ключом «claims». Что сделать: верните только JSON вида {{\"claims\":[…]}}, без пояснений.")
-    ok, _tables, bad = _screen(obj["claims"], part, codes, ENV_WHO)
-    if bad:
-        event(slug, "apply_rejected", action_id=aid, reason=f"цитата не прошла проверку 1: {bad}")
-        raise ValueError(f"{bad} из {len(obj['claims'])} утверждений не прошли проверку цитаты (нет дословно в одном абзаце части, короче {MIN_QUOTE} симв. или нет текста). "
-                         f"Что сделать: перепишите цитаты дословно из промпта и повторите --apply; записано ничего не было.")
+    ok, _tables, rej = _screen(obj["claims"], part, codes, ENV_WHO)
+    if rej:
+        event(slug, "claims_dropped", action_id=aid, role="env-model", count=len(rej), reasons=rej[:5])
+    if rej and not ok:
+        event(slug, "apply_rejected", action_id=aid, reason=f"ни одна цитата не прошла проверку 1 ({len(rej)})")
+        raise ValueError(f"ни одно из {len(rej)} утверждений не прошло проверку цитаты. Примеры: " + "; ".join(rej[:3]) +
+                         ". Что сделать: перепишите цитаты дословно из промпта (целое предложение ≥25 символов из одного абзаца) и повторите --apply; записано ничего не было.")
     added = _commit(slug, sid, ok)
+    if rej:
+        print(f"Отклонено {len(rej)} утверждений (цитата не прошла проверку 1): " + "; ".join(rej[:3]))
     state.add_degraded(slug, "env-model", f"извлечение {sid} часть {part_idx}: ответ модели среды (режим без ключа или эскалация)")
     event(slug, "env_model", action_id=aid, unit=f"{sid}:part-{part_idx:02d}",
           note="расход модели среды учитывайте вручную: python tools/log.py model <usd>")
@@ -382,34 +449,43 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
         if todo:
             part = todo[0]
             rep.emitted.append(_emit(slug, sid, part, system, _user_prompt(sid, part, len(parts), qs, suspicious),
-                                     rep.action_ids[part.idx], show_prompt=True))
+                                     rep.action_ids[part.idx], show_prompt=True, questions=questions))
             rep.pending.append(part.idx)
+        else:
+            print(f"Все части готовы. Дальше: python tools/check.py --only 1,2,3,4 -p {slug}")
         return rep
     failed_human: list[tuple[int, str]] = []
     for part in todo:
         aid = rep.action_ids[part.idx]
         unit = f"{sid}:part-{part.idx:02d}"
         user = _user_prompt(sid, part, len(parts), qs, suspicious)
-        accepted, tables, why = _try(slug, sid, model_role, system, user, aid, "yandex", part, codes, rep)
-        if accepted is None and model_role != "pro":
+        t1 = _try(slug, model_role, system, user, aid, "yandex", part, codes)
+        tiers = [t1]
+        if (not t1.valid or t1.weak) and model_role != "pro":
             rep.escalations += 1
-            event(slug, "escalation", step="lite->pro", unit=unit, part=part.idx, reason=why, action_id=aid)
-            accepted, tables, why = _try(slug, sid, "pro", system, user, aid, "retry", part, codes, rep)
-        if accepted is None:
+            event(slug, "escalation", step="lite->pro", unit=unit, part=part.idx, reason=t1.why, action_id=aid)
+            tiers.append(_try(slug, "pro", system, user, aid, "retry", part, codes))
+        accepted = [c for t in tiers for c in t.accepted]  # принятое с lite сохраняется и объединяется с принятым от pro
+        last = tiers[-1]
+        saw_items = any(t.valid and (t.accepted or t.rejected) for t in tiers)
+        rep.dropped_quotes += sum(len(t.rejected) for t in tiers)
+        if not accepted and (not last.valid or saw_items):
+            why = last.why or t1.why
             rep.escalations += 1
             rep.pending.append(part.idx)
             if _route() == "claude-code":
                 event(slug, "escalation", step="pro->env-model", unit=unit, part=part.idx, reason=why, action_id=aid)
-                rep.emitted.append(_emit(slug, sid, part, system, user, aid, show_prompt=False))
+                rep.emitted.append(_emit(slug, sid, part, system, user, aid, show_prompt=False, questions=questions))
             else:
                 event(slug, "escalation", step="pro->human", unit=unit, part=part.idx, reason=why, action_id=aid)
                 failed_human.append((part.idx, why))
             continue
-        rep.dropped_table_facts += tables
+        rep.dropped_table_facts += sum(t.tables for t in tiers)
         added = _commit(slug, sid, accepted)
         rep.claims_added += added
         state.mark_done(slug, aid, {"part": part.idx, "claims": added})
         event(slug, "extract_part", source=sid, part=part.idx, claims=added, via="yandex")
+    rep.rub = _rub_for(slug, [rep.action_ids[p.idx] for p in todo])
     if failed_human:
         listing = "; ".join(f"часть {i} ({w})" for i, w in failed_human)
         state.wait_human(slug, "extract", f"Источник {sid}: не удалось извлечь {listing}. "
@@ -428,7 +504,7 @@ def main(argv=None) -> int:
     setup_stdio()
     ap = argparse.ArgumentParser(
         description="Извлечение утверждений из источника: режет текст на части ≤12 000 символов (перекрытие 1 абзац), "
-                    "отправляет модели, проверяет цитаты и пишет утверждения в claims.jsonl. Повторный запуск не отправляет "
+                    "отправляет модели, поштучно проверяет цитаты и пишет утверждения в claims.jsonl. Повторный запуск не отправляет "
                     "готовые части. Без ключа: --emit-prompt и --apply.")
     ap.add_argument("source", help="номер источника, например S-003")
     ap.add_argument("-p", "--project", help="имя проекта (по умолчанию текущий)")
@@ -453,12 +529,17 @@ def main(argv=None) -> int:
             if not a.part:
                 print("Ошибка: для --apply нужен --part N. Что сделать: добавьте номер части из подсказки --emit-prompt.", file=sys.stderr)
                 return 2
-            n = apply_result(slug, a.source, a.part, a.apply, a.question)
             md, _ = _source(slug, a.source)
-            left = [p.idx for p in split_parts(md, PART_LIMIT) if not state.is_done(slug, _aid(a.source, p, _questions(slug, a.question)))]
+            qs = _questions(slug, a.question)
+            parts = split_parts(md, PART_LIMIT)
+            if 1 <= a.part <= len(parts) and state.is_done(slug, _aid(a.source, parts[a.part - 1], qs)):
+                print(f"Часть {a.part} уже применена: ничего не записано.")
+                return 0
+            n = apply_result(slug, a.source, a.part, a.apply, a.question)
+            left = [p.idx for p in parts if not state.is_done(slug, _aid(a.source, p, qs))]
             print(f"Часть {a.part} применена: новых утверждений {n}. Журнал: degraded: env-model.")
             if left:
-                print(f"Осталось частей: {len(left)}. Что сделать: python tools/extract.py {a.source} --emit-prompt")
+                print(f"Осталось частей: {len(left)}. Что сделать: python tools/extract.py {a.source}{_qflags(a.question)} --emit-prompt")
             else:
                 print(f"Все части готовы. Дальше: python tools/check.py --only 1,2,3,4 -p {slug}")
             return 0
@@ -472,7 +553,8 @@ def main(argv=None) -> int:
     if a.dry_run or a.emit_prompt:
         return 0
     print(f"Источник {a.source}: частей {rep.parts_total} (из кеша {rep.parts_cached}), утверждений добавлено {rep.claims_added}, "
-          f"табличных отброшено {rep.dropped_table_facts}, эскалаций {rep.escalations}, ₽ {_fmt_rub(rep.rub)}.")
+          f"цитат отброшено {rep.dropped_quotes}, табличных отброшено {rep.dropped_table_facts}, эскалаций {rep.escalations}, "
+          f"стоимость {_fmt_rub(rep.rub)}.")
     if rep.pending:
         print(f"Без результата части: {', '.join(map(str, rep.pending))}. Что сделать: см. подсказки выше и `python tools/status.py`; затем запустите команду ещё раз — готовое не задвоится.")
         return 1
