@@ -17,7 +17,7 @@ files:
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
-  AGENTS.md: 743ac3516ce13a7ce2957d10a0563813bb2db4df2567a7b936692d6858e77bef
+  AGENTS.md: 1867c1a3cee8884b8f7828b15d8511740a859522268b16d3b414238908a06927
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: 72b445163a693ae318566a5844ff745dec6e4765cc3fd8fa2b8190a6db1a5d91
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
@@ -58,5 +58,9 @@ history:
 - updated_at: '2026-11-09T20:09:03+03:00'
   reason: 'задача 9a, ревью: убран user-fact без ключа, флаги -p, --write; playbooks
     под замок не берём (правила процесса — в AGENTS.md)'
+  changed:
+  - AGENTS.md
+- updated_at: '2026-11-10T18:53:03+03:00'
+  reason: 'У16 пересмотрено 12.11: ключ — основной путь, без ключа — запасной'
   changed:
   - AGENTS.md
