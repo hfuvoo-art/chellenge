@@ -6,7 +6,7 @@ files:
   prompts/critic-claims.md: 5bb34278fa85550fb258e39160c5f16d469b95476e8f35542d9da0c24c7e3ceb
   prompts/critic-promises.md: a8c60e5984a656fb4e73340aa7ffc80696bc3dbad4e21735a3a4845795c03977
   prompts/critic.md: 6fa4cb6d119d01f67c5f8971c80ee19777b33344a1cb31d13d3cb00498a17d30
-  prompts/extract.md: b81ffcb65983c4a4dec5afc2b64058de04baa48e8c65e6c76251beb87df07d1e
+  prompts/extract.md: daf0c6f1386b683624ab0e96b75ffea6238109d18ae4ce55f403bb1ada19c160
   prompts/interview-coding.md: 775efdb80287943424b320670a3239a7f83f11500febdd97d30acfa81613f4f9
   prompts/respondent.md: 3d0eca4e4601a50118c1d22ed470143f12ac61a7daf9aa40e3c42cd042d34161
   methods/framing.md: e62cc87c7da0ed62dc6959c3c9af87adc848c30d3b015d0ee2976a08ae84d9fd
@@ -64,3 +64,7 @@ history:
   reason: 'У16 пересмотрено 12.11: ключ — основной путь, без ключа — запасной'
   changed:
   - AGENTS.md
+- updated_at: '2026-11-10T19:02:20+03:00'
+  reason: 'задача 10: оценка источника — fact с цитатой, estimate только расчёт'
+  changed:
+  - prompts/extract.md
