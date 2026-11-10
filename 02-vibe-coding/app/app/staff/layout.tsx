@@ -1,4 +1,5 @@
-import { logoutAction } from "@/app/actions";
+import Link from "next/link";
+import { logoutAction, resetDemoAction } from "@/app/actions";
 import AutoRefresh from "@/components/AutoRefresh";
 import GlassLight from "@/components/GlassLight";
 import StaffNav from "@/components/StaffNav";
@@ -17,7 +18,14 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       </div>
       <StaffNav />
       {children}
-      <p className="concept">Кабинет сотрудника · концепт для конкурса · данные вымышленные</p>
+      <details className="reset">
+        <summary>Сбросить демо-данные</summary>
+        <div className="card">
+          <div className="t2">Заявки, расписание, уведомления и чаты вернутся к исходному состоянию. Аккаунты останутся. Данные и так сбрасываются сами каждую ночь в 04:00 по Москве.</div>
+          <form action={resetDemoAction} style={{ marginTop: 10 }}><button className="btn danger sm">Да, сбросить сейчас</button></form>
+        </div>
+      </details>
+      <p className="concept">Кабинет сотрудника · концепт для конкурса · данные вымышленные · <Link href="/about" className="link">О проекте</Link></p>
       <AutoRefresh seconds={30} />
       <GlassLight />
     </main>

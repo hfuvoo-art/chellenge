@@ -1,7 +1,7 @@
 // Каталог справок и заявлений. Один источник для формы, помощника и кабинета сотрудника.
 
 export type Field =
-  | { name: string; label: string; kind: "select"; options: string[] }
+  | { name: string; label: string; kind: "select"; options: string[]; choose?: boolean }
   | { name: string; label: string; kind: "text"; placeholder?: string; optional?: boolean }
   | { name: string; label: string; kind: "textarea"; placeholder?: string; optional?: boolean }
   | { name: string; label: string; kind: "number"; min: number; max: number }
@@ -44,10 +44,10 @@ export const REQUEST_TYPES: RequestType[] = [
   },
   {
     type: "retake", title: "Заявление на пересдачу", group: "statement",
-    description: "Пересдача экзамена или зачёта. По болезни приложите справку.", eta: "до 3 рабочих дней",
+    description: "Пересдача экзамена или зачёта. Если причина — болезнь, принесите медицинскую справку в учебный офис (каб. 112) в течение 3 рабочих дней.", eta: "до 3 рабочих дней",
     fields: [
       { name: "subject", label: "Дисциплина", kind: "subject" },
-      { name: "reason", label: "Причина", kind: "select", options: ["Болезнь (есть справка)", "Академическая задолженность", "Семейные обстоятельства", "Другое"] },
+      { name: "reason", label: "Причина", kind: "select", choose: true, options: ["Болезнь (есть справка)", "Академическая задолженность", "Семейные обстоятельства", "Другое"] },
       { name: "comment", label: "Комментарий", kind: "textarea", placeholder: "Например, номер медицинской справки", optional: true },
     ],
   },
@@ -55,7 +55,7 @@ export const REQUEST_TYPES: RequestType[] = [
     type: "individual_plan", title: "Заявление на индивидуальный график", group: "statement",
     description: "Свободное посещение на время работы, спорта или лечения.", eta: "до 5 рабочих дней",
     fields: [
-      { name: "reason", label: "Основание", kind: "select", options: ["Работа по профилю", "Спортивные сборы", "Лечение", "Другое"] },
+      { name: "reason", label: "Основание", kind: "select", choose: true, options: ["Работа по профилю", "Спортивные сборы", "Лечение", "Другое"] },
       { name: "period", label: "Период", kind: "text", placeholder: "Например, 15.11–20.12" },
       { name: "comment", label: "Комментарий", kind: "textarea", optional: true },
     ],
@@ -64,9 +64,17 @@ export const REQUEST_TYPES: RequestType[] = [
     type: "academic_leave", title: "Заявление на академический отпуск", group: "statement",
     description: "Перерыв в учёбе до 2 лет по медицинским, семейным или иным причинам.", eta: "до 10 рабочих дней",
     fields: [
-      { name: "reason", label: "Основание", kind: "select", options: ["Медицинские показания", "Семейные обстоятельства", "Призыв на военную службу", "Другое"] },
+      { name: "reason", label: "Основание", kind: "select", choose: true, options: ["Медицинские показания", "Семейные обстоятельства", "Призыв на военную службу", "Другое"] },
       { name: "from", label: "С какой даты", kind: "text", placeholder: "ДД.ММ.ГГГГ" },
       { name: "comment", label: "Комментарий", kind: "textarea", optional: true },
+    ],
+  },
+  {
+    type: "scholarship_plus", title: "Заявление на повышенную стипендию", group: "statement",
+    description: "За достижения в учёбе, науке, спорте, общественной или творческой деятельности. Приём до 20 ноября.", eta: "до 10 рабочих дней",
+    fields: [
+      { name: "area", label: "Достижение в области", kind: "select", choose: true, options: ["Учёба", "Наука", "Спорт", "Общественная деятельность", "Творчество"] },
+      { name: "comment", label: "Что за достижение и чем подтверждается", kind: "textarea", placeholder: "Например: диплом призёра олимпиады, приказ № …" },
     ],
   },
 ];

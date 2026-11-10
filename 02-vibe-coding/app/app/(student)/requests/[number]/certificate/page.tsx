@@ -29,7 +29,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ nu
         <h1 style={{ fontSize: 22, textAlign: "center", margin: "14px 0 4px" }}>СПРАВКА № {r.number}</h1>
         <div className="t2" style={{ textAlign: "center" }}>выдана {humanDate(issued, false)} {issued.slice(0, 4)} г.</div>
         <p style={{ marginTop: 18, lineHeight: 1.6, fontSize: 16 }}>
-          Дана {user.last_name} {user.first_name} {user.middle_name} в том, что она (он) является студентом {user.course} курса
+          Настоящая справка подтверждает, что {user.last_name} {user.first_name} {user.middle_name} {user.gender === "f" ? "является студенткой" : user.gender === "m" ? "является студентом" : "обучается на"} {user.course} {user.gender ? "курса" : "курсе"}{" "}
           очной формы обучения, направление «{user.program}», {user.faculty.toLowerCase()}, группа {user.group_name}.
         </p>
         <p style={{ marginTop: 10, lineHeight: 1.6 }}>Справка выдана {String(JSON.parse(r.details).place ?? "по месту требования").toLowerCase()}.</p>

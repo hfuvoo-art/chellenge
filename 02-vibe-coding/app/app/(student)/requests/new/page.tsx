@@ -22,6 +22,11 @@ export default async function NewRequestPage({ searchParams }: { searchParams: P
           <div className="kv"><span>Студент</span><span>{user.last_name} {user.first_name[0]}. {user.middle_name[0]}.</span></div>
           <div className="kv"><span>Группа</span><span>{user.group_name}</span></div>
         </div>
+        {rt.type === "scholarship_plus" && !sum.scholarship && (
+          <div className="alert" style={{ marginTop: 0 }}>
+            <span>Сейчас условие не выполнено: {sum.scholarshipReasons.map((r) => r.text).join("; ")}. Заявление подать можно, но офис, скорее всего, отклонит его, пока это не закрыто.</span>
+          </div>
+        )}
         <div className="card"><RequestForm rt={rt} subjects={subjects} /></div>
       </div>
     </>

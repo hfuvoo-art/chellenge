@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import { roomLabel } from "./format";
 import { addDays, mondayOf, todayMsk, weekday } from "./time";
 
 // Все данные вымышленные. Совпадения с реальными людьми случайны.
@@ -66,30 +67,41 @@ export function seed(db: Database.Database, now = new Date()): void {
   const hash = (p: string) => bcrypt.hashSync(p, 10);
 
   const tx = db.transaction(() => {
-    const addUser = db.prepare(`INSERT INTO users (login,password_hash,role,last_name,first_name,middle_name,faculty,program,course,group_name,student_card,email,position)
-      VALUES (@login,@password_hash,@role,@last_name,@first_name,@middle_name,@faculty,@program,@course,@group_name,@student_card,@email,@position)`);
+    // Аккаунты создаются один раз и потом только обновляются: так сброс демо не разрывает открытые сессии.
+    const upsert = db.prepare(`INSERT INTO users (login,password_hash,role,last_name,first_name,middle_name,faculty,program,course,group_name,student_card,email,position,gender)
+      VALUES (@login,@password_hash,@role,@last_name,@first_name,@middle_name,@faculty,@program,@course,@group_name,@student_card,@email,@position,@gender)
+      ON CONFLICT(login) DO UPDATE SET role=excluded.role,last_name=excluded.last_name,first_name=excluded.first_name,middle_name=excluded.middle_name,
+        faculty=excluded.faculty,program=excluded.program,course=excluded.course,group_name=excluded.group_name,student_card=excluded.student_card,
+        email=excluded.email,position=excluded.position,gender=excluded.gender`);
+    const exists = db.prepare("SELECT id FROM users WHERE login = ?");
+    const addUser = (u: Record<string, string | number | null> & { login: string; password: string }): number => {
+      const { password, ...rest } = u;
+      const found = exists.get(u.login) as { id: number } | undefined;
+      upsert.run({ ...rest, password_hash: found ? "" : hash(password) });
+      // Пароль существующего аккаунта не трогаем (ON CONFLICT его не обновляет).
+      return (exists.get(u.login) as { id: number }).id;
+    };
 
-    const alina = Number(addUser.run({
-      login: "alina", password_hash: hash("demo2026"), role: "student",
+    const alina = addUser({
+      login: "alina", password: "demo2026", role: "student", gender: "f",
       last_name: "Соколова", first_name: "Алина", middle_name: "Игоревна",
       faculty: "Факультет международных отношений", program: "Международные отношения",
       course: 2, group_name: MO, student_card: "24-0417", email: "alina.sokolova@student.example", position: null,
-    }).lastInsertRowid);
+    });
 
-    const timur = Number(addUser.run({
-      login: "timur", password_hash: hash("demo2026"), role: "student",
+    const timur = addUser({
+      login: "timur", password: "demo2026", role: "student", gender: "m",
       last_name: "Ахмедов", first_name: "Тимур", middle_name: "Русланович",
       faculty: "Факультет экономики и бизнеса", program: "Экономика",
       course: 4, group_name: EK, student_card: "22-1183", email: "timur.akhmedov@student.example", position: null,
-    }).lastInsertRowid);
+    });
 
-    const staff = Number(addUser.run({
-      login: "dekanat", password_hash: hash("staff2026"), role: "staff",
+    addUser({
+      login: "dekanat", password: "staff2026", role: "staff", gender: "f",
       last_name: "Белова", first_name: "Ирина", middle_name: "Павловна",
       faculty: "Учебный офис", program: "", course: null, group_name: null, student_card: null,
       email: "dekanat@uni.example", position: "Специалист учебного офиса",
-    }).lastInsertRowid);
-    void staff;
+    });
 
     // Расписание: от двух недель назад до конца семестра.
     const addClass = db.prepare(`INSERT INTO schedule (group_name,date,start,end,subject,kind,room,teacher,status,old_room,note)
@@ -101,7 +113,9 @@ export function seed(db: Database.Database, now = new Date()): void {
       const wd = weekday(d);
       if (wd === 6) continue;
       dayIndex++;
-      const near = d >= addDays(today, -7);
+      // Разовые изменения ставим только в окне «вчера … +5 дней»: один день недели попадает в окно один раз,
+      // поэтому перенос не повторяется из недели в неделю.
+      const near = d >= addDays(today, -1) && d <= addDays(today, 5);
       for (const group of [MO, EK]) {
         const slots = TEMPLATES[group].filter((x) => x[0] === wd);
         slots.forEach((x, i) => {
@@ -189,19 +203,24 @@ export function seed(db: Database.Database, now = new Date()): void {
     mkReq(1031, timur, "cert_military", "Справка для военкомата", { place: "Военный комиссариат", copies: 1, format: "Бумажная" },
       [["submitted", null, "Студент", iso(addDays(today, -2), "18:12")], ["in_progress", null, "Учебный офис", iso(addDays(today, -1), "10:02")]]);
     mkReq(1038, alina, "cert_study", "Справка об обучении", { place: "По месту требования", copies: 1, format: "Электронная (PDF с QR-кодом)" },
-      [["submitted", null, "Студент", iso(addDays(today, -1), "20:41")], ["in_progress", null, "Учебный офис", iso(today, "09:05")], ["ready", "Справка готова. Скачайте PDF или заберите оригинал в каб. 112.", "Учебный офис", iso(today, "09:30")]], true);
+      [["submitted", null, "Студент", iso(addDays(today, -1), "20:41")], ["in_progress", null, "Учебный офис", iso(today, "09:05")], ["ready", "Справка готова. Откройте её по кнопке ниже: внутри QR-код для проверки, файл можно сохранить как PDF.", "Учебный офис", iso(today, "09:30")]], true);
+    // Одна новая заявка, чтобы очередь учебного офиса не была пустой при первом входе.
+    mkReq(1041, timur, "cert_study", "Справка об обучении", { place: "Работодателю", copies: 2, format: "Бумажная" },
+      [["submitted", null, "Студент", iso(addDays(today, -1), "21:15")]]);
 
     // Уведомления
     const addN = db.prepare(`INSERT INTO notifications (user_id,kind,title,body,link,created_at,read_at) VALUES (?,?,?,?,?,?,?)`);
     const ann = [
-      ["Продлён приём заявлений на повышенную стипендию", "Заявления принимаются до 20 ноября включительно. Подать можно в разделе «Заявки».", -1, "16:30"],
+      ["Продлён приём заявлений на повышенную стипендию", "Заявления принимаются до 20 ноября включительно. Нажмите, чтобы подать заявление онлайн.", -1, "16:30"],
       ["Ярмарка стажировок 14 ноября", "Партнёры факультетов проведут собеседования в холле главного корпуса с 12:00 до 17:00.", -3, "12:00"],
     ] as const;
     for (const uid of [alina, timur]) {
-      for (const [t, b, off, time] of ann) addN.run(uid, "announcement", t, b, null, iso(addDays(today, off), time), off < -2 ? iso(addDays(today, off), "18:00") : null);
+      for (const [t, b, off, time] of ann) addN.run(uid, "announcement", t, b, t.includes("стипенди") ? "/requests/new?type=scholarship_plus" : null, iso(addDays(today, off), time), off < -2 ? iso(addDays(today, off), "18:00") : null);
     }
-    addN.run(alina, "schedule", "Мировая экономика: новая аудитория", "Сегодня семинар пройдёт в ауд. 405 вместо 214.", "/schedule", iso(today, "08:10"), null);
-    addN.run(alina, "request", "Справка об обучении готова", "Заявка № 1038: скачайте PDF с QR-кодом.", "/requests/1038", iso(today, "09:30"), null);
+    const movedToday = db.prepare("SELECT subject, room, old_room, start FROM schedule WHERE group_name = ? AND date = ? AND status = 'moved' ORDER BY start LIMIT 1").get(MO, today) as
+      | { subject: string; room: string; old_room: string; start: string } | undefined;
+    if (movedToday) addN.run(alina, "schedule", `${movedToday.subject}: новая аудитория`, `Сегодня в ${movedToday.start}: ${roomLabel(movedToday.room)} вместо ${roomLabel(movedToday.old_room)}.`, "/schedule", iso(today, "08:10"), null);
+    addN.run(alina, "request", "Справка об обучении готова", "Заявка № 1038: откройте справку с QR-кодом.", "/requests/1038", iso(today, "09:30"), null);
     addN.run(alina, "deadline", "Через 2 дня: эссе по истории дипломатии", "Сдать до 23:59 в системе курса.", "/study", iso(today, "07:00"), null);
     addN.run(timur, "request", "Справка для военкомата в работе", "Заявка № 1031 принята учебным офисом.", "/requests/1031", iso(addDays(today, -1), "10:02"), null);
     addN.run(timur, "deadline", "Риск недопуска: эконометрика", "Не хватает 3 баллов до допуска. Сдайте проект до дедлайна.", "/study", iso(today, "07:00"), null);

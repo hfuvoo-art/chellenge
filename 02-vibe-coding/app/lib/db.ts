@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { seed } from "./seed";
+import { todayMsk } from "./time";
 
 // Одна база SQLite на диске сервера. Путь задаётся переменной DATABASE_PATH.
 // Для роста нагрузки схему можно перенести в PostgreSQL без смены логики: все запросы лежат в lib/.
@@ -21,8 +22,10 @@ CREATE TABLE IF NOT EXISTS users (
   group_name TEXT,
   student_card TEXT,
   email TEXT,
-  position TEXT
+  position TEXT,
+  gender TEXT
 );
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -116,19 +119,45 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 `;
 
 let db: Database.Database | null = null;
+let seedDay = "";
+
+/** «Демо-день» начинается в 04:00 по Москве: тогда данные пересоздаются вокруг новой даты. */
+function demoDay(): string {
+  return todayMsk(new Date(Date.now() - 4 * 3600_000));
+}
+
+const DEMO_TABLES = ["chat_messages", "notifications", "request_events", "requests", "deadlines", "works", "subjects", "schedule"];
+
+/** Возвращает демо к исходному состоянию. Аккаунты и открытые сессии сохраняются. */
+export function resetDemo(d: Database.Database = getDb()): void {
+  d.transaction(() => {
+    for (const t of DEMO_TABLES) d.prepare(`DELETE FROM ${t}`).run();
+    seed(d);
+    d.prepare("INSERT INTO meta (key, value) VALUES ('seed_day', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(demoDay());
+  })();
+  seedDay = demoDay();
+}
 
 export function getDb(): Database.Database {
-  if (db) return db;
-  const file = process.env.DATABASE_PATH || path.join(process.cwd(), "data", "dekanat.db");
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  db = new Database(file);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(SCHEMA);
-  const count = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number };
-  if (count.n === 0) {
-    // Пустая база: заполняем вымышленными данными при первом запуске.
-    seed(db);
+  if (!db) {
+    const file = process.env.DATABASE_PATH || path.join(process.cwd(), "data", "dekanat.db");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    db = new Database(file);
+    db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+    db.exec(SCHEMA);
+    // Обновление старой базы: колонка появилась позже.
+    const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    if (!cols.some((c) => c.name === "gender")) db.exec("ALTER TABLE users ADD COLUMN gender TEXT");
+  }
+  // Раз в сутки (и при первом запуске) демо-данные пересоздаются: расписание и сроки считаются
+  // от сегодняшней даты, а следы чужих проверок исчезают. Отключается DEMO_RESET=off.
+  const day = demoDay();
+  if (seedDay !== day) {
+    const stored = (db.prepare("SELECT value FROM meta WHERE key = 'seed_day'").get() as { value: string } | undefined)?.value;
+    const empty = (db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n === 0;
+    if (empty || (stored !== day && process.env.DEMO_RESET !== "off")) resetDemo(db);
+    else seedDay = day;
   }
   return db;
 }

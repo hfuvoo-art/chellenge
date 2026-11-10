@@ -77,10 +77,19 @@ export function studySummary(studentId: number) {
   const examMarks = forecasts.filter((x) => x.f.mark !== null).map((x) => x.f.mark as number);
   const minExam = examMarks.length ? Math.min(...examMarks) : 5;
   const scholarship = risks.length === 0 && debts.length === 0 && minExam >= 4;
-  return { currentSem, current, past, avg, debts, risks, forecasts, scholarship };
+  // Почему стипендия под риском: показываем причину, а не только ярлык.
+  const scholarshipReasons = [
+    ...debts.map((d) => ({ text: `долг за ${d.semester} семестр: ${d.name}`, href: "/requests/new?type=retake" })),
+    ...risks.map(({ s, f }) => ({ text: `${f.label.toLowerCase()}: ${s.name}`, href: `/study/${s.id}` })),
+    ...forecasts.filter((x) => x.f.mark === 3).map(({ s }) => ({ text: `прогноз «удовлетворительно»: ${s.name}`, href: `/study/${s.id}` })),
+  ];
+  return { currentSem, current, past, avg, debts, risks, forecasts, scholarship, scholarshipReasons };
 }
 
 export type Deadline = { id: number; title: string; subject: string | null; due_at: string };
+export function deadlinesOfSubject(studentId: number, subject: string): Deadline[] {
+  return deadlinesOf(studentId).filter((d) => d.subject === subject);
+}
 export function deadlinesOf(studentId: number): Deadline[] {
   return getDb().prepare("SELECT id,title,subject,due_at FROM deadlines WHERE student_id = ? AND due_at >= ? ORDER BY due_at").all(studentId, new Date(Date.now() - 3600_000).toISOString()) as Deadline[];
 }

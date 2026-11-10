@@ -3,6 +3,7 @@ import { IconCalendar } from "@/components/icons";
 import TopBar from "@/components/TopBar";
 import { requireStudent } from "@/lib/auth";
 import { weekOf, type ClassRow } from "@/lib/data";
+import { roomLabel } from "@/lib/format";
 import { addDays, dayNumber, dayShort, humanDate, mondayOf, nowTimeMsk, todayMsk } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +17,8 @@ function ClassCell({ c, isToday }: { c: ClassRow; isToday: boolean }) {
       <div className="g">
         <div className={`t1 ${c.status === "cancelled" ? "strike" : ""}`}>{c.subject}</div>
         <div className="t2">
-          {c.kind} · ауд.{" "}
-          {c.status === "moved" && c.old_room ? <><s>{c.old_room}</s> → <b style={{ color: "var(--warn)" }}>{c.room}</b></> : c.room}
+          {c.kind} ·{" "}
+          {c.status === "moved" && c.old_room ? <><s>{roomLabel(c.old_room)}</s> → <b style={{ color: "var(--warn)" }}>{roomLabel(c.room)}</b></> : roomLabel(c.room)}
           {c.status === "moved" && c.old_start ? <> · перенос с <s>{c.old_start}</s></> : null}
         </div>
         <div className="t2">{c.teacher}</div>

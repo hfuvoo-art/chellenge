@@ -2,22 +2,25 @@
 
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { answer } from "@/lib/assistant";
 import { login, logout, requireStaff, requireStudent } from "@/lib/auth";
 import { studySummary } from "@/lib/data";
-import { getDb, nowIso } from "@/lib/db";
+import { getDb, nowIso, resetDemo } from "@/lib/db";
+import { roomLabel } from "@/lib/format";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { humanDate } from "@/lib/time";
 
-export type FormState = { error?: string; ok?: string } | undefined;
+export type FormState = { error?: string; ok?: string; login?: string } | undefined;
 
 export async function loginAction(_: FormState, form: FormData): Promise<FormState> {
   const loginName = String(form.get("login") ?? "");
   const password = String(form.get("password") ?? "");
-  if (!loginName || !password) return { error: "Введите логин и пароль" };
+  // Логин возвращаем обратно в форму, чтобы после ошибки не вводить его заново.
+  const keep = loginName.slice(0, 64);
+  if (!loginName || !password) return { error: "Введите логин и пароль", login: keep };
   const res = await login(loginName, password);
-  if (!res.ok) return { error: res.error };
+  if (!res.ok) return { error: res.error, login: keep };
   redirect(res.role === "staff" ? "/staff" : "/");
 }
 
@@ -66,7 +69,8 @@ export async function createRequestAction(_: FormState, form: FormData): Promise
     return n;
   })();
   revalidatePath("/requests");
-  redirect(`/requests/${number}?new=1`);
+  // replace: кнопка «Назад» после отправки ведёт в список, а не на заполненную форму (защита от дублей).
+  redirect(`/requests/${number}?new=1`, RedirectType.replace);
 }
 
 export async function markAllReadAction(): Promise<void> {
@@ -149,7 +153,7 @@ export async function changeClassAction(_: FormState, form: FormData): Promise<F
     if (room.length < 1) return { error: "Укажите новую аудиторию" };
     db.prepare("UPDATE schedule SET status='moved', old_room = COALESCE(old_room, room), room = ?, note = 'Аудитория изменена' WHERE id = ?").run(room, c.id);
     title = `${c.subject}: новая аудитория`;
-    body = `${humanDate(c.date)}, ${c.start}: ауд. ${room} вместо ${c.old_room ?? c.room}.`;
+    body = `${humanDate(c.date)}, ${c.start}: ${roomLabel(room)} вместо ${roomLabel(c.old_room ?? c.room)}.`;
   } else if (action === "time") {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)) return { error: "Время в формате ЧЧ:ММ" };
     const [h, m] = start.split(":").map(Number);
@@ -187,4 +191,12 @@ export async function announceAction(_: FormState, form: FormData): Promise<Form
     : db.prepare("SELECT id FROM users WHERE role='student' AND group_name = ?").all(audience)) as { id: number }[];
   for (const s of students) notify(s.id, "announcement", title, body, null);
   return { ok: `Объявление отправлено: ${students.length} студентам.` };
+}
+
+/** Возвращает демо-данные к исходному состоянию (заявки, расписание, уведомления, чат). Аккаунты и сессии остаются. */
+export async function resetDemoAction(): Promise<void> {
+  await requireStaff();
+  resetDemo();
+  revalidatePath("/", "layout");
+  redirect("/staff?reset=1");
 }

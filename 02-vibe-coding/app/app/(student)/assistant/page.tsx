@@ -6,19 +6,23 @@ import { requireStudent } from "@/lib/auth";
 import type { Reply } from "@/lib/assistant";
 import { studySummary } from "@/lib/data";
 import { getDb } from "@/lib/db";
+import { articleBy } from "@/lib/regulations";
 import { requestType } from "@/lib/request-types";
 
 export const dynamic = "force-dynamic";
 
 type Msg = { id: number; role: "user" | "assistant"; text: string; meta: string | null; created_at: string };
 
-const SUGGESTIONS = [
-  "Заболела и пропустила зачёт. Что делать?",
-  "Как у меня дела с учёбой?",
-  "Нужна справка для военкомата",
-  "Какие пары завтра?",
-  "Как получить повышенную стипендию?",
-];
+// Подсказки зависят от студента: формулировка по полу, справка в военкомат только там, где она уместна.
+function suggestions(gender: "f" | "m" | null, hasDebt: boolean): string[] {
+  return [
+    gender === "m" ? "Заболел и пропустил зачёт. Что делать?" : gender === "f" ? "Заболела и пропустила зачёт. Что делать?" : "Пропуск зачёта по болезни. Что делать?",
+    hasDebt ? "Как закрыть долг?" : "Как у меня дела с учёбой?",
+    gender === "m" ? "Нужна справка для военкомата" : "Нужна справка об обучении",
+    "Какие пары завтра?",
+    "Как получить повышенную стипендию?",
+  ];
+}
 
 export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const user = await requireStudent();
@@ -45,7 +49,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
               <div className="ic" style={{ background: "var(--brand)", color: "#fff" }}><IconSpark /></div>
               <div className="t1">Спросите о пересдачах, справках, стипендии или о своих оценках</div>
             </div>
-            <div className="t2" style={{ marginTop: 8 }}>Помощник видит только ваши данные и положения вуза, показывает пункт, на который опирается, и может заполнить заявление. Отправляете его вы.</div>
+            <div className="t2" style={{ marginTop: 8 }}>Помощник видит только ваши данные и положения вуза, показывает пункт, на который опирается (его можно раскрыть и прочитать), и может заполнить заявление. Отправляете его вы.</div>
           </div>
         )}
         {msgs.map((m) => {
@@ -56,7 +60,15 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div className="bub bot">
                 {m.text}
-                {meta.sources?.map((s) => <div className="src" key={s.point + s.doc}>{s.doc}, {s.point}</div>)}
+                {meta.sources?.map((s) => {
+                  const a = articleBy(s.doc, s.point);
+                  return a ? (
+                    <details className="src" key={s.point + s.doc}>
+                      <summary>{s.doc}, {s.point}</summary>
+                      <p><b>{a.title}</b>{a.text}</p>
+                    </details>
+                  ) : <div className="src" key={s.point + s.doc}>{s.doc}, {s.point}</div>;
+                })}
               </div>
               {rt && meta.draft && m.id === lastDraftId && (
                 <div className="card">
@@ -69,7 +81,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
         })}
         {msgs.length === 0 && (
           <div className="chips" style={{ marginTop: 6 }}>
-            {SUGGESTIONS.map((s) => <Suggestion key={s} text={s} />)}
+            {suggestions(user.gender, sum.debts.length > 0).map((s) => <Suggestion key={s} text={s} />)}
           </div>
         )}
       </div>

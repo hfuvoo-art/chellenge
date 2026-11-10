@@ -12,9 +12,10 @@ const FILTERS = [
   { key: "done", label: "Закрытые", where: "r.status IN ('ready','rejected')" },
 ];
 
-export default async function StaffQueue({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
+export default async function StaffQueue({ searchParams }: { searchParams: Promise<{ f?: string; reset?: string }> }) {
   await requireStaff();
-  const fk = (await searchParams).f ?? "new";
+  const sp = await searchParams;
+  const fk = sp.f ?? "new";
   const filter = FILTERS.find((f) => f.key === fk) ?? FILTERS[0];
   const db = getDb();
   const counts = Object.fromEntries(FILTERS.map((f) => [f.key, (db.prepare(`SELECT COUNT(*) n FROM requests r WHERE ${f.where}`).get() as { n: number }).n]));
@@ -24,6 +25,7 @@ export default async function StaffQueue({ searchParams }: { searchParams: Promi
   return (
     <>
       <h1 className="large">Заявки студентов</h1>
+      {sp.reset === "1" && <div className="ok-banner" role="status" style={{ marginBottom: 10 }}>Демо-данные возвращены к исходному состоянию.</div>}
       <div className="seg glass" style={{ maxWidth: 480 }}>
         {FILTERS.map((f) => <Link key={f.key} href={`/staff?f=${f.key}`} aria-current={f.key === filter.key ? "page" : undefined}>{f.label} · {counts[f.key]}</Link>)}
       </div>

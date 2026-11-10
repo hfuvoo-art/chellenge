@@ -19,7 +19,7 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <TopBar user={user} left={<span className="eyebrow-date">{sum.currentSem} семестр</span>} />
-      <h1 className="large">Как дела</h1>
+      <h1 className="large">Учёба</h1>
       <div className="seg glass" role="group" aria-label="Период">
         <Link href="/study" aria-current={tab === "now" ? "page" : undefined}>Семестр</Link>
         <Link href="/study?tab=history" aria-current={tab === "history" ? "page" : undefined}>Зачётка</Link>
@@ -43,6 +43,11 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
               <span className={`badge ${sum.scholarship ? "b-ok" : "b-bad"}`} style={{ marginTop: 8 }}>
                 {sum.scholarship ? "Стипендия сохраняется" : "Стипендия под риском"}
               </span>
+              {!sum.scholarship && sum.scholarshipReasons.length > 0 && (
+                <ul className="reasons" aria-label="Почему стипендия под риском">
+                  {sum.scholarshipReasons.map((r) => <li key={r.text}><Link href={r.href}>{r.text} ›</Link></li>)}
+                </ul>
+              )}
             </div>
           </div>
 

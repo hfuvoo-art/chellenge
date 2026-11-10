@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { IconBack } from "@/components/icons";
 import StatusForm from "@/components/StatusForm";
 import { requireStaff } from "@/lib/auth";
-import type { RequestEvent, RequestRow } from "@/lib/data";
+import { studySummary, type RequestEvent, type RequestRow } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { relativeTime } from "@/lib/time";
@@ -20,6 +20,8 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
   const events = db.prepare("SELECT * FROM request_events WHERE request_id = ? ORDER BY created_at, id").all(r.id) as RequestEvent[];
   const rt = requestType(r.type);
   const details = JSON.parse(r.details) as Record<string, string>;
+  // Сводка по учёбе нужна офису, чтобы решить по пересдаче или стипендии, не открывая другие системы.
+  const sum = studySummary(r.student_id);
   return (
     <>
       <Link href="/staff" className="pillbtn glass"><IconBack /> Очередь</Link>
@@ -33,7 +35,14 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
             <div className="kv"><span>Студ. билет</span><span>{r.student_card}</span></div>
           </div>
           <div className="card">
-            {rt?.fields.map((f) => details[f.name] ? <div className="kv" key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
+            <div className="t1" style={{ marginBottom: 4 }}>Учёба студента</div>
+            <div className="kv"><span>Средний балл</span><span>{sum.avg ? sum.avg.toFixed(1).replace(".", ",") : "нет оценок"}</span></div>
+            <div className={`kv ${sum.debts.length ? "long" : ""}`}><span>Задолженности</span><span style={{ color: sum.debts.length ? "var(--bad)" : undefined }}>{sum.debts.length ? sum.debts.map((d) => `${d.name} (${d.semester} семестр)`).join(", ") : "нет"}</span></div>
+            <div className={`kv ${sum.risks.length ? "long" : ""}`}><span>Риски в этом семестре</span><span style={{ color: sum.risks.length ? "var(--bad)" : undefined }}>{sum.risks.length ? sum.risks.map(({ s }) => `${s.name}: ${s.blocker ?? `${s.points} баллов`}`).join("; ") : "нет"}</span></div>
+            <div className="kv"><span>Стипендия</span><span>{sum.scholarship ? "условия выполнены" : "под риском"}</span></div>
+          </div>
+          <div className="card">
+            {rt?.fields.map((f) => details[f.name] ? <div className={`kv ${details[f.name].length > 28 ? "long" : ""}`} key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
           </div>
         </div>
         <div className="stack">

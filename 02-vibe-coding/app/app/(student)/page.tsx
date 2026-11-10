@@ -3,6 +3,7 @@ import { IconCalendar, IconChat, IconCheck, IconClock, IconDoc, IconSpark, IconW
 import TopBar from "@/components/TopBar";
 import { requireStudent } from "@/lib/auth";
 import { classesOn, deadlinesOf, nextClass, notificationsOf, requestsOf, studySummary, type ClassRow } from "@/lib/data";
+import { roomLabel } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/request-types";
 import { addDays, daysBetween, humanDate, minutesBetween, nowTimeMsk, plural, relativeTime, todayMsk } from "@/lib/time";
 
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 function ChangeAlert({ c }: { c: ClassRow }) {
   if (c.status === "moved" && c.old_room)
-    return <div className="alert"><IconWarn /><span>Новая аудитория: <s>{c.old_room}</s> → <b>{c.room}</b></span></div>;
+    return <div className="alert"><IconWarn /><span>Новое место: <s>{roomLabel(c.old_room)}</s> → <b>{roomLabel(c.room)}</b></span></div>;
   if (c.status === "moved" && c.old_start)
     return <div className="alert"><IconWarn /><span>Перенос: <s>{c.old_start}</s> → <b>{c.start}</b></span></div>;
   return null;
@@ -47,7 +48,7 @@ export default async function TodayPage() {
               {nc.state === "now" ? `Идёт сейчас · до ${nc.cls.end}` : `Через ${formatIn(minutesBetween(now, nc.cls.start))} · ${nc.cls.start}–${nc.cls.end}`}
             </div>
             <h2 className="h">{nc.cls.subject}</h2>
-            <div className="t2">{nc.cls.kind} · ауд. {nc.cls.room} · {nc.cls.teacher}</div>
+            <div className="t2">{nc.cls.kind} · {roomLabel(nc.cls.room)} · {nc.cls.teacher}</div>
             <ChangeAlert c={nc.cls} />
           </Link>
         ) : (
@@ -56,7 +57,7 @@ export default async function TodayPage() {
             {tomorrowFirst ? (
               <>
                 <h2 className="h">Дальше: {tomorrowFirst.subject}</h2>
-                <div className="t2">{humanDate(tomorrowFirst.date)}, {tomorrowFirst.start} · ауд. {tomorrowFirst.room}</div>
+                <div className="t2">{humanDate(tomorrowFirst.date)}, {tomorrowFirst.start} · {roomLabel(tomorrowFirst.room)}</div>
               </>
             ) : (
               <div className="t2">Отдыхайте!</div>
@@ -74,7 +75,7 @@ export default async function TodayPage() {
                   <div className="g">
                     <div className={`t1 ${c.status === "cancelled" ? "strike" : ""}`}>{c.subject}</div>
                     <div className="t2">
-                      ауд. {c.status === "moved" && c.old_room ? <><s>{c.old_room}</s> → <b style={{ color: "var(--warn)" }}>{c.room}</b></> : c.room} · {c.kind}
+                      {c.status === "moved" && c.old_room ? <><s>{roomLabel(c.old_room)}</s> → <b style={{ color: "var(--warn)" }}>{roomLabel(c.room)}</b></> : roomLabel(c.room)} · {c.kind}
                     </div>
                   </div>
                   {c.status === "cancelled" && <span className="badge b-bad">Отменена</span>}
@@ -85,6 +86,15 @@ export default async function TodayPage() {
           </>
         )}
 
+        {summary.debts.map((d) => (
+          <Link key={d.id} href="/requests/new?type=retake" className="card prio" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div className="g">
+              <div className="t1">Долг: {d.name}</div>
+              <div className="t2">Задолженность за {d.semester} семестр. Подайте заявление на пересдачу</div>
+            </div>
+            <span className="chev" style={{ color: "var(--bad)" }}>›</span>
+          </Link>
+        ))}
         {summary.risks.length > 0 && (
           <Link href={`/study/${summary.risks[0].s.id}`} className="card prio" style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div className="g">
@@ -106,7 +116,7 @@ export default async function TodayPage() {
               </div>
               <div className="g">
                 <div className="t1">{r.title}</div>
-                <div className="t2">№ {r.number} · {STATUS_LABEL[r.status]}{r.status === "ready" && r.verify_code ? " · PDF с QR-кодом" : ""}</div>
+                <div className="t2">№ {r.number}{r.status === "ready" && r.verify_code ? " · справка с QR-кодом" : ` · подана ${relativeTime(r.created_at)}`}</div>
               </div>
               <span className={`badge ${r.status === "ready" ? "b-ok" : "b-brand"}`}>{STATUS_LABEL[r.status]}</span>
             </Link>
@@ -125,7 +135,7 @@ export default async function TodayPage() {
             );
           })}
           {announcement && (
-            <Link href="/notifications" className="cell">
+            <Link href={announcement.link ?? "/notifications?f=announcement"} className="cell">
               <div className="ic" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}><IconChat /></div>
               <div className="g">
                 <div className="t1">{announcement.title}</div>

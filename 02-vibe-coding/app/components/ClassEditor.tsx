@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import { changeClassAction } from "@/app/actions";
 import type { ClassRow } from "@/lib/data";
+import { roomLabel } from "@/lib/format";
 
 export default function ClassEditor({ c }: { c: ClassRow }) {
   const [state, action, pending] = useActionState(changeClassAction, undefined);
@@ -10,7 +11,7 @@ export default function ClassEditor({ c }: { c: ClassRow }) {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
         <div>
           <div className="t1">{c.start}–{c.end} · {c.subject}</div>
-          <div className="t2">{c.kind} · ауд. {c.status === "moved" && c.old_room ? `${c.old_room} → ${c.room}` : c.room} · {c.teacher}</div>
+          <div className="t2">{c.kind} · {c.status === "moved" && c.old_room ? `${roomLabel(c.old_room)} → ${roomLabel(c.room)}` : roomLabel(c.room)} · {c.teacher}</div>
         </div>
         {c.status === "cancelled" && <span className="badge b-bad">Отменена</span>}
         {c.status === "moved" && <span className="badge b-warn">Изменена</span>}

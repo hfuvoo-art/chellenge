@@ -25,24 +25,30 @@ export type User = {
   student_card: string | null;
   email: string | null;
   position: string | null;
+  gender: "f" | "m" | null;
 };
 
-const USER_COLUMNS = "u.id,u.login,u.role,u.last_name,u.first_name,u.middle_name,u.faculty,u.program,u.course,u.group_name,u.student_card,u.email,u.position";
+const USER_COLUMNS = "u.id,u.login,u.role,u.last_name,u.first_name,u.middle_name,u.faculty,u.program,u.course,u.group_name,u.student_card,u.email,u.position,u.gender";
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
-// Простое ограничение попыток входа: 5 неудач за 10 минут на пару «IP + логин».
-const attempts = new Map<string, { n: number; until: number }>();
+// Ограничение попыток входа на пару «IP + логин»: после 5 неудач за 10 минут следующая попытка
+// разрешается раз в минуту. Подбор пароля это тормозит, а человека, который ошибся (или чей
+// тестовый аккаунт «заняли» с того же адреса), не запирает надолго. Чужие IP на блокировку не влияют.
+const attempts = new Map<string, { n: number; windowEnd: number; lockedUntil: number }>();
 const WINDOW_MS = 10 * 60 * 1000;
+const LOCK_MS = 60 * 1000;
 
 export function tooManyAttempts(key: string): boolean {
   const a = attempts.get(key);
-  return !!a && a.n >= 5 && a.until > Date.now();
+  return !!a && a.lockedUntil > Date.now();
 }
 function failAttempt(key: string) {
-  const a = attempts.get(key);
-  if (!a || a.until < Date.now()) attempts.set(key, { n: 1, until: Date.now() + WINDOW_MS });
-  else a.n++;
+  const now = Date.now();
+  let a = attempts.get(key);
+  if (!a || a.windowEnd < now) { a = { n: 0, windowEnd: now + WINDOW_MS, lockedUntil: 0 }; attempts.set(key, a); }
+  a.n++;
+  if (a.n >= 5) a.lockedUntil = now + LOCK_MS;
 }
 
 // Хэш-«пустышка», чтобы время ответа не выдавало, существует ли логин.
@@ -52,7 +58,7 @@ export async function login(loginRaw: string, password: string): Promise<{ ok: t
   const loginName = loginRaw.trim().toLowerCase();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const key = `${ip}|${loginName}`;
-  if (tooManyAttempts(key)) return { ok: false, error: "Слишком много попыток. Подождите 10 минут и попробуйте снова." };
+  if (tooManyAttempts(key)) return { ok: false, error: "Слишком много неверных попыток. Подождите минуту и попробуйте снова." };
 
   const db = getDb();
   const row = db.prepare("SELECT id, role, password_hash FROM users WHERE login = ?").get(loginName) as

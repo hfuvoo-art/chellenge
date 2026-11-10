@@ -35,17 +35,17 @@ export default async function RequestPage({ params, searchParams }: { params: Pr
           <div className="t2" style={{ marginTop: 8 }}>
             {r.status === "submitted" && `Ждёт учебный офис. Обычный срок: ${rt?.eta ?? "несколько дней"}.`}
             {r.status === "in_progress" && "Учебный офис готовит документ."}
-            {r.status === "ready" && (r.staff_comment ?? "Готово.")}
+            {r.status === "ready" && (r.staff_comment ?? "Заявка выполнена.")}
             {r.status === "rejected" && `Отклонена: ${r.staff_comment}`}
           </div>
           {r.status === "ready" && r.verify_code && (
-            <Link href={`/requests/${r.number}/certificate`} className="btn" style={{ marginTop: 12 }}><IconCheck /> Открыть справку с QR-кодом</Link>
+            <Link href={`/requests/${r.number}/certificate`} className="btn" style={{ marginTop: 12 }}><IconCheck /> Открыть справку</Link>
           )}
         </div>
 
         <div className="sh">Данные заявки</div>
         <div className="card">
-          {rt?.fields.map((f) => details[f.name] ? <div className="kv" key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
+          {rt?.fields.map((f) => details[f.name] ? <div className={`kv ${details[f.name].length > 28 ? "long" : ""}`} key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
         </div>
 
         <div className="sh">История</div>
