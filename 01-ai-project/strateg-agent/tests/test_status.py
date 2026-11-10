@@ -1,4 +1,5 @@
 # Тесты status.py: проверяют блоки статуса, учёт стоимости по 5 статьям без двойного счёта и устойчивость вывода; без них старт сессии врёт про деньги или падает в консоли Windows.
+import math
 import os
 import re
 import subprocess
@@ -122,7 +123,25 @@ def test_unknown_and_broken_journal_lines_do_not_crash(proj):
                     '{"kind": "model", "usd": "?"}\n{"ts": "обрыв', encoding="utf-8")
     out = status.render(proj)
     assert "Стоимость" in out
-    assert status.costs(proj)["total"] == 0
+    c = status.costs(proj)
+    assert math.isfinite(c["total"]) and c["total"] == 0
+    assert "nan" not in out.lower() and "inf" not in out.lower().replace("информ", "")
+    assert "[ЖЁЛТАЯ]" in out and "цена" in out
+
+
+def test_manual_bypass_count(proj):
+    log.event(proj, "human", minutes=5, what="правки")
+    assert "Ручных обходов: 0" in status.render(proj)
+    log.event(proj, "human", minutes=5, what="Ручной ОБХОД: PDF")
+    log.event(proj, "bypass", what="x")
+    assert "Ручных обходов: 2" in status.render(proj)
+
+
+def test_hook_lines_capped_and_next_kept(proj):
+    state.wait_human(proj, "Т", "я" * 5000)
+    out = status.render(proj, hook=True)
+    assert all(len(x) <= 300 for x in out.splitlines())
+    assert out.splitlines()[-1].startswith("Следующее действие:")
 
 
 def test_no_project_gives_next_step(tmp_path, monkeypatch, prices):

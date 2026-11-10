@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -31,7 +32,7 @@ HOOK_MAX_LINES = 25
 def _num(v) -> float | None:
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return None
-    return float(v)
+    return float(v) if math.isfinite(float(v)) else None
 
 
 def _prices() -> dict:
@@ -117,7 +118,7 @@ def _scan(slug) -> dict:
                 s["no_human_rate"] = True
             else:
                 s["human"] += m / 60 * hour
-            if "point" not in e:  # запись `log.py human` вне точек решения = ручной обход
+            if "обход" in str(e.get("what") or "").lower():  # ручной обход помечается словом «обход» в описании
                 s["bypasses"] += 1
         elif k == "bypass":
             s["bypasses"] += 1
@@ -223,8 +224,7 @@ def render(slug=None, hook: bool = False) -> str:
             out.append(f"{RED} …и ещё {len(reds) - 8}")
         if yellows:
             out.append(f"{YELLOW} замечаний: {len(yellows)}. Подробнее: `python tools/status.py`")
-        out.append(nxt)
-        return "\n".join(out[:HOOK_MAX_LINES - 1] + ([out[-1]] if len(out) > HOOK_MAX_LINES - 1 else []))[:4000]
+        return "\n".join(_one_line(x, 300) for x in out[:HOOK_MAX_LINES - 1] + [nxt])
     out = [
         head,
         f"Ждёт от человека: {wait_txt}",
@@ -268,7 +268,5 @@ def main(argv=None) -> int:
     return 0
 
 
-# TODO(оркестратор): AGENTS.md ещё не упоминает tools/status.py (файл заперт, задача 14 его не меняет); после правки вернуть двойные кавычки,
-# чтобы test_smoke_structure снова следил за этим файлом.
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
