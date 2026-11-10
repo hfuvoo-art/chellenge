@@ -1,0 +1,42 @@
+#cloud-config
+# Вставляется в поле «Пользовательские данные» (user-data) при создании ВМ в Yandex Cloud.
+# Ставит Docker и запускает: сайт (образ из GHCR), Caddy с HTTPS на адресе <IP>.sslip.io и
+# watchtower, который раз в 5 минут подтягивает новую версию сайта. Секретов здесь нет.
+package_update: true
+packages: [ca-certificates, curl]
+write_files:
+  - path: /opt/dekanat/docker-compose.yml
+    content: |
+      services:
+        app:
+          image: ghcr.io/hfuvoo-art/dekanat:latest
+          restart: unless-stopped
+          env_file: .env
+          volumes: [dekanat-data:/data]
+          labels: [com.centurylinklabs.watchtower.enable=true]
+        caddy:
+          image: caddy:2.10-alpine
+          restart: unless-stopped
+          ports: ["80:80", "443:443"]
+          env_file: .env
+          volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy-data:/data]
+          depends_on: [app]
+        watchtower:
+          image: containrrr/watchtower:1.7.1
+          restart: unless-stopped
+          command: --interval 300 --label-enable --cleanup
+          volumes: [/var/run/docker.sock:/var/run/docker.sock]
+      volumes:
+        dekanat-data:
+        caddy-data:
+  - path: /opt/dekanat/Caddyfile
+    content: |
+      {$DOMAIN} {
+      	encode zstd gzip
+      	header Strict-Transport-Security "max-age=31536000"
+      	reverse_proxy app:3000
+      }
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - IP=$(curl -s -H Metadata-Flavor:Google http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip); test -f /opt/dekanat/.env || echo "DOMAIN=${IP}.sslip.io" > /opt/dekanat/.env
+  - cd /opt/dekanat && docker compose up -d

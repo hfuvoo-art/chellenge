@@ -39,7 +39,7 @@ npm run seed       # пересоздать вымышленные данные
 ```
 
 ## Выкладка
-Yandex Cloud, виртуальная машина + Docker + Caddy (HTTPS). Пошагово: [[vykladka-yandex-cloud]].
+Yandex Cloud: образ собирает GitHub Actions, виртуальная машина сама его подтягивает (Docker + Caddy с HTTPS + watchtower). Пошагово: [[vykladka-yandex-cloud]].
 
 ## Процесс для жюри
 - Эскизы и их эволюция: `eskiz/` (v1–v7).
