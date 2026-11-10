@@ -19,7 +19,7 @@ files:
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
   AGENTS.md: 1867c1a3cee8884b8f7828b15d8511740a859522268b16d3b414238908a06927
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
-  tools/check.py: 72b445163a693ae318566a5844ff745dec6e4765cc3fd8fa2b8190a6db1a5d91
+  tools/check.py: 44827d3c61953f2040ee867a724f03254f3ed27bad9ee03aa824ca9908c4158a
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
 history:
 - updated_at: '2026-11-09T19:38:15+03:00'
@@ -64,3 +64,7 @@ history:
   reason: 'У16 пересмотрено 12.11: ключ — основной путь, без ключа — запасной'
   changed:
   - AGENTS.md
+- updated_at: '2026-11-10T19:08:35+03:00'
+  reason: 'задача 13: check.py 5–10'
+  changed:
+  - tools/check.py

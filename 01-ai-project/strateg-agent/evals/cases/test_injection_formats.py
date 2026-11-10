@@ -167,9 +167,8 @@ def test_review_csv_does_not_store_author_names_or_contacts(rt_project, tmp_path
     assert "Иван Тестов" not in md and "+7 900 000-00-00" not in md and "test.person@example.test" not in md
 
 
-@HOLE
 def test_fact_on_suspicious_paragraph_fails_check(rt_project, tmp_path):
-    """evidence.md: suspicious-абзац не может быть единственным основанием; check.py этого не проверяет, правило только в промптах."""
+    """evidence.md: suspicious-абзац не может быть единственным основанием; check.py даёт WARN (задача 13), подтверждается только человеком."""
     f = tmp_path / "inj.txt"
     f.write_text(INJ + "\n\nPrice 100 rub.\n", encoding="utf-8")
     sid = _ingest(rt_project, f)
