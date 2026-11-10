@@ -44,5 +44,8 @@ write_files:
       }
 runcmd:
   - curl -fsSL https://get.docker.com | sh
-  - IP=$(curl -s -H Metadata-Flavor:Google http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip); test -f /opt/dekanat/.env || echo "DOMAIN=${IP}.sslip.io" > /opt/dekanat/.env
+  # Адрес сайта: DOMAIN_HERE подставляет команда создания ВМ; если не подставлен, берём IP из метаданных.
+  - D="DOMAIN_HERE"; case "$D" in *.*) ;; *) IP=$(curl -s -H Metadata-Flavor:Google http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip); D="${IP}.sslip.io";; esac; test -f /opt/dekanat/.env || echo "DOMAIN=$D" > /opt/dekanat/.env
   - cd /opt/dekanat && docker compose up -d
+  # Для диагностики: состояние и логи видны в «Последовательном порте».
+  - sleep 60; cd /opt/dekanat && cat .env && docker compose ps -a && docker compose logs --tail 15
