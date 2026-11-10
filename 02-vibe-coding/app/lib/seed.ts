@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { roomLabel } from "./format";
-import { addDays, mondayOf, todayMsk, weekday } from "./time";
+import { addDays, mondayOf, todayMsk, weekday, humanDate } from "./time";
 
 // Все данные вымышленные. Совпадения с реальными людьми случайны.
 // Расписание строится вокруг текущей даты, чтобы на главной всегда были пары и изменения.
@@ -218,8 +218,8 @@ export function seed(db: Database.Database, now = new Date()): void {
     // Уведомления
     const addN = db.prepare(`INSERT INTO notifications (user_id,kind,title,body,link,created_at,read_at) VALUES (?,?,?,?,?,?,?)`);
     const ann = [
-      ["Продлён приём заявлений на повышенную стипендию", "Заявления принимаются до 20 ноября включительно. Нажмите, чтобы подать заявление онлайн.", -1, "16:30"],
-      ["Ярмарка стажировок 14 ноября", "Партнёры факультетов проведут собеседования в холле главного корпуса с 12:00 до 17:00.", -3, "12:00"],
+      ["Продлён приём заявлений на повышенную стипендию", `Заявления принимаются до ${humanDate(addDays(today, 9), false)} включительно. Нажмите, чтобы подать заявление онлайн.`, -1, "16:30"],
+      [`Ярмарка стажировок ${humanDate(addDays(today, 4), false)}`, "Партнёры факультетов проведут собеседования в холле главного корпуса с 12:00 до 17:00.", -3, "12:00"],
     ] as const;
     for (const uid of [alina, timur]) {
       for (const [t, b, off, time] of ann) addN.run(uid, "announcement", t, b, t.includes("стипенди") ? "/requests/new?type=scholarship_plus" : null, iso(addDays(today, off), time), off < -2 ? iso(addDays(today, off), "18:00") : null);

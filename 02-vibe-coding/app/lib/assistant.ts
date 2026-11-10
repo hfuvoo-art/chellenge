@@ -1,6 +1,6 @@
 import "server-only";
 import type { User } from "./auth";
-import { classesOn, deadlinesOf, nextClass, studySummary, type Subject } from "./data";
+import { classesOn, deadlinesOf, nextClass, studySummary, type Subject, requestsOf } from "./data";
 import { getDb } from "./db";
 import { roomLabel } from "./format";
 import { searchArticles, type Article } from "./regulations";
@@ -112,7 +112,12 @@ function asksAboutOthers(user: User, text: string): boolean {
   const t = norm(text);
   if (has(t, "другого студент", "другой студент", "других студент", "одногруппни", "однокурсни", "чужие", "чужую", "чужой", "соседа", "моего друга", "моей подруги", "всех студент", "всей группы")) return true;
   const others = getDb().prepare("SELECT first_name, last_name FROM users WHERE id != ? AND role = 'student'").all(user.id) as { first_name: string; last_name: string }[];
-  return others.some((o) => [o.first_name, o.last_name].some((n) => n.length >= 4 && t.includes(norm(n).slice(0, Math.max(4, n.length - 1)))));
+  // Имя ищем только в начале слова: «Сталинградская» не должна срабатывать на «Алин».
+  const words = t.split(/[^a-zа-я0-9]+/).filter(Boolean);
+  return others.some((o) => [o.first_name, o.last_name].some((n) => {
+    const stem = norm(n).slice(0, Math.max(4, n.length - 1));
+    return n.length >= 4 && words.some((w) => w.startsWith(stem) && w.length <= stem.length + 3);
+  }));
 }
 
 function scheduleLine(user: User, day: string): string {
@@ -165,6 +170,17 @@ function personalContext(user: User, text: string, hasArticle: boolean): { facts
       dl ? `Ближайший срок: ${dl.title} до ${humanDate(todayMsk(new Date(dl.due_at)), false)}.` : "",
       `Преподаватель: ${subj.teacher}.`,
     ].filter(Boolean).join(" ");
+  }
+
+  // 2а. Долг за прошлый семестр и пересдача: отвечаем по данным студента и его заявке, а не общим пунктом.
+  const debt = findSubject(text, sum.debts) ?? (has(text, "пересдач", "долг", "хвост") && sum.debts.length === 1 && has(text, "когда", "мой долг", "моя пересдач", "закрыть долг", "мне") ? sum.debts[0] : undefined);
+  if (!direct && debt && has(text, "что делать", "как сдать", "как закрыть", "когда", "пересдач", "долг", "предмет", "что с ")) {
+    const req = requestsOf(user.id).find((r) => r.type === "retake" && r.status !== "rejected" && String(JSON.parse(r.details).subject ?? "") === debt.name);
+    direct = [
+      `${debt.name}: задолженность за ${debt.semester} семестр.`,
+      req?.status === "ready" && req.staff_comment ? `По вашей заявке № ${req.number}: ${req.staff_comment}.` : req ? `Заявка на пересдачу № ${req.number} уже подана, статус: ${req.status === "submitted" ? "ждёт учебный офис" : "в работе"}. Дата придёт в уведомления.` : "Заявления на пересдачу пока нет: подайте его в разделе «Заявки», офис назначит дату.",
+      "Пока долг не закрыт, стипендия не назначается.",
+    ].join(" ");
   }
 
   // 3. Расписание: день недели, дата, «завтра», «следующая пара», «на неделе»

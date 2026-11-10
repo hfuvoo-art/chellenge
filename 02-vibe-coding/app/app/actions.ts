@@ -60,6 +60,9 @@ export async function createRequestAction(_: FormState, form: FormData): Promise
   const rt = requestType(type)!;
   const db = getDb();
   const now = nowIso();
+  // Защита общего демо от спама: не больше 5 заявок от одного студента за час.
+  const lastHour = (db.prepare("SELECT COUNT(*) AS n FROM requests WHERE student_id = ? AND created_at > ?").get(user.id, new Date(Date.now() - 3600_000).toISOString()) as { n: number }).n;
+  if (lastHour >= 5) return { error: "Слишком много заявок за час. Попробуйте позже." };
   const number = db.transaction(() => {
     const max = (db.prepare("SELECT COALESCE(MAX(number), 1000) AS m FROM requests").get() as { m: number }).m;
     const n = max + 1;
@@ -85,6 +88,9 @@ export async function askAssistantAction(_: FormState, form: FormData): Promise<
   if (!text) return { error: "Напишите вопрос" };
   if (text.length > 500) return { error: "Слишком длинный вопрос, сократите до 500 символов" };
   const db = getDb();
+  // Не больше 20 вопросов за 10 минут: защищает сервер и ключ модели.
+  const asked = (db.prepare("SELECT COUNT(*) AS n FROM chat_messages WHERE user_id = ? AND role = 'user' AND created_at > ?").get(user.id, new Date(Date.now() - 600_000).toISOString()) as { n: number }).n;
+  if (asked >= 20) return { error: "Слишком много вопросов подряд. Подождите пару минут." };
   db.prepare("INSERT INTO chat_messages (user_id,role,text,meta,created_at) VALUES (?,?,?,?,?)").run(user.id, "user", text, null, nowIso());
   const reply = await answer(user, text);
   db.prepare("INSERT INTO chat_messages (user_id,role,text,meta,created_at) VALUES (?,?,?,?,?)").run(

@@ -159,3 +159,16 @@ test("переписка по заявке привязана к заявке, �
   assert.equal(data.requestOf(alina, timurReq.number), null);
   assert.equal(db.prepare("SELECT id FROM requests WHERE number = ? AND student_id = ?").get(timurReq.number, alina), undefined);
 });
+
+test("помощник отвечает про долг и дату пересдачи по данным студента", async () => {
+  const { answer } = await import("../lib/assistant.ts");
+  const user = (login: string) => db.prepare("SELECT id,login,role,last_name,first_name,middle_name,faculty,program,course,group_name,student_card,email,position,gender FROM users WHERE login = ?").get(login) as never;
+  const a = await answer(user("timur"), "Когда пересдача по статистике?");
+  assert.match(a.text, /Статистика: задолженность/);
+  assert.match(a.text, /Пересдача назначена/);
+  const b = await answer(user("timur"), "Как сдать статистику?");
+  assert.doesNotMatch(b.text, /Не нашёл/);
+  // Слово с куском чужого имени внутри не считается вопросом о другом студенте.
+  const c = await answer(user("timur"), "Где находится Сталинградская аудитория, какие пары завтра?");
+  assert.doesNotMatch(c.text, /только ваши данные/);
+});
