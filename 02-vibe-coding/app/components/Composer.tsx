@@ -18,8 +18,8 @@ function Pending() {
   useEffect(() => { if (pending) window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }, [pending]);
   if (!pending) return null;
   return (
-    <div style={{ position: "fixed", bottom: 160, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-      <div style={{ width: "min(560px,100%)", padding: "0 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="pending-wrap">
+      <div>
         <div className="bub me" style={{ alignSelf: "flex-end" }}>{String(data?.get("text") ?? "")}</div>
         <div className="bub bot"><span className="typing" aria-label="Помощник думает"><i /><i /><i /></span></div>
       </div>

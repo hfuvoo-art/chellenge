@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IconCalendar, IconChat, IconCheck, IconClock, IconDoc, IconWarn } from "@/components/icons";
+import { IconCalendar, IconChat, IconCheck, IconClock, IconDoc, IconSpark, IconWarn } from "@/components/icons";
 import TopBar from "@/components/TopBar";
 import { requireStudent } from "@/lib/auth";
 import { classesOn, deadlinesOf, nextClass, notificationsOf, requestsOf, studySummary, type ClassRow } from "@/lib/data";
@@ -38,10 +38,12 @@ export default async function TodayPage() {
     <>
       <TopBar user={user} left={<span className="eyebrow-date">{humanDate(today)}</span>} />
       <h1 className="large">Привет, {user.first_name}</h1>
+      <div className="cols">
       <div className="stack">
+        <div className="sh desk-only">Ближайшее</div>
         {nc ? (
           <Link href="/schedule" className="card hero" aria-label={`Ближайшая пара: ${nc.cls.subject}`}>
-            <div className="eyebrow">
+            <div className={`eyebrow ${nc.state === "now" ? "live" : ""}`}>
               {nc.state === "now" ? `Идёт сейчас · до ${nc.cls.end}` : `Через ${formatIn(minutesBetween(now, nc.cls.start))} · ${nc.cls.start}–${nc.cls.end}`}
             </div>
             <h2 className="h">{nc.cls.subject}</h2>
@@ -93,6 +95,8 @@ export default async function TodayPage() {
           </Link>
         )}
 
+      </div>
+      <div className="stack">
         <div className="sh">Важное</div>
         <div className="card list">
           {requests.map((r) => (
@@ -139,8 +143,17 @@ export default async function TodayPage() {
           )}
         </div>
 
-        <p className="concept">Концепт для конкурса · не официальный сервис · данные вымышленные</p>
+        <div className="desk-only">
+          <div className="sh" style={{ paddingBottom: 10 }}>Быстрые действия</div>
+          <div className="row-btns">
+            <Link href="/requests" className="btn secondary sm"><IconDoc /> Заказать справку</Link>
+            <Link href="/assistant" className="btn secondary sm"><IconSpark /> Спросить помощника</Link>
+            <Link href="/schedule?view=week" className="btn secondary sm"><IconCalendar /> Неделя</Link>
+          </div>
+        </div>
       </div>
+      </div>
+      <p className="concept">Концепт для конкурса · не официальный сервис · данные вымышленные</p>
     </>
   );
 }

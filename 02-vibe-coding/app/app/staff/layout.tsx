@@ -1,5 +1,6 @@
 import { logoutAction } from "@/app/actions";
 import AutoRefresh from "@/components/AutoRefresh";
+import GlassLight from "@/components/GlassLight";
 import StaffNav from "@/components/StaffNav";
 import { requireStaff } from "@/lib/auth";
 
@@ -18,6 +19,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       {children}
       <p className="concept">Кабинет сотрудника · концепт для конкурса · данные вымышленные</p>
       <AutoRefresh seconds={30} />
+      <GlassLight />
     </main>
   );
 }

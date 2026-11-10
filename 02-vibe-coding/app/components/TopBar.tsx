@@ -13,7 +13,7 @@ export default function TopBar({ user, left }: { user: User; left?: React.ReactN
           <IconBell />
           {unread > 0 && <span className="dot-badge">{unread}</span>}
         </Link>
-        <Link href="/profile" className="iconbtn glass" aria-label="Профиль">
+        <Link href="/profile" className="iconbtn glass profile-btn" aria-label="Профиль">
           {user.first_name[0]}{user.last_name[0]}
         </Link>
       </div>

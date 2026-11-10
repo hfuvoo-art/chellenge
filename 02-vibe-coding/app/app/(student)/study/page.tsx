@@ -26,12 +26,14 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
       </div>
 
       {tab === "now" ? (
-        <div className="stack" style={{ marginTop: 6 }}>
+        <div className="cols" style={{ marginTop: 6 }}>
+        <div className="stack">
+          <div className="sh desk-only">Сводка</div>
           <div className="card" style={{ display: "flex", gap: 16, alignItems: "center" }}>
             <div className="ring" role="img" aria-label={`Средний балл ${avg.toFixed(1)}`}>
               <svg width="88" height="88" aria-hidden>
                 <circle cx="44" cy="44" r="36" stroke="#e9ecf2" strokeWidth="10" fill="none" />
-                <circle cx="44" cy="44" r="36" stroke={avg >= 4.5 ? "#1a8a47" : avg >= 4 ? "#e08600" : "#c9302c"} strokeWidth="10" fill="none" strokeLinecap="round" strokeDasharray={ring} strokeDashoffset={ring * (1 - Math.min(avg, 5) / 5)} />
+                <circle cx="44" cy="44" r="36" stroke={avg >= 4.5 ? "#1a8a47" : avg >= 4 ? "#e08600" : "#c9302c"} strokeWidth="10" fill="none" strokeLinecap="round" strokeDasharray={ring} strokeDashoffset={ring * (1 - Math.min(avg, 5) / 5)} className="ring-arc" style={{ "--len": ring } as React.CSSProperties} />
               </svg>
               <div className="n">{avg.toFixed(1).replace(".", ",")}</div>
             </div>
@@ -62,6 +64,8 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
             </>
           )}
 
+        </div>
+        <div className="stack">
           <div className="sh">Дисциплины · прогноз по баллам</div>
           <div className="card list">
             {sum.forecasts.map(({ s, f }) => (
@@ -78,8 +82,9 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
           </div>
           <p className="t2" style={{ padding: "0 6px" }}>Прогноз: 85+ баллов — «отлично», 70+ — «хорошо», 55+ — «удовлетворительно» или зачёт.</p>
         </div>
+        </div>
       ) : (
-        <div className="stack" style={{ marginTop: 6 }}>
+        <div className="grid-auto" style={{ marginTop: 6 }}>
           {[...new Set(sum.past.map((s) => s.semester))].map((sem) => (
             <section key={sem}>
               <div className="sh">{sem} семестр</div>

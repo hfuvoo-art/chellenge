@@ -19,6 +19,7 @@ export default async function RequestsPage() {
     <>
       <TopBar user={user} left={<span className="eyebrow-date">Справки и заявления</span>} />
       <h1 className="large">Заявки</h1>
+      <div className="cols">
       <div className="stack">
         <div className="sh">Заказать за 2 касания</div>
         <div className="card list">
@@ -31,6 +32,8 @@ export default async function RequestsPage() {
           ))}
         </div>
 
+      </div>
+      <div className="stack">
         <div className="sh">В работе</div>
         {active.length ? (
           <div className="card list">{active.map((r) => <Row key={r.id} r={r} />)}</div>
@@ -48,6 +51,7 @@ export default async function RequestsPage() {
             <div className="card list">{done.map((r) => <Row key={r.id} r={r} />)}</div>
           </>
         )}
+      </div>
       </div>
     </>
   );
