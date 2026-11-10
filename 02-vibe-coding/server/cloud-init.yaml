@@ -2,6 +2,11 @@
 # Вставляется в поле «Пользовательские данные» (user-data) при создании ВМ в Yandex Cloud.
 # Ставит Docker и запускает: сайт (образ из GHCR), Caddy с HTTPS на адресе <IP>.sslip.io и
 # watchtower, который раз в 5 минут подтягивает новую версию сайта. Секретов здесь нет.
+users:
+  - name: dekanat
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys: [ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDBvgr4oyTC7ZEVGJdJaQCDxX8cuWjUoYSpV9lr+L6vh dekanat-vm]
 package_update: true
 packages: [ca-certificates, curl]
 write_files:
