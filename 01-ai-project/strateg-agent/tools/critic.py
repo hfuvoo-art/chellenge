@@ -82,7 +82,7 @@ def _safe_check(job: Job, obj) -> tuple[Any, list[str]]:
 
 def _emit(slug, job: Job, show: bool) -> Path:
     return extract.write_prompt(slug, job.aid, job.system, job.user, title=job.label, label=job.label,
-                                apply_cmd=f'python tools/critic.py {job.cmd} --apply "{{ans}}"'.replace("  ", " "),
+                                apply_cmd=f'python tools/critic.py -p {slug} {job.cmd} --apply "{{ans}}"'.replace("  ", " "),
                                 show_prompt=show, shape=job.shape)
 
 
@@ -487,7 +487,7 @@ def main(argv=None) -> int:
             res = {"options": lambda: critique_options(slug), "promises": lambda: check_promises(slug),
                    "claims": lambda: sample_claims(slug, n or 10, a.seed)}[mode]()
     except llm.NoKeyError as e:
-        print(f"{e}\nЧто сделать без ключа: `python tools/critic.py {flags} --emit-prompt`, затем `--apply файл.json` (критик — модель среды; в статусе красная и жёлтая строки).".replace("  ", " "))
+        print(f"{e}\nЧто сделать без ключа: `python tools/critic.py -p {slug} {flags} --emit-prompt`, затем `--apply файл.json` (критик — модель среды; в статусе красная и жёлтая строки).".replace("  ", " "))
         return 3
     except Escalated as e:
         print(str(e))

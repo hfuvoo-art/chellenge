@@ -368,7 +368,7 @@ def write_prompt(slug, aid, system, user, *, title, label, apply_cmd, show_promp
 
 def _emit(slug, sid, part, system, user, aid, *, show_prompt: bool, questions=None) -> Path:
     return write_prompt(slug, aid, system, user, title=f"источник {sid}, часть {part.idx}", label=f"части {part.idx}",
-                        apply_cmd=f"python tools/extract.py {sid}{_qflags(questions)} --apply \"{{ans}}\" --part {part.idx}",
+                        apply_cmd=f"python tools/extract.py {sid}{_qflags(questions)} --apply \"{{ans}}\" --part {part.idx} -p {slug}",
                         show_prompt=show_prompt)
 
 
@@ -403,6 +403,10 @@ def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] 
         event(slug, "apply_rejected", action_id=aid, reason=f"ни одна цитата не прошла проверку 1 ({len(rej)})")
         raise ValueError(f"ни одно из {len(rej)} утверждений не прошло проверку цитаты. Примеры: " + "; ".join(rej[:3]) +
                          ". Что сделать: перепишите цитаты дословно из промпта (целое предложение ≥25 символов из одного абзаца) и повторите --apply; записано ничего не было.")
+    if len(rej) > DROP_ESCALATE_SHARE * (len(ok) + len(rej)):  # тот же порог, что для lite → pro: слабый ответ возвращается на доработку
+        event(slug, "apply_rejected", action_id=aid, reason=f"отброшено {len(rej)} из {len(ok) + len(rej)} (порог {DROP_ESCALATE_SHARE})")
+        raise ValueError(f"не прошли проверку цитаты {len(rej)} из {len(ok) + len(rej)} утверждений (больше половины). Примеры: " + "; ".join(rej[:3]) +
+                         ". Что сделать: перепишите эти цитаты дословно из промпта или удалите такие утверждения из ответа и повторите --apply; записано ничего не было.")
     added = _commit(slug, sid, ok)
     if rej:
         print(f"Отклонено {len(rej)} утверждений (цитата не прошла проверку 1): " + "; ".join(rej[:3]))
@@ -493,6 +497,9 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
                 failed_human.append((part.idx, why))
             continue
         rep.dropped_table_facts += sum(t.tables for t in tiers)
+        if len(tiers) > 1 and not last.valid and t1.accepted:
+            print(f"Часть {part.idx}: pro не дал ответа ({last.why}), сохранено принятое с lite: {len(t1.accepted)}.")
+            event(slug, "pro_failed_kept_lite", unit=unit, part=part.idx, kept=len(t1.accepted), reason=last.why, action_id=aid)
         added = _commit(slug, sid, accepted)
         rep.claims_added += added
         state.mark_done(slug, aid, {"part": part.idx, "claims": added})

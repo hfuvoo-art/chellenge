@@ -418,3 +418,31 @@ def test_source_delimiters_are_defused_in_prompt(fake_llm, tmp_project):
     extract.extract_source(tmp_project, sid)
     user = fake_llm.calls[0]["messages"][1]["content"]
     assert user.count("<<<ИСТОЧНИК") == 1 and user.count("ИСТОЧНИК>>>") == 1
+
+
+def test_apply_more_than_half_rejected_writes_nothing(tmp_project):
+    sid = _ingest(tmp_project, _paras(3))
+    rep = extract.extract_source(tmp_project, sid, emit_prompt=True)
+    p = rep.emitted[0]
+    p.write_text(_resp(_c(_paras(3)[0]), _bad("а"), _bad("б")), encoding="utf-8")
+    with pytest.raises(ValueError, match="больше половины"):
+        extract.apply_result(tmp_project, sid, 1, p)
+    assert claims.load(tmp_project) == [] and not state.is_done(tmp_project, rep.action_ids[1])
+    p.write_text(_resp(_c(_paras(3)[0])), encoding="utf-8")  # отклонённые удалены из ответа — принимается
+    assert extract.apply_result(tmp_project, sid, 1, p) == 1
+
+
+def test_pro_garbage_keeps_lite_with_message(fake_llm, tmp_project, capsys):
+    sid = _ingest(tmp_project, _paras(3))
+    p = _paras(3)
+    fake_llm.add(_resp(_c(p[0]), _bad("а"), _bad("б")), "не json", "опять не json")
+    rep = extract.extract_source(tmp_project, sid)
+    assert rep.claims_added == 1 and state.is_done(tmp_project, rep.action_ids[1])
+    assert "pro не дал ответа" in capsys.readouterr().out
+    assert any(e["kind"] == "pro_failed_kept_lite" for e in _log(tmp_project))
+
+
+def test_emit_hint_has_project_flag(tmp_project, capsys):
+    sid = _ingest(tmp_project, _paras(2))
+    extract.extract_source(tmp_project, sid, emit_prompt=True)
+    assert f"-p {tmp_project}" in capsys.readouterr().out

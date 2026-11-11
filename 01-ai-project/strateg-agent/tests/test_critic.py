@@ -132,7 +132,7 @@ def test_emit_apply_roundtrip_logs_degraded(tmp_project, capsys):
     ans = critic.emit_critique(tmp_project)
     out = capsys.readouterr().out
     assert ans.suffix == ".json" and ans.parent.name == "prompts" and ":" not in ans.name
-    assert P[0] in out and SECRET not in out and "--apply" in out
+    assert P[0] in out and SECRET not in out and "--apply" in out and f"-p {tmp_project}" in out
     ans.write_text(json.dumps(_good(), ensure_ascii=False), encoding="utf-8")
     path = critic.apply_critique(tmp_project, ans)
     assert path.is_file()
