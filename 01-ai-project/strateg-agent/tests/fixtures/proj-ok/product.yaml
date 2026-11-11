@@ -1,0 +1,3 @@
+features:
+- {id: F-1, what: "Подключение eSIM по QR-коду без визита в салон", status: exists, available_from: null, basis: [C-001]}
+- {id: F-2, what: "Перенос номера на eSIM в один шаг", status: planned, available_from: 2027-Q1, basis: [C-002]}

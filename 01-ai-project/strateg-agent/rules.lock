@@ -19,7 +19,7 @@ files:
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
   AGENTS.md: 12d7abe2971200cc97e82a50c56ccee756a6334a091558928ad3818501a0e34d
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
-  tools/check.py: 72b445163a693ae318566a5844ff745dec6e4765cc3fd8fa2b8190a6db1a5d91
+  tools/check.py: cf9281aefd612f282dff06c5f97aa8809bdcee682c5edc02dd0d590391205abb
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
 history:
 - updated_at: '2026-11-09T19:38:15+03:00'
@@ -73,3 +73,20 @@ history:
     замен'
   changed:
   - AGENTS.md
+- updated_at: '2026-11-10T19:08:35+03:00'
+  reason: 'задача 13: check.py 5–10'
+  changed:
+  - tools/check.py
+- updated_at: '2026-11-10T19:17:48+03:00'
+  reason: 'задача 13: правки по ревью'
+  changed:
+  - tools/check.py
+- updated_at: '2026-11-11T17:08:24+03:00'
+  reason: 'задача 13: правки по ревью, круг 2'
+  changed:
+  - tools/check.py
+- updated_at: '2026-11-11T17:11:46+03:00'
+  reason: 'задача 13: правки по ревью, круг 2 (оркестратор): waiting строкой, пропуск
+    только для неначатого документа'
+  changed:
+  - tools/check.py

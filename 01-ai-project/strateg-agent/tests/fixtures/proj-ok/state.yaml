@@ -1,0 +1,5 @@
+step: {n: 5, name: strategy}
+done: {}
+waiting: null
+human: []
+degraded: []
