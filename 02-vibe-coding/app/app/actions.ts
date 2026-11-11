@@ -7,6 +7,7 @@ import { answer } from "@/lib/assistant";
 import { login, logout, requireStaff, requireStudent } from "@/lib/auth";
 import { MUTABLE_KINDS, mutedKinds, retakeSubjects } from "@/lib/data";
 import { getDb, nowIso, resetDemo } from "@/lib/db";
+import { FILE_TYPES, MAX_FILE_BYTES, MAX_TOTAL_BYTES, safeName, sniffType } from "@/lib/files";
 import { roomLabel } from "@/lib/format";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { humanDate } from "@/lib/time";
@@ -240,4 +241,27 @@ export async function saveNotifPrefsAction(_: FormState, form: FormData): Promis
   getDb().prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(`mute:${user.id}`, muted.join(","));
   revalidatePath("/profile");
   return { ok: muted.length ? "Сохранено. Отключённые уведомления больше не приходят." : "Сохранено. Приходят все уведомления." };
+}
+
+/** Файл к заявке (медицинская справка и т.п.). Один файл на заявку, только к своей и только пока она не закрыта. */
+export async function uploadRequestFileAction(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireStudent();
+  const db = getDb();
+  const r = db.prepare("SELECT id, type, status FROM requests WHERE number = ? AND student_id = ?").get(Number(form.get("number")), user.id) as { id: number; type: string; status: string } | undefined;
+  if (!r) return { error: "Заявка не найдена" };
+  if (!FILE_TYPES.includes(r.type)) return { error: "К этой заявке файл не нужен" };
+  if (r.status !== "submitted" && r.status !== "in_progress") return { error: "Заявка уже закрыта, файл прикрепить нельзя" };
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Выберите файл" };
+  if (file.size > MAX_FILE_BYTES) return { error: "Файл больше 2 МБ. Сожмите его или сфотографируйте заново." };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // Тип проверяем по содержимому: переименованный .exe или .html не пройдёт.
+  const kind = sniffType(bytes);
+  if (!kind) return { error: "Подходят только PDF, JPG и PNG" };
+  const total = (db.prepare("SELECT COALESCE(SUM(size), 0) AS n FROM request_files WHERE request_id != ?").get(r.id) as { n: number }).n;
+  if (total + bytes.length > MAX_TOTAL_BYTES) return { error: "Хранилище демо заполнено. Принесите справку в каб. 112." };
+  db.prepare("INSERT INTO request_files (request_id,name,mime,size,data,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT(request_id) DO UPDATE SET name = excluded.name, mime = excluded.mime, size = excluded.size, data = excluded.data, created_at = excluded.created_at")
+    .run(r.id, safeName(file.name, kind.ext), kind.mime, bytes.length, Buffer.from(bytes), nowIso());
+  revalidatePath("/requests");
+  return { ok: "Файл прикреплён. Учебный офис увидит его в заявке." };
 }

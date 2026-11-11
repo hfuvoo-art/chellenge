@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconBack, IconCheck } from "@/components/icons";
 import { requireStudent } from "@/lib/auth";
+import FileUpload from "@/components/FileUpload";
 import RequestChat from "@/components/RequestChat";
-import { messagesOfRequest, requestOf } from "@/lib/data";
+import { fileOfRequest, messagesOfRequest, requestOf } from "@/lib/data";
+import { FILE_TYPES, humanSize } from "@/lib/files";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { relativeTime } from "@/lib/time";
 
@@ -20,6 +22,8 @@ export default async function RequestPage({ params, searchParams }: { params: Pr
   const rt = requestType(r.type);
   const details = JSON.parse(r.details) as Record<string, string>;
   const messages = messagesOfRequest(r.id).map((m) => ({ ...m, when: relativeTime(m.created_at) }));
+  const file = fileOfRequest(r.id);
+  const open = r.status === "submitted" || r.status === "in_progress";
   const step = { submitted: 1, in_progress: 2, ready: 3, rejected: 3 }[r.status];
 
   return (
@@ -49,6 +53,20 @@ export default async function RequestPage({ params, searchParams }: { params: Pr
         <div className="card">
           {rt?.fields.map((f) => details[f.name] ? <div className={`kv ${details[f.name].length > 28 ? "long" : ""}`} key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
         </div>
+
+        {FILE_TYPES.includes(r.type) && (open || file) && (
+          <>
+            <div className="sh">Документ к заявке</div>
+            <div className="card">
+              {file ? (
+                <div className="kv"><span>{file.name} · {humanSize(file.size)}</span><span><a className="link" href={`/files/${r.id}`}>Скачать</a></span></div>
+              ) : (
+                <div className="t2">Справку или другой подтверждающий документ можно прикрепить здесь, чтобы не нести в офис.</div>
+              )}
+              {open && <FileUpload number={r.number} has={!!file} />}
+            </div>
+          </>
+        )}
 
         <div className="sh">Вопрос учебному офису</div>
         <RequestChat side="student" target={r.number} messages={messages} closed={r.status === "ready" || r.status === "rejected"} />

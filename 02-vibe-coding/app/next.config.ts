@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["better-sqlite3"],
   poweredByHeader: false,
+  // Файл к заявке до 2 МБ: поднимаем предел тела запроса для Server Actions (по умолчанию 1 МБ).
+  experimental: { serverActions: { bodySizeLimit: "3mb" } },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

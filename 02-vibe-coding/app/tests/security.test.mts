@@ -303,3 +303,22 @@ test("помощник: «как пересдать, если болела» т�
   assert.deepEqual(data.mutedKinds(timur), []);
   db.prepare("DELETE FROM meta WHERE key = ?").run(`mute:${alina}`);
 });
+
+test("файлы к заявке: тип определяется по содержимому, имя очищается", async () => {
+  const f = await import("../lib/files.ts");
+  const enc = (s: string) => new TextEncoder().encode(s);
+  assert.equal(f.sniffType(enc("%PDF-1.7 ..."))?.mime, "application/pdf");
+  assert.equal(f.sniffType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))?.mime, "image/jpeg");
+  assert.equal(f.sniffType(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))?.mime, "image/png");
+  assert.equal(f.sniffType(enc("<html><script>alert(1)</script>")), null);
+  assert.equal(f.sniffType(enc("MZ\x90\x00 exe")), null);
+  assert.equal(f.safeName("../../etc/passwd<script>.html", "pdf"), "passwdscript.pdf");
+  assert.equal(f.safeName("Справка от врача.JPG", "jpg"), "Справка от врача.jpg");
+  // Файл привязан к заявке: чужую заявку студент не находит, значит и файл не получит.
+  const timurReq = db.prepare("SELECT id, number FROM requests WHERE student_id = ? LIMIT 1").get(timur) as { id: number; number: number };
+  db.prepare("INSERT INTO request_files (request_id,name,mime,size,data,created_at) VALUES (?,?,?,?,?,?)").run(timurReq.id, "t.pdf", "application/pdf", 5, Buffer.from("%PDF-"), new Date().toISOString());
+  assert.equal(data.fileOfRequest(timurReq.id)?.name, "t.pdf");
+  const leaked = db.prepare("SELECT f.name FROM request_files f JOIN requests r ON r.id = f.request_id WHERE f.request_id = ? AND r.student_id = ?").get(timurReq.id, alina);
+  assert.equal(leaked, undefined);
+  db.prepare("DELETE FROM request_files WHERE request_id = ?").run(timurReq.id);
+});

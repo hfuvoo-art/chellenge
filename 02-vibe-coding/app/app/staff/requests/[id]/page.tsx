@@ -4,8 +4,9 @@ import { IconBack } from "@/components/icons";
 import RequestChat from "@/components/RequestChat";
 import StatusForm from "@/components/StatusForm";
 import { requireStaff } from "@/lib/auth";
-import { messagesOfRequest, studySummary, type RequestEvent, type RequestRow } from "@/lib/data";
+import { fileOfRequest, messagesOfRequest, studySummary, type RequestEvent, type RequestRow } from "@/lib/data";
 import { getDb } from "@/lib/db";
+import { humanSize } from "@/lib/files";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
 import { relativeTime } from "@/lib/time";
 
@@ -23,6 +24,7 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
   const details = JSON.parse(r.details) as Record<string, string>;
   // Сводка по учёбе нужна офису, чтобы решить по пересдаче или стипендии, не открывая другие системы.
   const sum = studySummary(r.student_id);
+  const file = fileOfRequest(r.id);
   const messages = messagesOfRequest(r.id).map((m) => ({ ...m, when: relativeTime(m.created_at) }));
   const waiting = messages.length > 0 && messages[messages.length - 1].author === "student";
   return (
@@ -45,6 +47,7 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
             <div className="kv"><span>Стипендия</span><span>{sum.scholarship ? "условия выполнены" : "под риском"}</span></div>
           </div>
           <div className="card">
+            {file && <div className="kv"><span>Документ: {file.name} · {humanSize(file.size)}</span><span><a className="link" href={`/files/${r.id}`}>Скачать</a></span></div>}
             {rt?.fields.map((f) => details[f.name] ? <div className={`kv ${details[f.name].length > 28 ? "long" : ""}`} key={f.name}><span>{f.label}</span><span>{details[f.name]}</span></div> : null)}
           </div>
         </div>

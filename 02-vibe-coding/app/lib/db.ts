@@ -97,6 +97,14 @@ CREATE TABLE IF NOT EXISTS request_events (
   actor TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS request_files (
+  request_id INTEGER PRIMARY KEY REFERENCES requests(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  data BLOB NOT NULL,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS request_messages (
   id INTEGER PRIMARY KEY,
   request_id INTEGER NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
@@ -135,7 +143,7 @@ function demoDay(): string {
   return todayMsk(new Date(Date.now() - 4 * 3600_000));
 }
 
-const DEMO_TABLES = ["chat_messages", "notifications", "request_messages", "request_events", "requests", "deadlines", "works", "subjects", "schedule"];
+const DEMO_TABLES = ["chat_messages", "notifications", "request_files", "request_messages", "request_events", "requests", "deadlines", "works", "subjects", "schedule"];
 
 /** Возвращает демо к исходному состоянию. Аккаунты и открытые сессии сохраняются. */
 export function resetDemo(d: Database.Database = getDb()): void {

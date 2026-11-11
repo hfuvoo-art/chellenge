@@ -121,6 +121,12 @@ export function requestOf(studentId: number, number: number): (RequestRow & { ev
   return { ...r, events };
 }
 
+export type RequestFile = { name: string; mime: string; size: number; created_at: string };
+/** Сведения о файле заявки (без содержимого). Вызывать после проверки владельца заявки. */
+export function fileOfRequest(requestId: number): RequestFile | null {
+  return (getDb().prepare("SELECT name,mime,size,created_at FROM request_files WHERE request_id = ?").get(requestId) as RequestFile | undefined) ?? null;
+}
+
 export type RequestMessage = { id: number; author: "student" | "staff"; author_name: string; text: string; created_at: string };
 /** Переписка по заявке. Вызывать только после проверки, что заявка принадлежит студенту (requestOf) или что это сотрудник. */
 export function messagesOfRequest(requestId: number): RequestMessage[] {
