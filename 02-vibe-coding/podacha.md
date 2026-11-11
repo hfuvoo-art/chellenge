@@ -28,6 +28,7 @@
 
 Код: https://github.com/hfuvoo-art/chellenge/tree/claude/project-thread-hfs6t6/02-vibe-coding
 Описание процесса: https://github.com/hfuvoo-art/chellenge/blob/claude/project-thread-hfs6t6/02-vibe-coding/opisanie-processa.md
+Связь с командой: Telegram @hfuvo или @mountaindewcitrus
 ```
 
 ## 2. Исходный код

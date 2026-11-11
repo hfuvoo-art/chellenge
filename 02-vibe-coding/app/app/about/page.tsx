@@ -50,7 +50,7 @@ export default async function AboutPage() {
         </div>
         <div className="card">
           <div className="t1">Команда и связь</div>
-          <p className="t2 prose">Проект сделан командой участников MGIMO×AI Challenge 2026 вместе с ИИ-ассистентом. Связаться с командой можно через организаторов конкурса.</p>
+          <p className="t2 prose">Проект сделан командой участников MGIMO×AI Challenge 2026 вместе с ИИ-ассистентом. Написать команде можно в Telegram: <a href="https://t.me/hfuvo" target="_blank" rel="noopener noreferrer">@hfuvo</a> или <a href="https://t.me/mountaindewcitrus" target="_blank" rel="noopener noreferrer">@mountaindewcitrus</a>.</p>
         </div>
         <p className="concept">Концепт для конкурса · не официальный сервис · данные вымышленные</p>
       </div>
