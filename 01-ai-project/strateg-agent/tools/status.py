@@ -17,15 +17,8 @@ PRICES_PATH: Path = ROOT / "config" / "prices.yaml"
 RED, YELLOW = "[КРАСНАЯ]", "[ЖЁЛТАЯ]"
 YANDEX_CATEGORIES = {None, "", "yandex", "lite", "pro"}  # остальные категории llm-вызовов идут в «повторы и сбои» (У2)
 RED_FLAGS = {"env-model", "lock"}
-NEXT_BY_STEP = {
-    0: "python tools/project.py new <имя>",
-    1: "python tools/ingest.py --help",
-    2: "python tools/ingest.py --help",
-    3: "python tools/extract.py --dry-run",
-    4: "python tools/critic.py --help",
-    5: "python tools/check.py",
-    6: "python tools/status.py",
-}
+STEP_PLAYBOOKS = {1: "playbooks/1-frame.md", 2: "playbooks/2-collect.md", 3: "playbooks/3-research.md",
+                  4: "playbooks/4-options.md", 5: "playbooks/5-strategy.md", 6: "playbooks/6-after-decision.md"}
 HOOK_MAX_LINES = 25
 
 
@@ -182,12 +175,40 @@ def _degraded_lines(slug, s: dict, st: dict) -> tuple[list[str], list[str]]:
 def _next_action(slug, st: dict, lock_problems: list[str]) -> str:
     if lock_problems:
         return "python tools/lock.py --verify  (правила изменены: разберитесь до работы)"
-    waiting = st.get("waiting")
-    if isinstance(waiting, dict) and waiting.get("question"):
-        return f'ответить человеку, затем `python tools/log.py human <мин> "<что решено>"`'
+    point, question = _waiting_parts(st.get("waiting"))
+    if point or question:
+        return (f'ответить человеку, затем `python tools/state.py resolve "{point or "точка N"}" '
+                f'--summary "<что решил человек>" --minutes <мин>`')
     step = st.get("step") if isinstance(st.get("step"), dict) else {}
     n = step.get("n") if isinstance(step.get("n"), int) else 0
-    return NEXT_BY_STEP.get(n, "python tools/status.py")
+    if n == 0:
+        return f"прочитай {STEP_PLAYBOOKS[1]} и начни шаг 1"
+    if n in STEP_PLAYBOOKS:
+        return f"открой {STEP_PLAYBOOKS[n]} и продолжи шаг"
+    return "python tools/status.py"
+
+
+def _waiting_parts(waiting) -> tuple[str, str]:
+    """(точка, вопрос): ожидание бывает словарём {point, question} или строкой «точка 1» (так велят playbooks)."""
+    if isinstance(waiting, dict):
+        return str(waiting.get("point") or "").strip(), str(waiting.get("question") or "").strip()
+    if isinstance(waiting, str) and waiting.strip():
+        return waiting.strip(), ""
+    return "", ""
+
+
+def _dates_lines() -> list[str]:
+    as_of = _prices().get("as_of")
+    upd = None
+    try:
+        upd = lock.last_update(ROOT)
+    except Exception:  # noqa: BLE001 — битый rules.lock не должен ронять статус
+        pass
+    when = upd.get("updated_at") if isinstance(upd, dict) else None
+    why = upd.get("reason") if isinstance(upd, dict) else None
+    return [f"Цены (config/prices.yaml): на {as_of if as_of else 'неизвестно'}",
+            "Правила обновлены (lock.py --update): " + (_one_line(f"{when}" + (f" — {why}" if why else ""), 200)
+                                                         if when else "неизвестно")]
 
 
 def render(slug=None, hook: bool = False) -> str:
@@ -209,8 +230,9 @@ def render(slug=None, hook: bool = False) -> str:
     review_lines = review_mod.review(slug)
     step = st.get("step") if isinstance(st.get("step"), dict) else {}
     waiting = st.get("waiting")
-    wait_txt = (_one_line(f"{waiting.get('point', '')}: {waiting.get('question', '')}", 200)
-                if isinstance(waiting, dict) else "ничего")
+    point, question = _waiting_parts(waiting)
+    wait_txt = (_one_line(f"{point}: {question}" if point and question else (point or question), 200)
+                if point or question else "ничего")
     done = len(st.get("done") or {})
     nxt = f"Следующее действие: {_next_action(slug, st, lock_problems)}"
     head = f"Проект: {slug} · шаг {step.get('n', 0)} {step.get('name', '')} · сделано действий: {done}"
@@ -237,6 +259,7 @@ def render(slug=None, hook: bool = False) -> str:
         f"  Итого: {_rub(c['total'])} · минуты человека: {c['minutes']:g}",
         f"Ручных обходов: {s['bypasses']}",
         lock_line,
+        *_dates_lines(),
         "Деградации:",
     ]
     dl = reds + yellows
