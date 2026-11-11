@@ -577,10 +577,52 @@ def test_resolve_without_waiting_or_minutes_exit_3(proj):
     assert rc(["-p", proj, "--resolve", "x", "--minutes", "1"]) == 3
     _exhaust(proj)
     assert rc(["-p", proj, "--resolve", "x"]) == 3
-    assert "--resolve" in check._Parser(prog="x").format_help() or True
 
 
 def test_help_mentions_resolve(capsys):
     with pytest.raises(SystemExit):
         check.main(["--help"])
     assert "--resolve" in capsys.readouterr().out
+
+
+def test_waiting_as_string_from_playbook_does_not_crash(proj, capsys):
+    """playbooks пишут `waiting: "точка 3"` строкой: check.py не падает, лимит итераций работает."""
+    st = state.load(proj)
+    st["waiting"] = "точка 3"
+    st["step"] = {"n": 5, "name": "strategy"}
+    state.save(proj, st)
+    assert rc(["-p", proj, "--only", "1,2,3,4,5,6,7,8,9,10"]) == 0
+    edit(proj, "strategy.md", "→ F-1", "→ F-9")
+    for _ in range(3):
+        assert rc(["-p", proj, "--only", "7"]) == 1
+    assert state.load(proj)["waiting"]["point"] == "check"
+
+
+@pytest.mark.parametrize("n", [0, 3, 4])
+def test_freeform_strategy_is_not_skipped_on_early_step(proj, capsys, monkeypatch, n):
+    """Стратегия не по шаблону (свои заголовки) на раннем шаге не пропускается и не получает код 0."""
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])  # п.11 проверяется отдельно
+    st = state.load(proj)
+    st["step"] = {"n": n, "name": "x"}
+    state.save(proj, st)
+    (project_path(proj) / "strategy.md").write_text("# Стратегия\n\n## 1. Что делаем\nЗапускаем eSIM [C-001].\n", encoding="utf-8")
+    assert rc(["-p", proj]) == 1
+    assert "пропущено: проверки 6" not in capsys.readouterr().out
+
+
+def test_text_under_non_leaf_heading_is_not_skipped(proj, capsys, monkeypatch):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    st = state.load(proj)
+    st["step"] = {"n": 4, "name": "options"}
+    state.save(proj, st)
+    (project_path(proj) / "strategy.md").write_text("## Продуктовая стратегия\nВесь текст здесь, без подразделов.\n", encoding="utf-8")
+    assert rc(["-p", proj]) == 1
+
+
+def test_freeform_options_are_not_skipped_on_early_step(proj, capsys, monkeypatch):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    st = state.load(proj)
+    st["step"] = {"n": 3, "name": "research"}
+    state.save(proj, st)
+    (project_path(proj) / "options.md").write_text("# Варианты\n\n### Вариант 1\nОставить как есть.\n", encoding="utf-8")
+    assert rc(["-p", proj]) == 1

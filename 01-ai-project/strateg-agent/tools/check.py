@@ -656,6 +656,19 @@ def _step_n(st: dict):
     return n if isinstance(n, int) and not isinstance(n, bool) and n >= 0 else None
 
 
+def _waiting_point(st) -> str | None:
+    """Точка ожидания человека. В state.yaml `waiting` бывает и строкой («точка 3» из playbooks) — тогда точки нет."""
+    w = (st or {}).get("waiting")
+    return w.get("point") if isinstance(w, dict) else None
+
+
+def _started(text: str | None) -> bool:
+    """Документ начат, если в нём есть хоть одна непустая строка, кроме заголовков и комментариев."""
+    if text is None:
+        return False
+    return any(ln.strip() and not HEAD_RE.match(ln) for ln in COMMENT_RE.sub("", text).splitlines())
+
+
 def _early_skip(slug, st: dict) -> set[int]:
     """Проверки документов пропускаются, только если шаг ранний И сам документ ещё не начат; иначе проверяем всё."""
     n = _step_n(st)
@@ -663,17 +676,11 @@ def _early_skip(slug, st: dict) -> set[int]:
     if n is None:
         return cut
     if n < 4:
-        text = _doc(slug, "options.md")
-        if text is None or not _options_blocks(text):
+        if not _started(_doc(slug, "options.md")):
             cut.add(5)
     if n < 5:
-        text = _doc(slug, "strategy.md")
-        if text is None:
+        if not _started(_doc(slug, "strategy.md")):
             cut |= {6, 7, 8, 9, 10}
-        else:
-            secs = _sections(text)
-            if all(not (s := _find(secs, lv, t)) or not _body(s["lines"]) for lv, t, leaf in STRATEGY_SECTIONS if leaf):
-                cut |= {6, 7, 8, 9, 10}
     return cut
 
 
@@ -685,7 +692,8 @@ def _track_iterations(slug, findings: list[Finding], ran: set[int]) -> int:
     """Считает подряд идущие запуски с FAIL в текущем шаге. Возвращает номер итерации (0 — FAIL нет)."""
     st = state.load(slug)
     step = _step_n(st)  # None, если шаг записан нестандартно: счётчик ведётся под ключом None
-    prev = st.get("check_fails") or {}
+    prev = st.get("check_fails")
+    prev = prev if isinstance(prev, dict) else {}
     failed = sorted({f.check for f in findings if f.level == "FAIL"})
     if failed:
         same = prev.get("step") == step
@@ -693,7 +701,7 @@ def _track_iterations(slug, findings: list[Finding], ran: set[int]) -> int:
         checks = sorted(set(prev.get("checks", []) if same else []) | set(failed))
         st["check_fails"] = {"step": step, "count": count, "checks": checks}
         state.save(slug, st)
-        if count >= MAX_ITERATIONS and (count == MAX_ITERATIONS or (st.get("waiting") or {}).get("point") != "check"):
+        if count >= MAX_ITERATIONS and (count == MAX_ITERATIONS or _waiting_point(st) != "check"):
             lines = [f"- п.{f.check} {f.target}: {f.msg}" for f in findings if f.level == "FAIL"][:15]
             state.wait_human(slug, "check", f"Не прошло проверку: {len(lines)} замечаний после {count} итераций исправления.\n" + "\n".join(lines)
                               + '\nПосле решения человека: `python tools/check.py --resolve "<что решил человек>" --minutes <N>`.')
@@ -726,7 +734,7 @@ def write_report(slug, findings: list[Finding], ran: set[int], iteration: int, s
               f"Подряд запусков с FAIL: {iteration} из {MAX_ITERATIONS}."
               + (" Лимит исчерпан: решение за человеком (state.yaml, waiting)." if iteration >= MAX_ITERATIONS else "")]
     st, _ = _read_state(slug)
-    if iteration >= MAX_ITERATIONS or ((st or {}).get("waiting") or {}).get("point") == "check":
+    if iteration >= MAX_ITERATIONS or _waiting_point(st) == "check":
         lines += ["", "Лимит итераций был исчерпан: ожидание человека не снимается автоматически: `python tools/check.py --resolve \"<что решил человек>\" --minutes <N>`."]
     if skipped:
         lines += ["", skipped]
@@ -853,7 +861,7 @@ def main(argv=None) -> int:
         st, err = _read_state(slug)
         if err:
             die(err, code=3)
-        if (st.get("waiting") or {}).get("point") != "check":
+        if _waiting_point(st) != "check":
             die("нет ожидания человека по проверке (waiting.point=check), снимать нечего. Что сделать: ожидание появляется после 3-го подряд FAIL.", code=3)
         state.resolve_human(slug, "check", a.resolve.strip(), a.minutes)
         st = state.load(slug)
