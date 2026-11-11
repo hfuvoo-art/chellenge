@@ -60,6 +60,7 @@
 |---|---|
 | `python tools/project.py new <slug>` / `use <slug>` / `list` | создать проект из шаблона, переключить, показать |
 | `python tools/ingest.py <файл или URL> --found-by user\|brief\|"search:<запрос>" [--refresh] [--url URL]` | добавить источник (PDF, docx, xlsx/csv, md/txt, html, сайт, изображение); пометки `suspicious` |
+| `python tools/ingest.py --reviews gplay:<app_id> --since ГГГГ-ММ-ДД [--until ГГГГ-ММ-ДД]` | отзывы Google Play без авторов: CSV `date,rating,version,text` и число отзывов по месяцам; свой CSV с такой шапкой — обычным `ingest.py <файл.csv>` |
 | `python tools/analyze.py cell <S-id> "Лист!C14" [--question Q1]` | табличный `fact` из ячейки, детерминированно |
 | `python tools/extract.py <S-id> [--question Q4] [--dry-run]` / `--emit-prompt` / `--apply <файл.json> --part N` | извлечение утверждений из текстового источника: части ≤12 000 символов, в реестр идут только дословные цитаты (остальные отброшены и записаны в журнал), повтор не отправляет готовые части; оценка из источника — `fact` «По оценке источника: …»; `--dry-run` — оценка цены без вызовов; без ключа — `--emit-prompt` и `--apply` |
 | `python tools/critic.py` / `--promises` / `--claims-sample N [--seed S]` (у всех — `--emit-prompt` / `--apply <файл.json>`) | критик в чистом контексте: видит только `options.md` и цитаты утверждений, на которые ссылаются варианты. Без флагов — ≥2 возражения на вариант и «что заставит передумать» → `critique.md`; `--promises` — обещания `strategy.md` против функций `product.yaml`; `--claims-sample` — верно ли истолкованы цитаты → `critique-claims.md`. Ответ критика фактом не становится |
@@ -100,8 +101,6 @@
 
 | Целевое (задача) | Сейчас |
 |---|---|
-| табличные факты | `python tools/analyze.py cell <S-id> "Лист!C14" --question Q1` |
-| `ingest.py --reviews` — отзывы (12) | Скачанный человеком CSV отзывов без имён авторов подключай как таблицу: `ingest.py <файл.csv> --found-by user` |
 | `export.py` — читаемый вид (14a) | Нет. `strategy.md` читается как есть |
 | `impact.py`, `review.py` — пересмотр и решения (17) | `claims.py search "<слова>"` и `claims.py list --status active`, ручной обход затронутых `[C-…]`, вариантов, разделов `strategy.md`, `decisions.yaml`; просрочки — по `due` в `decisions.yaml` |
 <!-- TEMP-END -->
