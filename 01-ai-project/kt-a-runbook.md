@@ -22,7 +22,7 @@
   - `../data/emiss-38480-vyezd-2023-2026.xlsx` — выезд граждан РФ по странам и кварталам (ЕМИСС 38480);
   - https://www.csr.ru/upload/iblock/db1/2tefjudwt0eb6cznxbjq4nw5m244539i.pdf — ЦСР «Туризм в России. Итоги 2025»;
   - https://simology.io/ru/esim-turtsiya и https://mobimatter.com/ru/esim-istanbul — тарифы eSIM.
-- Минуты своего участия агент записывает через `python tools/log.py human …` — следить, что записывает.
+- Точки человека агент открывает `python tools/state.py wait "точка N" "…"` и закрывает `python tools/state.py resolve "точка N" --summary "…" --minutes N` (минуты — ваши); прочее время — `log.py human`. Следить, что записывает: `python tools/status.py` → «Ждёт от человека» и «Человек: … мин».
 
 ## Точки 2 и 3
 - Точка 2 — выбор варианта из ≥3 (есть `status_quo` и `close`, у каждого ≥2 возражения). Выбирать по сути, причину выбора сказать одной фразой.
