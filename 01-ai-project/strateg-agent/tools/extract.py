@@ -125,9 +125,14 @@ def split_parts(md: str, limit: int = PART_LIMIT) -> list[Part]:
 
 # ---------- вход ----------
 
-def load_prompt() -> str:
-    t = read_text(PROMPT_PATH)
+def load_prompt_file(path) -> str:
+    """Текст промпта без служебного комментария первой строки (общая функция extract/critic/respond)."""
+    t = read_text(path)
     return re.sub(r"\A\s*<!--.*?-->\s*", "", t, flags=re.S).strip()
+
+
+def load_prompt() -> str:
+    return load_prompt_file(PROMPT_PATH)
 
 
 def _questions(slug: str, wanted: list[str] | None) -> list[tuple[str, str]]:
@@ -348,16 +353,23 @@ def _qflags(questions) -> str:
     return "".join(f" --question {q}" for q in (questions or []))
 
 
-def _emit(slug, sid, part, system, user, aid, *, show_prompt: bool, questions=None) -> Path:
+def write_prompt(slug, aid, system, user, *, title, label, apply_cmd, show_prompt, shape="один JSON-объект") -> Path:
+    """Общая механика режима без ключа (У3): промпт в cache/prompts/<action_id>.prompt.txt, подсказка, куда класть ответ.
+    Возвращает путь файла ответа модели среды; в apply_cmd «{ans}» заменяется этим путём."""
     from tools.common import write_text_atomic
     ans, prm = _prompt_paths(slug, aid)
     write_text_atomic(prm, f"{system}\n\n---\n\n{user}\n")
     if show_prompt:
-        print(f"=== ПРОМПТ (источник {sid}, часть {part.idx}) ===\n{system}\n\n---\n\n{user}\n=== КОНЕЦ ПРОМПТА ===")
-    print(f"Промпт части {part.idx}: {prm}\n"
-          f"Что сделать: модель среды читает промпт, кладёт ответ (один JSON-объект) в {ans}, затем: "
-          f"python tools/extract.py {sid}{_qflags(questions)} --apply \"{ans}\" --part {part.idx}")
+        print(f"=== ПРОМПТ ({title}) ===\n{system}\n\n---\n\n{user}\n=== КОНЕЦ ПРОМПТА ===")
+    print(f"Промпт {label}: {prm}\n"
+          f"Что сделать: модель среды читает промпт, кладёт ответ ({shape}) в {ans}, затем: {apply_cmd.replace('{ans}', str(ans))}")
     return ans
+
+
+def _emit(slug, sid, part, system, user, aid, *, show_prompt: bool, questions=None) -> Path:
+    return write_prompt(slug, aid, system, user, title=f"источник {sid}, часть {part.idx}", label=f"части {part.idx}",
+                        apply_cmd=f"python tools/extract.py {sid}{_qflags(questions)} --apply \"{{ans}}\" --part {part.idx}",
+                        show_prompt=show_prompt)
 
 
 def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] | None = None) -> int:

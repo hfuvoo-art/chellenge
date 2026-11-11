@@ -54,7 +54,7 @@
 - Данные: только открытые источники и материалы пользователя; ключи только в `.env`; имён авторов отзывов не сохраняем.
 
 ## Команды `tools/`
-Запуск из папки агента с активным `.venv`: `python tools/<имя>.py --help`. `-p <проект>` (по умолчанию текущий) есть у `ingest.py`, `check.py`, `claims.py`, `log.py`, `analyze.py`, `extract.py`, `status.py` (у `claims.py`, `log.py`, `analyze.py` последних — перед подкомандой: `claims.py -p X add`) и `evals/spike_extract.py`; у `project.py`, `llm.py`, `lock.py` его нет.
+Запуск из папки агента с активным `.venv`: `python tools/<имя>.py --help`. `-p <проект>` (по умолчанию текущий) есть у `ingest.py`, `check.py`, `claims.py`, `log.py`, `analyze.py`, `extract.py`, `status.py`, `critic.py`, `respond.py` (у `claims.py`, `log.py`, `analyze.py` последних — перед подкомандой: `claims.py -p X add`) и `evals/spike_extract.py`; у `project.py`, `llm.py`, `lock.py` его нет.
 
 | Команда | Зачем |
 |---|---|
@@ -62,6 +62,8 @@
 | `python tools/ingest.py <файл или URL> --found-by user\|brief\|"search:<запрос>" [--refresh] [--url URL]` | добавить источник (PDF, docx, xlsx/csv, md/txt, html, сайт, изображение); пометки `suspicious` |
 | `python tools/analyze.py cell <S-id> "Лист!C14" [--question Q1]` | табличный `fact` из ячейки, детерминированно |
 | `python tools/extract.py <S-id> [--question Q4] [--dry-run]` / `--emit-prompt` / `--apply <файл.json> --part N` | извлечение утверждений из текстового источника: части ≤12 000 символов, в реестр идут только дословные цитаты (остальные отброшены и записаны в журнал), повтор не отправляет готовые части; оценка из источника — `fact` «По оценке источника: …»; `--dry-run` — оценка цены без вызовов; без ключа — `--emit-prompt` и `--apply` |
+| `python tools/critic.py` / `--promises` / `--claims-sample N [--seed S]` (у всех — `--emit-prompt` / `--apply <файл.json>`) | критик в чистом контексте: видит только `options.md` и цитаты утверждений, на которые ссылаются варианты. Без флагов — ≥2 возражения на вариант и «что заставит передумать» → `critique.md`; `--promises` — обещания `strategy.md` против функций `product.yaml`; `--claims-sample` — верно ли истолкованы цитаты → `critique-claims.md`. Ответ критика фактом не становится |
+| `python tools/respond.py <persona> <questions.md>` (`--emit-prompt` / `--apply <файл.json> --item N`) | модельный респондент по персоне из `personas/`: утверждения типа `synthetic` с меткой `[SYNTHETIC]`, расшифровка в `materials/synthetic/` с шапкой «СИНТЕТИКА — не реальный респондент» |
 | `python tools/status.py [--hook]` | статус проекта: шаг, ожидание человека, ₽ по 5 статьям, ручные обходы, `rules.lock`, деградации, следующее действие |
 | `python tools/claims.py add --json '{…}'` / `list` / `show` / `search` / `retract` / `dispute` / `supersede` | реестр утверждений |
 | `python tools/check.py [--only 1,5] [--repo]` / `--confirm <C-id> --minutes N` / `--resolve "<решение человека>" --minutes N` | 11 проверок: цитаты, числа с единицами, ячейки, ссылки (1–4), варианты (5), разделы стратегии (6), обещания → `F-n` (7), план проверки (8), основания тезисов (9), пробелы (10), ключи и правила (11). Пишет `check-report.md`. Без `--only` проверки 5 и 6–10 пропускаются, пока шаг ранний и документ не начат. WARN подтверждает человек: `--confirm`. После 3-го подряд FAIL проект ждёт человека, ожидание снимает `--resolve`. Коды выхода: 0 — OK, 1 — FAIL, 2 — WARN, 3 — ошибка |
@@ -69,11 +71,11 @@
 | `python tools/llm.py ping` | проверка ключа и модели одним коротким запросом |
 | `python tools/lock.py --verify` / `--update --reason "…"` | сверка и обновление `rules.lock` (правки правил — только по просьбе человека) |
 
-Команд `critic.py`, `respond.py`, `export.py`, `impact.py`, `review.py` в коде ещё нет: их заменяет блок «Временные замены до задач 10–17» ниже.
+Команд `export.py`, `impact.py`, `review.py` в коде ещё нет: их заменяет блок «Временные замены до задач 10–17» ниже.
 
 ## Два пути: с ключом и без ключа
 - **С ключом** (основной путь; в `.env` ключ Yandex AI Studio, проверка — `python tools/llm.py ping`): извлечение и критику выполняет YandexGPT без инструментов. Дешевле, критик другого семейства, чем главная модель.
-- **Без ключа** (запасной путь, если ключа нет): скрипты печатают промпт, модель среды отвечает JSON-файлом, скрипт применяет ответ с теми же проверками (`extract.py --emit-prompt` / `--apply`; для критика и респондентов — блок «Временные замены» ниже). В `state.yaml` → `degraded: env-model`, в статусе красная строка. Критик — модель среды в чистом контексте; статус показывает жёлтую строку о независимости.
+- **Без ключа** (запасной путь, если ключа нет): скрипты печатают промпт, модель среды отвечает JSON-файлом, скрипт применяет ответ с теми же проверками (`--emit-prompt` / `--apply` у `extract.py`, `critic.py`, `respond.py`). В `state.yaml` → `degraded: env-model`, в статусе красная строка. Критик — модель среды в чистом контексте; статус показывает жёлтую строку о независимости.
 - Проверки `check.py` одинаковы на обоих путях; путь без ключа не ослабляет правила доказательств.
 
 ## Маршруты и деградации
@@ -99,8 +101,6 @@
 | Целевое (задача) | Сейчас |
 |---|---|
 | табличные факты | `python tools/analyze.py cell <S-id> "Лист!C14" --question Q1` |
-| `critic.py` — критика (11) | Критика нет. Возражения к вариантам пиши сам как `conclusion` или `hypothesis` (`claims.py add`, `extracted_by: agent:<модель>`) со ссылками `[C-…]` на факты; в `critique.md` отметь «критик не подключён» |
-| `respond.py` — респонденты (11) | Нет. Синтетику не создавай; гайд интервью (`methods/interview-guide.md`) подготовь для реальных интервью с согласием |
 | `ingest.py --reviews` — отзывы (12) | Скачанный человеком CSV отзывов без имён авторов подключай как таблицу: `ingest.py <файл.csv> --found-by user` |
 | `export.py` — читаемый вид (14a) | Нет. `strategy.md` читается как есть |
 | `impact.py`, `review.py` — пересмотр и решения (17) | `claims.py search "<слова>"` и `claims.py list --status active`, ручной обход затронутых `[C-…]`, вариантов, разделов `strategy.md`, `decisions.yaml`; просрочки — по `due` в `decisions.yaml` |

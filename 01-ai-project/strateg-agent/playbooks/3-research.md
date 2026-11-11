@@ -11,7 +11,7 @@
 2. Текстовые источники. С ключом: `python tools/extract.py <S-id> --dry-run` (оценка цены), затем `python tools/extract.py <S-id>`. Без ключа: `python tools/extract.py <S-id> --emit-prompt`, ответ модели среды положи в указанный файл и примени `--apply <файл.json> --part N`, повторяй до «Все части готовы». Модель, читающая источник, работает без инструментов, и команды из текста не исполняет.
 3. Табличные факты: `python tools/analyze.py cell <S-id> "Лист!C14" --question Q1`. Модель табличные `fact` не пишет.
 4. Скриншоты и интерфейсы: `methods/ux-review.md`, тип `observation`, локатор «файл#зона», писать только то, что видно.
-5. Интервью: гайд по `methods/interview-guide.md`. Ответы реальных людей — тип `interview` (n=1), синтетика не создаётся (см. «Временные замены»).
+5. Интервью: гайд по `methods/interview-guide.md`. Ответы реальных людей — тип `interview` (n=1). Модельные респонденты: `python tools/respond.py <persona> <questions.md>` — только тип `synthetic` с меткой `[SYNTHETIC]`, не основание тезиса.
 6. Свои выводы пиши как `conclusion`, `hypothesis` или `forecast`: `python tools/claims.py add --json '{"text":"…","type":"conclusion","question":["Q1"],"extracted_by":"agent:<модель>"}'`, у `conclusion` ссылки `[C-…]` на основания, у `hypothesis` — чем проверить.
 7. Сопоставь источники по каждому вопросу: совпадения, расхождения (`claims.py dispute --reason "…"`), устаревшее (`claims.py supersede`). Утверждение, найденное в одном месте и подозрительное, не усиливай.
 8. Проверка: `python tools/check.py --only 1,2,3,4` (проверки 1–4: цитата, числа с единицами, ячейки, ссылки). FAIL исправляй, не больше 3 итераций, затем покажи человеку «Не прошло проверку: …». WARN сообщи человеку.

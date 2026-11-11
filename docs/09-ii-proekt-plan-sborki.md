@@ -576,17 +576,17 @@
   - расшифровка сохраняется в `materials/synthetic/<persona>-<дата>.md` с шапкой «СИНТЕТИКА — не реальный респондент»;
 - CLI: `critic.py [--promises] [--claims-sample N] [--emit-prompt|--apply]`, `respond.py <persona> questions.md`.
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_critic_payload_only_options_and_cited_quotes`: в запросе нет текста материалов;
   - `test_critique_two_objections_per_option`;
   - `test_promises_planned_without_date_flagged`;
   - `test_claims_sample_reproducible_with_seed`;
   - `test_same_family_sets_yellow_degraded` (У5);
   - `test_synthetic_typed_labeled_and_transcript_header`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_critic.py tests/test_respond.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: critic.py и respond.py`.
+- [x] **Шаг 2.** `python -m pytest tests/test_critic.py tests/test_respond.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: critic.py и respond.py`.
 
 ### Задача 12. Отзывы Google Play
 
