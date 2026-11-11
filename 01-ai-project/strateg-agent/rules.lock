@@ -17,7 +17,7 @@ files:
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
-  AGENTS.md: 1867c1a3cee8884b8f7828b15d8511740a859522268b16d3b414238908a06927
+  AGENTS.md: 12d7abe2971200cc97e82a50c56ccee756a6334a091558928ad3818501a0e34d
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: 72b445163a693ae318566a5844ff745dec6e4765cc3fd8fa2b8190a6db1a5d91
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
@@ -68,3 +68,8 @@ history:
   reason: 'задача 10: оценка источника — fact с цитатой, estimate только расчёт'
   changed:
   - prompts/extract.md
+- updated_at: '2026-11-10T19:21:05+03:00'
+  reason: 'задачи 10 и 14: extract.py и status.py в AGENTS.md, строки убраны из Временных
+    замен'
+  changed:
+  - AGENTS.md
