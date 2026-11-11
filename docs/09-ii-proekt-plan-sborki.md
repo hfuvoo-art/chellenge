@@ -644,7 +644,7 @@
 - CLI `check.py [-p slug] [--only 1,5] [--confirm C-014 --minutes 2]` пишет `check-report.md`. Коды выхода: 0 — PASS, 1 — FAIL, 2 — есть неподтверждённые WARN.
 - После 3-го подряд FAIL в шаге — `state.wait_human` с блоком «Не прошло проверку: …».
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_options_min3_with_status_quo_and_close`;
   - `test_objections_two_and_one_with_ref`;
   - `test_strategy_required_headings`;
@@ -655,10 +655,10 @@
   - `test_confirm_clears_warn_logs_minutes`;
   - `test_third_fail_waits_for_human`;
   - `test_report_and_exit_codes`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_check_docs.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать. В конце: `python tools/lock.py --update --reason "задача 13: check.py 5–10"`.
-- [ ] **Шаг 4.** pytest → PASS; `python tools/lock.py --verify` → OK.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: check.py — варианты, стратегия, обещания, план проверки, пробелы`.
+- [x] **Шаг 2.** `python -m pytest tests/test_check_docs.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать. В конце: `python tools/lock.py --update --reason "задача 13: check.py 5–10"`.
+- [x] **Шаг 4.** pytest → PASS; `python tools/lock.py --verify` → OK.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: check.py — варианты, стратегия, обещания, план проверки, пробелы`.
 
 ### Задача 14. status.py, review.py (заготовка), учёт стоимости
 
