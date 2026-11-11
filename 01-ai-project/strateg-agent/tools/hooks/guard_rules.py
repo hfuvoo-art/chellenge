@@ -1,4 +1,4 @@
-# Хук PreToolUse: просит подтверждение, когда правка или команда затрагивает запертые файлы (У6); без него rules/, prompts/, methods/, AGENTS.md, CLAUDE.md, check.py и lock.py меняются молча.
+# Хук PreToolUse: просит подтверждение, когда правка или команда затрагивает запертые файлы (У6); без него rules/, prompts/, methods/, AGENTS.md, CLAUDE.md, check.py и lock.py меняются молча. Предохранитель от случайной правки: обходы через cd, heredoc и скрипты regex-ом не закрыть, настоящая защита — rules.lock и check.py п.11.
 import json
 import re
 import sys
@@ -7,19 +7,27 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parent.parent.parent
 DIRS = ("rules", "prompts", "methods")
 FILES = ("agents.md", "claude.md", "tools/lock.py", "tools/check.py")
-# Запертый путь в тексте команды (регистр не важен, слэш любой).
-PROT_BODY = r"(?:\.[\\/])?(?:(?:rules|prompts|methods)[\\/]|AGENTS\.md|CLAUDE\.md|tools[\\/]lock\.py|tools[\\/]check\.py)"
-PROT_RE = re.compile(r"(?<![\w.-])" + PROT_BODY, re.I)
+# Запертый путь в тексте команды (регистр не важен, слэш любой). Каталоги rules/prompts/methods считаются только
+# в начале пути, после `./`, `../`, `x/../` или после корня агента (абсолютный путь), а не после любого `/`.
+_ROOT_PFX = r"(?:[^\s\x27\x22]*?[\\/])?" + re.escape(ROOT.name) + r"[\\/]"
+_LOCAL_PFX = r"(?:\.\.?[\\/]|[\w-]+[\\/]\.\.[\\/])*"
+_ITEM = r"(?:(?:rules|prompts|methods)[\\/]|AGENTS\.md|CLAUDE\.md|tools[\\/]lock\.py|tools[\\/]check\.py)"
+PROT_BODY = r"(?:" + _ROOT_PFX + r"|" + _LOCAL_PFX + r")" + _ITEM
+PROT_RE = re.compile(r"(?<![\w.\\/-])" + PROT_BODY, re.I)
+GIT_BARE = re.compile(r"(?<![\w.\\/-])(?:rules|prompts|methods|AGENTS\.md|CLAUDE\.md)(?![\w.-])", re.I)
+GIT_WRITE = re.compile(r"\bgit\s+(?:checkout|restore|rm|mv|reset|clean|stash|apply|am)\b", re.I)
 WRITE_PATTERNS = [
-    re.compile(r"(?<![\w&>])\d?>>?\s*['\"]?[^\s'\"|;&]*" + PROT_BODY, re.I),  # > и >> в запертый путь
-    re.compile(r"\b(?:sed|perl)\b[^|;&]*\s-[A-Za-z]*i", re.I),
-    re.compile(r"(?:^|\s)(?:rm|rmdir|mv|tee|truncate|shred|del|erase|ren|rename|move|move-item|remove-item|"
-               r"set-content|add-content|out-file|clear-content|new-item|copy-item|install)\b", re.I),
-    re.compile(r"\bgit\s+(?:checkout|restore|rm|mv|reset|clean|stash|apply|am)\b", re.I),
+    re.compile(r"(?<![&>])\d?>>?\s*['\"]?" + PROT_BODY, re.I),  # > и >> в запертый путь (в том числе `x>rules/a`)
+    re.compile(r"\b(?:sed|perl)\b[^|;&]*\s(?:-[A-Za-z]*i|--in-place)", re.I),
+    re.compile(r"(?:^|[\s'\"(])(?:rm|rmdir|mv|tee|truncate|shred|del|erase|ren|rename|move|move-item|remove-item|"
+               r"set-content|add-content|out-file|clear-content|new-item|copy-item|install|sc|ac)\b", re.I),
+    GIT_WRITE,
     re.compile(r"\bdd\b[^|;&]*\bof=", re.I),
     re.compile(r"\bpython[\w.]*\s+-c\b.*(?:open\s*\([^)]*['\"][wax][bt+]*['\"]|write_text|write_bytes|unlink|remove|rename|replace\()", re.I | re.S),
+    re.compile(r"\block\.py\b[^|;&]*--update", re.I),  # узаконивание правки запертых файлов подтверждает человек
 ]
 CP_RE = re.compile(r"(?:^|\s)(?:cp|copy|xcopy|rsync|ln)\b", re.I)
+SHELLS = ("Bash", "PowerShell")
 
 
 def _norm_path(p):
@@ -30,6 +38,11 @@ def _norm_path(p):
     if q.is_absolute():
         try:
             q = q.resolve().relative_to(ROOT.resolve())
+        except (ValueError, OSError):
+            return None
+    else:
+        try:
+            q = (ROOT / q).resolve().relative_to(ROOT.resolve())
         except (ValueError, OSError):
             return None
     parts = [x for x in PurePosixPath(q.as_posix()).parts if x not in (".", "")]
@@ -68,9 +81,11 @@ def _segments(cmd: str) -> list[str]:
 
 
 def bash_touches(cmd) -> bool:
-    if not isinstance(cmd, str) or not PROT_RE.search(cmd):
+    if not isinstance(cmd, str) or not (PROT_RE.search(cmd) or GIT_BARE.search(cmd)):
         return False
     for seg in _segments(cmd):
+        if GIT_WRITE.search(seg) and GIT_BARE.search(seg):
+            return True
         if not PROT_RE.search(seg):
             continue
         if any(p.search(seg) for p in WRITE_PATTERNS):
@@ -92,7 +107,7 @@ def decide(data) -> bool:
     tool = data.get("tool_name")
     if tool in ("Edit", "Write", "MultiEdit"):
         return protected_file(ti.get("file_path") or ti.get("path"))
-    if tool == "Bash":
+    if tool in SHELLS:
         return bash_touches(ti.get("command"))
     return False
 

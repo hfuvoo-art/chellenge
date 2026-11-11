@@ -64,8 +64,8 @@ def test_settings_json_valid_scripts_exist():
     hooks = s["hooks"]
     assert set(hooks) == {"SessionStart", "PreToolUse", "PostToolUse"}
     matchers = {(ev, g.get("matcher")) for ev, groups in hooks.items() for g in groups}
-    assert ("PreToolUse", "Edit|Write|MultiEdit|Bash") in matchers
-    assert ("PostToolUse", "Bash") in matchers and ("PostToolUse", "WebSearch") in matchers
+    assert ("PreToolUse", "Edit|Write|MultiEdit|Bash|PowerShell") in matchers
+    assert ("PostToolUse", "Bash|PowerShell") in matchers and ("PostToolUse", "WebSearch") in matchers
     found = set()
     for groups in hooks.values():
         for g in groups:
@@ -120,3 +120,49 @@ def test_post_hooks_no_project_silent(tmp_path):
         code, out, err = run_hook(name, p, env)
         assert (code, out.strip()) == (0, "") and "Traceback" not in err
     assert not (tmp_path / "none").exists()
+
+
+def _ask(tool, **ti):
+    code, out, _ = guard(tool, **ti)
+    return code == 0 and bool(out.strip()) and json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "ask"
+
+
+def test_guard_review_round1_asks():
+    for p in ["tools/../rules/style.md", "../strateg-agent/rules/style.md", "./AGENTS.md"]:
+        assert _ask("Edit", file_path=p), p
+    for cmd in ["echo x>rules/style.md", "echo x>>AGENTS.md", "python tools/lock.py --update --reason x",
+                "sed --in-place s/a/b/ AGENTS.md", "git restore rules", "git checkout rules", "git checkout -- methods",
+                '"x" | Set-Content rules/a.md', "(1) | Out-File rules/a.md", "sc rules/a.md x", "echo x > tools/../rules/a.md",
+                "rm -rf " + str(ROOT / "rules" / "old"), "rm -rf " + (ROOT / "prompts" / "x.md").as_posix(),
+                "rm ../strateg-agent/methods/jtbd.md"]:
+        assert _ask("Bash", command=cmd), cmd
+    for cmd in ["Set-Content rules/x.md -Value 1", "Remove-Item prompts/critic.md", "python tools/lock.py --update --reason x"]:
+        assert _ask("PowerShell", command=cmd), cmd
+
+
+def test_guard_review_round1_silent():
+    for cmd in ["rm -rf projects/x/rules/old", "python tools/lock.py --verify", "git status rules", "git diff rules/style.md",
+                "cat projects/x/methods/a.md > /tmp/a"]:
+        assert not _ask("Bash", command=cmd), cmd
+    assert not _ask("PowerShell", command="python tools/check.py -p x")
+    assert not _ask("PowerShell", command="Get-Content rules/style.md")
+
+
+def test_settings_cover_powershell():
+    s = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))["hooks"]
+    assert any(g["matcher"] == "Edit|Write|MultiEdit|Bash|PowerShell" for g in s["PreToolUse"])
+    assert any(g["matcher"] == "Bash|PowerShell" for g in s["PostToolUse"])
+
+
+def test_post_hooks_mask_yandex_tokens_powershell(tmp_project, tmp_path):
+    pd = tmp_path / "projects"
+    (pd / "CURRENT").write_text("p1", encoding="utf-8")
+    env = {"STRATEG_PROJECTS_DIR": str(pd)}
+    cmd = "python tools/check.py -p x --h bearer abc.def y0_ABCDEFGHIJKLMN t1.9euelZqXXXXXXXXXX.yyyy"
+    run_hook("log_tool.py", {"tool_name": "PowerShell", "tool_input": {"command": cmd}}, env)
+    run_hook("log_search.py", {"tool_input": {"query": "q y0_ABCDEFGHIJKLMN t1.9euelZqXXXXXXXXXX.yyyy bearer zzz999"}}, env)
+    ev = _journal(pd)
+    assert [e["kind"] for e in ev] == ["tool", "search"] and ev[0]["script"] == "check.py"
+    blob = json.dumps(ev)
+    for secret in ("y0_ABCDEFGHIJKLMN", "t1.9euelZq", "abc.def", "zzz999"):
+        assert secret not in blob

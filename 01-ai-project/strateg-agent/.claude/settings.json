@@ -10,7 +10,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|Bash",
+        "matcher": "Edit|Write|MultiEdit|Bash|PowerShell",
         "hooks": [
           {"type": "command", "command": "python", "args": ["${CLAUDE_PROJECT_DIR}/tools/hooks/guard_rules.py"], "timeout": 10}
         ]
@@ -18,7 +18,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
           {"type": "command", "command": "python", "args": ["${CLAUDE_PROJECT_DIR}/tools/hooks/log_tool.py"], "timeout": 10}
         ]

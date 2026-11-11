@@ -54,6 +54,4 @@
 
 Откройте Claude Code в этой папке (в другой среде скажите агенту прочитать `AGENTS.md`). Статус одной командой: `python tools/status.py` — шаг, что ждёт от человека, стоимость по 5 статьям, деградации, следующее действие. Другой проект: `python tools/project.py list`, затем `python tools/project.py use <имя>`. Выполненное не повторяется (`action_id` в `state.yaml`).
 
-## Другие среды
-
-Запуск в OpenCode описан в задаче 20.
+В другой среде (OpenCode, Cursor) попросите агента прочитать `AGENTS.md` — это общий вход; хуки и `ux-observer` есть только в Claude Code.

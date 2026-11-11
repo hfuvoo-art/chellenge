@@ -1,4 +1,4 @@
-# Хук PostToolUse (Bash): пишет событие `tool` в log.jsonl проекта для команд `python tools/…`; без него в журнале нет следа запусков скриптов. Ключи маскируются.
+# Хук PostToolUse (Bash, PowerShell): пишет событие `tool` в log.jsonl проекта для команд `python tools/…`; без него в журнале нет следа запусков скриптов. Ключи маскируются.
 import json
 import re
 import sys
@@ -12,6 +12,8 @@ MASKS = [
     (re.compile(r"(Bearer\s+)\S+", re.I), r"\1***"),
     (re.compile(r"\bAQVN[\w-]+"), "***"),
     (re.compile(r"\bsk-[\w-]{4,}"), "***"),
+    (re.compile(r"\by0_[\w-]{10,}"), "***"),
+    (re.compile(r"\bt1\.[\w.-]{10,}"), "***"),
     (re.compile(r"(--?(?:api[-_]?key|token|secret|password|passwd|key)(?:=|\s+))\S+", re.I), r"\1***"),
     (re.compile(r"\b((?:\w*(?:api[_-]?key|token|secret|password))\s*[=:]\s*)\S+", re.I), r"\1***"),
 ]
