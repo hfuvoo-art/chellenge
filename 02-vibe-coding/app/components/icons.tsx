@@ -25,6 +25,11 @@ export const IconDoc = (p: P) => (
     <path d="M7 3.5h7l5 5v12H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z" fillOpacity={p.filled ? 0.15 : 0} /><path d="M14 3.5v5h5M9 13h6M9 16.5h4" />
   </svg>
 );
+export const IconMegaphone = (p: P) => (
+  <svg viewBox="0 0 24 24" {...stroke(p)} fill={p.filled ? "currentColor" : "none"} aria-hidden>
+    <path d="M4 9.5h4l8.5-4.5v14L8 14.5H4z" fillOpacity={p.filled ? 0.15 : 0} /><path d="M8 14.5 9.5 20H12M19.5 9.5a4 4 0 0 1 0 5" />
+  </svg>
+);
 export const IconSpark = (p: P) => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" /></svg>
 );

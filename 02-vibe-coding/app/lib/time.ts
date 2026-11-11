@@ -79,3 +79,8 @@ export function plural(n: number, one: string, few: string, many: string): strin
   if (b === 1) return one;
   return many;
 }
+
+/** Срок приёма заявлений на повышенную стипендию в демо: считается от сегодняшнего дня, чтобы не устаревал. */
+export function scholarshipDeadline(): string {
+  return addDays(todayMsk(new Date(Date.now() - 4 * 3600_000)), 9);
+}

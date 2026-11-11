@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { answer } from "@/lib/assistant";
 import { login, logout, requireStaff, requireStudent } from "@/lib/auth";
-import { studySummary } from "@/lib/data";
+import { retakeSubjects } from "@/lib/data";
 import { getDb, nowIso, resetDemo } from "@/lib/db";
 import { roomLabel } from "@/lib/format";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
@@ -36,8 +36,7 @@ function validateDetails(type: string, form: FormData, studentId: number): { det
   const rt = requestType(type);
   if (!rt) return { error: "Неизвестный тип заявки" };
   const details: Record<string, string> = {};
-  const sum = studySummary(studentId);
-  const subjects = [...sum.debts, ...sum.current].map((s) => s.name);
+  const subjects = retakeSubjects(studentId);
   for (const f of rt.fields) {
     const raw = String(form.get(f.name) ?? "").trim().slice(0, 300);
     if (f.kind === "select" && !f.options.includes(raw)) return { error: `Выберите значение в поле «${f.label}»` };
@@ -185,7 +184,7 @@ export async function changeClassAction(_: FormState, form: FormData): Promise<F
     if (room.length < 1) return { error: "Укажите новую аудиторию" };
     db.prepare("UPDATE schedule SET status='moved', old_room = COALESCE(old_room, room), room = ?, note = 'Аудитория изменена' WHERE id = ?").run(room, c.id);
     title = `${c.subject}: новая аудитория`;
-    body = `${humanDate(c.date)}, ${c.start}: ${roomLabel(room)} вместо ${roomLabel(c.old_room ?? c.room)}.`;
+    body = `${humanDate(c.date)}, ${c.start}: теперь ${roomLabel(room)} (было: ${roomLabel(c.old_room ?? c.room)}).`;
   } else if (action === "time") {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)) return { error: "Время в формате ЧЧ:ММ" };
     const [h, m] = start.split(":").map(Number);

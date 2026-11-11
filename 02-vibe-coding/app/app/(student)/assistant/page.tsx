@@ -4,7 +4,7 @@ import { IconSpark } from "@/components/icons";
 import RequestForm from "@/components/RequestForm";
 import { requireStudent } from "@/lib/auth";
 import type { Reply } from "@/lib/assistant";
-import { studySummary } from "@/lib/data";
+import { retakeSubjects, studySummary } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { articleBy } from "@/lib/regulations";
 import { requestType } from "@/lib/request-types";
@@ -29,7 +29,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
   const q = (await searchParams).q?.slice(0, 300) ?? "";
   const msgs = getDb().prepare("SELECT id, role, text, meta, created_at FROM chat_messages WHERE user_id = ? ORDER BY id DESC LIMIT 30").all(user.id).reverse() as Msg[];
   const sum = studySummary(user.id);
-  const subjects = [...sum.debts.map((d) => d.name), ...sum.current.map((s) => s.name)];
+  const subjects = retakeSubjects(user.id);
   const lastDraft = [...msgs].reverse().find((m) => m.role === "assistant" && m.meta && JSON.parse(m.meta).draft);
   // Черновик скрываем, если после него студент уже отправил заявку.
   const lastRequestAt = (getDb().prepare("SELECT MAX(created_at) AS t FROM requests WHERE student_id = ?").get(user.id) as { t: string | null }).t;

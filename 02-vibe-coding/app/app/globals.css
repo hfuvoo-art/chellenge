@@ -101,11 +101,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .tabwrap { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 50; display: flex; justify-content: center; pointer-events: none; }
 .tabinner { width: min(560px, 100%); padding: 0 12px; display: flex; gap: 10px; align-items: center; pointer-events: auto; }
-.tabbar { flex: 1; height: 66px; border-radius: 33px; display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; padding: 0 5px; }
+.tabbar { flex: 1; height: 66px; border-radius: 33px; display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); align-items: center; padding: 0 5px; }
 .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--nav); height: 56px; border-radius: 28px; transition: color .25s; }
 .tabbar a[aria-current="page"] { color: var(--brand); }
 /* стеклянный индикатор переезжает к активному разделу */
-.tabbar .tab-ind { position: absolute; z-index: 0; left: 5px; top: 50%; margin-top: -28px; height: 56px; width: calc((100% - 10px) / 4); border-radius: 28px; background: rgba(255,255,255,.78); box-shadow: inset 0 1.5px 0 #fff, 0 3px 10px rgba(16,19,26,.12); transform: translateX(calc(var(--i) * 100%)); transition: transform .55s cubic-bezier(.3,1.35,.5,1), opacity .25s; }
+.tabbar .tab-ind { position: absolute; z-index: 0; left: 5px; top: 50%; margin-top: -28px; height: 56px; width: calc((100% - 10px) / var(--n, 4)); border-radius: 28px; background: rgba(255,255,255,.78); box-shadow: inset 0 1.5px 0 #fff, 0 3px 10px rgba(16,19,26,.12); transform: translateX(calc(var(--i) * 100%)); transition: transform .55s cubic-bezier(.3,1.35,.5,1), opacity .25s; }
 .tabbar[data-none] .tab-ind { opacity: 0; }
 .tabbar a[aria-current="page"] svg { animation: tabpop .5s cubic-bezier(.3,1.5,.5,1); }
 @keyframes tabpop { from { transform: scale(.65); } }
@@ -233,9 +233,6 @@ textarea.input { min-height: 90px; resize: vertical; line-height: 1.4; }
 @keyframes sh { to { background-position: -200% 0 } }
 
 /* сотрудник */
-.staff-nav { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 14px; }
-.staff-nav a { padding: 9px 14px; border-radius: 999px; background: var(--card); font-weight: 600; font-size: 14px; box-shadow: var(--shadow); }
-.staff-nav a[aria-current="page"] { background: var(--brand-fill); color: #fff; }
 .grid2 { display: grid; grid-template-columns: 1fr; gap: 10px; }
 @media (min-width: 860px) { .grid2 { grid-template-columns: 1fr 1fr; } }
 table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -276,7 +273,7 @@ table.tbl th { color: var(--sec); font-size: 12.5px; text-transform: uppercase; 
   .sh.desk-only, .side-brand.desk-only, .side-user.desk-only { display: flex !important; }
 
   .page.shell { max-width: 1120px; padding: 22px 40px 64px; }
-  .page.shell:not(:has(.cols, .weekgrid, .grid-auto)) { max-width: 800px; }
+  .page.shell:not(:has(.cols, .weekgrid, .grid-auto, .grid2)) { max-width: 800px; }
   .large { font-size: 40px; padding-bottom: 16px; }
   .seg { max-width: 340px; }
   .cols { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 22px; align-items: start; }
@@ -351,7 +348,7 @@ table.tbl th { color: var(--sec); font-size: 12.5px; text-transform: uppercase; 
 .ok-banner, .err-banner, .alert { animation: rise .4s cubic-bezier(.2,.8,.2,1) backwards; }
 
 /* отклик на нажатие и наведение */
-.btn, .iconbtn, .pillbtn, .fab, .chip, a.card, .week a, .seg a, .staff-nav a {
+.btn, .iconbtn, .pillbtn, .fab, .chip, a.card, .week a, .seg a {
   transition: transform .28s cubic-bezier(.3,1.4,.5,1), background .2s, box-shadow .28s, color .2s, border-color .15s, opacity .15s;
 }
 .btn:active { transform: scale(.975); }
@@ -367,7 +364,6 @@ a.card:active { transform: scale(.985); }
   a.cell:hover .chev, a.card:hover .chev { transform: translateX(4px); }
   .iconbtn:hover, .pillbtn:hover { transform: translateY(-1px) scale(1.04); }
   .week a:not([aria-current="date"]):hover { background: var(--brand-soft); }
-  .staff-nav a:hover { transform: translateY(-1px); }
 }
 
 /* живые акценты */

@@ -86,6 +86,14 @@ export function studySummary(studentId: number) {
   return { currentSem, current, past, avg, debts, risks, forecasts, scholarship, scholarshipReasons };
 }
 
+/** Предметы, по которым сейчас можно просить пересдачу: долги и те текущие, где контроль уже был или идёт без даты (зачёты).
+ *  Экзамены, которые ещё впереди, в список не попадают. */
+export function retakeSubjects(studentId: number): string[] {
+  const { debts, current } = studySummary(studentId);
+  const today = todayMsk();
+  return [...debts, ...current.filter((s) => !s.exam_date || s.exam_date <= today)].map((s) => s.name);
+}
+
 export type Deadline = { id: number; title: string; subject: string | null; due_at: string };
 export function deadlinesOfSubject(studentId: number, subject: string): Deadline[] {
   return deadlinesOf(studentId).filter((d) => d.subject === subject);

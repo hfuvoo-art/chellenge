@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { roomLabel } from "./format";
-import { addDays, mondayOf, todayMsk, weekday, humanDate } from "./time";
+import { addDays, mondayOf, todayMsk, weekday, humanDate, scholarshipDeadline } from "./time";
 
 // Все данные вымышленные. Совпадения с реальными людьми случайны.
 // Расписание строится вокруг текущей даты, чтобы на главной всегда были пары и изменения.
@@ -218,7 +218,7 @@ export function seed(db: Database.Database, now = new Date()): void {
     // Уведомления
     const addN = db.prepare(`INSERT INTO notifications (user_id,kind,title,body,link,created_at,read_at) VALUES (?,?,?,?,?,?,?)`);
     const ann = [
-      ["Продлён приём заявлений на повышенную стипендию", `Заявления принимаются до ${humanDate(addDays(today, 9), false)} включительно. Нажмите, чтобы подать заявление онлайн.`, -1, "16:30"],
+      ["Продлён приём заявлений на повышенную стипендию", `Заявления принимаются до ${humanDate(scholarshipDeadline(), false)} включительно. Нажмите, чтобы подать заявление онлайн.`, -1, "16:30"],
       [`Ярмарка стажировок ${humanDate(addDays(today, 4), false)}`, "Партнёры факультетов проведут собеседования в холле главного корпуса с 12:00 до 17:00.", -3, "12:00"],
     ] as const;
     for (const uid of [alina, timur]) {
@@ -226,7 +226,7 @@ export function seed(db: Database.Database, now = new Date()): void {
     }
     const movedToday = db.prepare("SELECT subject, room, old_room, start FROM schedule WHERE group_name = ? AND date = ? AND status = 'moved' ORDER BY start LIMIT 1").get(MO, today) as
       | { subject: string; room: string; old_room: string; start: string } | undefined;
-    if (movedToday) addN.run(alina, "schedule", `${movedToday.subject}: новая аудитория`, `Сегодня в ${movedToday.start}: ${roomLabel(movedToday.room)} вместо ${roomLabel(movedToday.old_room)}.`, "/schedule", iso(today, "08:10"), null);
+    if (movedToday) addN.run(alina, "schedule", `${movedToday.subject}: новая аудитория`, `Сегодня в ${movedToday.start}: теперь ${roomLabel(movedToday.room)} (было: ${roomLabel(movedToday.old_room)}).`, "/schedule", iso(today, "08:10"), null);
     addN.run(alina, "request", "Справка об обучении готова", "Заявка № 1038: откройте справку с QR-кодом.", "/requests/1038", iso(today, "09:30"), null);
     addN.run(alina, "deadline", "Через 2 дня: эссе по истории дипломатии", "Сдать до 23:59 в системе курса.", "/study", iso(today, "07:00"), null);
     addN.run(timur, "request", "Справка для военкомата в работе", "Заявка № 1031 принята учебным офисом.", "/requests/1031", iso(addDays(today, -1), "10:02"), null);

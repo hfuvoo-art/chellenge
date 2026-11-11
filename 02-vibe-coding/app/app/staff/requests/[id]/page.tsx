@@ -41,7 +41,7 @@ export default async function StaffRequest({ params }: { params: Promise<{ id: s
             <div className="t1" style={{ marginBottom: 4 }}>Учёба студента</div>
             <div className="kv"><span>Средний балл</span><span>{sum.avg ? sum.avg.toFixed(1).replace(".", ",") : "нет оценок"}</span></div>
             <div className={`kv ${sum.debts.length ? "long" : ""}`}><span>Задолженности</span><span style={{ color: sum.debts.length ? "var(--bad)" : undefined }}>{sum.debts.length ? sum.debts.map((d) => `${d.name} (${d.semester} семестр)`).join(", ") : "нет"}</span></div>
-            <div className={`kv ${sum.risks.length ? "long" : ""}`}><span>Риски в этом семестре</span><span style={{ color: sum.risks.length ? "var(--bad)" : undefined }}>{sum.risks.length ? sum.risks.map(({ s }) => `${s.name}: ${s.blocker ?? `${s.points} баллов`}`).join("; ") : "нет"}</span></div>
+            <div className={`kv ${sum.risks.length ? "long" : ""}`}><span>Риски в этом семестре</span><span style={{ color: sum.risks.length ? "var(--bad)" : undefined }}>{sum.risks.length ? sum.risks.map(({ s }) => `${s.name} — ${(s.blocker ?? `${s.points} баллов из 55 нужных`).replace(/^./, (c) => c.toLowerCase())}`).join("; ") : "нет"}</span></div>
             <div className="kv"><span>Стипендия</span><span>{sum.scholarship ? "условия выполнены" : "под риском"}</span></div>
           </div>
           <div className="card">

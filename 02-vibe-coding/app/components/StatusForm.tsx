@@ -21,7 +21,12 @@ export default function StatusForm({ id, status }: { id: number; status: string 
       {state?.error && <div className="err-banner" role="alert">{state.error}</div>}
       {state?.ok && <div className="ok-banner" role="status">{state.ok}</div>}
       <div className="row-btns">
-        {options.map((o) => <button key={o.status} name="status" value={o.status} className={`${o.cls} sm`} disabled={pending} style={{ flex: 1 }}>{o.label}</button>)}
+        {options.map((o) => (
+          <button key={o.status} name="status" value={o.status} className={`${o.cls} sm`} disabled={pending} style={{ flex: 1 }}
+            onClick={o.status === "rejected" ? (e) => { if (!window.confirm("Отклонить заявку? Студент получит уведомление с причиной, вернуть заявку в работу будет нельзя.")) e.preventDefault(); } : undefined}>
+            {o.label}
+          </button>
+        ))}
       </div>
     </form>
   );
