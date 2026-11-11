@@ -730,12 +730,12 @@
   - `PostToolUse` на `WebSearch` → событие `search`.
 - README v1: быстрый старт с ключом и без ключа (У16), таблица файлов «зачем и что сломается без него».
 
-- [ ] **Шаг 1. Тесты:** `test_guard_asks_on_rules_edit`; `test_guard_silent_for_other_files`; `test_settings_json_valid_scripts_exist`. Связь `SKILL.md` → playbook проверяет `test_smoke_structure` из задачи 9a.
-- [ ] **Шаг 2.** `python -m pytest tests/test_hooks.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать. Запертые файлы не трогать: `python tools/lock.py --verify` → OK.
-- [ ] **Шаг 4.** `python -m pytest -q` → зелёный.
-- [ ] **Шаг 5. Живая проверка хуков.** Новая сессия Claude Code в `strateg-agent/`: в контексте есть вывод статуса; попытка правки `rules/style.md` вызывает запрос подтверждения.
-- [ ] **Шаг 6.** Коммит: `ИИ-проект: навыки, субагент, хуки, README v1`.
+- [x] **Шаг 1. Тесты:** `test_guard_asks_on_rules_edit`; `test_guard_silent_for_other_files`; `test_settings_json_valid_scripts_exist`. Связь `SKILL.md` → playbook проверяет `test_smoke_structure` из задачи 9a.
+- [x] **Шаг 2.** `python -m pytest tests/test_hooks.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать. Запертые файлы не трогать: `python tools/lock.py --verify` → OK.
+- [x] **Шаг 4.** `python -m pytest -q` → зелёный.
+- [ ] **Шаг 5. Живая проверка хуков.** *(14.11: headless-запуск недоступен — проверяет пользователь в начале прогона КТ-A, `01-ai-project/kt-a-runbook.md`.)* Новая сессия Claude Code в `strateg-agent/`: в контексте есть вывод статуса; попытка правки `rules/style.md` вызывает запрос подтверждения.
+- [x] **Шаг 6.** Коммит: `ИИ-проект: навыки, субагент, хуки, README v1`.
 
 ### Задача 16. Сквозной прогон задачи №1 → КТ-A (14.11)
 
