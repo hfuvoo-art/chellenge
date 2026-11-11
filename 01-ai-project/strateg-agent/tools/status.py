@@ -223,7 +223,10 @@ def render(slug=None, hook: bool = False) -> str:
             lock_line,
             "Следующее действие: python tools/project.py new <имя>",
         ])
-    st = state.load(slug)
+    st, st_err = state.read_checked(slug)
+    if st_err:
+        return chr(10).join([f"Проект: {slug}", f"{RED} {st_err}", lock_line,
+                          "Следующее действие: исправь projects/" + str(slug) + "/state.yaml"])
     s = _scan(slug)
     c = costs(slug)
     reds, yellows = _degraded_lines(slug, s, st)

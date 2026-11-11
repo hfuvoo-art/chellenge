@@ -26,6 +26,7 @@
 | `PRO_MODEL` | да | `gpt://<ID каталога>/yandexgpt-5.1` |
 | `CRITIC_MODEL` | да для критика с ключом | `gpt://<ID каталога>/yandexgpt-5.1`; свои `CRITIC_BASE_URL`, `CRITIC_API_KEY`, `CRITIC_PROJECT` нужны, только если критик ходит в другое место (иначе берутся `LLM_*`) |
 | `MAIN_MODEL_FAMILY`, `CRITIC_MODEL_FAMILY` | нет | для Claude Code: `claude` и `yandexgpt`. Только проверка независимости критика: совпали, статус покажет жёлтую строку; пусто, проверка не выполняется |
+| `JUDGE_MODEL` | нет | судья слепого сравнения с обычным чатом; пусто — не используется |
 | `AGENT_ROUTE`, `LLM_TIMEOUT_S` | нет | маршрут среды (`claude-code`, `opencode`, `cursor`, `other`; пусто определяется само) и таймаут запроса в секундах |
 
 `yandexgpt-5-lite` не используйте: модель отключается 15.11.2026, дешёвая роль `extract` работает на `aliceai-llm-flash`. Цены моделей, поиска, курс и дата их проверки лежат в `config/prices.yaml`: оттуда считается стоимость, порядок цены прогона смотрите в `python tools/status.py` у своего проекта. Список моделей Yandex: https://aistudio.yandex.ru/docs/ru/ai-studio/concepts/generation/models

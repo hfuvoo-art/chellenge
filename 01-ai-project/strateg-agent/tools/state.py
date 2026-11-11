@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -78,6 +79,21 @@ def add_degraded(slug: str | None, flag: str, note: str) -> None:
     event(slug, "degraded", flag=flag, note=note)
 
 
+BROKEN_MSG = ("state.yaml не читается (битый YAML или не та структура). "
+              "Что сделать: исправь файл или возьми projects/_template/state.yaml.")
+
+
+def read_checked(slug) -> tuple[dict | None, str]:
+    """state.yaml для CLI и статуса: битый файл — не traceback, а (None, сообщение)."""
+    try:
+        st = load(slug)
+        if not isinstance(st, dict) or not isinstance(st.get("done"), dict) or not isinstance(st.get("human"), list):
+            raise ValueError("структура")
+        return st, ""
+    except Exception:  # noqa: BLE001 — любой разбор YAML или структуры сводится к одному сообщению
+        return None, BROKEN_MSG
+
+
 def _fail(msg: str) -> int:
     print(f"Ошибка: {msg}", file=sys.stderr)
     return 3
@@ -117,6 +133,9 @@ def main(argv=None) -> int:
     except SystemExit:
         return 3  # сообщение «проекта нет, что сделать» уже напечатано
     slug = a.project
+    _, err = read_checked(slug)
+    if err:
+        return _fail(err)
     if a.cmd == "step":
         want = STEP_NAMES.get(a.n)
         if want is None or a.name != want:
@@ -127,10 +146,18 @@ def main(argv=None) -> int:
     elif a.cmd == "wait":
         if not a.point.strip() or not a.question.strip():
             return _fail('нужны точка и вопрос. Что сделать: `state.py wait "точка 1" "<вопрос>"`.')
+        w = load(slug).get("waiting")
+        if w:
+            wp = _waiting_point(w)
+            how = "`python tools/check.py --resolve \"<решение>\" --minutes N`" if _norm(wp) == "check" else                   f'`python tools/state.py resolve "{wp}" --summary "…" --minutes N`'
+            return _fail(f"уже ждём «{wp}». Что сделать: сначала закрой текущую точку: {how}.")
         wait_human(slug, a.point.strip(), a.question.strip())
         print(f"Жду человека: {a.point.strip()}.")
     elif a.cmd == "resolve":
-        if a.minutes < 0 or a.minutes != a.minutes:
+        if _norm(a.point) == "check":
+            return _fail('ожидание «check» снимает только `python tools/check.py --resolve "<решение>" --minutes N` '
+                         "(он же сбрасывает счётчик check_fails). Что сделать: вызови эту команду.")
+        if not math.isfinite(a.minutes) or a.minutes < 0:
             return _fail("минуты должны быть числом ≥ 0. Что сделать: укажи --minutes N.")
         w = load(slug).get("waiting")
         if not w:

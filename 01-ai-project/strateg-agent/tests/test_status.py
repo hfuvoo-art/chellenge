@@ -217,3 +217,12 @@ def test_state_cli_flow_costs_minutes_once(proj):
     assert "Ждёт от человека: ничего" in out
     assert status.costs(proj)["minutes"] == pytest.approx(6.0)
     assert status.costs(proj)["human"] == pytest.approx(120.0)
+
+
+@pytest.mark.parametrize("content", ["step: [unclosed\n  : :", "[1, 2]\n"])
+def test_broken_state_yaml_red_line_not_traceback(proj, tmp_path, content):
+    (tmp_path / "projects" / proj / "state.yaml").write_text(content, encoding="utf-8")
+    out = status.render(proj)
+    assert "[КРАСНАЯ]" in out and "state.yaml не читается" in out
+    assert "Следующее действие:" in out
+    assert "state.yaml не читается" in status.render(proj, hook=True) or "Статус" in status.render(proj, hook=True)

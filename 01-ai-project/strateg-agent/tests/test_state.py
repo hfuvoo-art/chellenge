@@ -111,3 +111,37 @@ def test_cli_help_in_russian():
     from tools.common import ROOT
     r = subprocess.run([sys.executable, str(ROOT / "tools" / "state.py"), "--help"], capture_output=True, timeout=60)
     assert r.returncode == 0 and re.search("[а-яё]", r.stdout.decode("utf-8", "replace").lower())
+
+
+@pytest.mark.parametrize("content", ["step: [unclosed\n  : :", "[1, 2]\n", "just text\n"])
+@pytest.mark.parametrize("args", [["show"], ["step", "1", "frame"], ["wait", "точка 1", "в"],
+                                   ["resolve", "точка 1", "--summary", "x", "--minutes", "1"]])
+def test_cli_broken_state_code_3(proj, tmp_path, capsys, content, args):
+    (tmp_path / proj / "state.yaml").write_text(content, encoding="utf-8")
+    assert state.main(["-p", proj, *args]) == 3
+    err = capsys.readouterr().err
+    assert "state.yaml не читается" in err and "Что сделать" in err and "_template/state.yaml" in err
+
+
+def test_cli_resolve_check_refused(proj, capsys):
+    state.wait_human(proj, "check", "Не прошло проверку")
+    assert state.main(["-p", proj, "resolve", "check", "--summary", "x", "--minutes", "1"]) == 3
+    assert "check.py --resolve" in capsys.readouterr().err
+    assert state.load(proj)["waiting"] is not None and state.load(proj)["human"] == []
+
+
+@pytest.mark.parametrize("m", ["inf", "nan", "-inf"])
+def test_cli_resolve_minutes_not_finite(proj, m):
+    state.wait_human(proj, "точка 1", "в")
+    assert state.main(["-p", proj, "resolve", "точка 1", "--summary", "x", f"--minutes={m}"]) == 3
+    assert state.load(proj)["waiting"] is not None
+
+
+def test_cli_wait_refused_when_already_waiting(proj, capsys):
+    assert state.main(["-p", proj, "wait", "точка 1", "в"]) == 0
+    assert state.main(["-p", proj, "wait", "точка 2", "в2"]) == 3
+    assert "state.py resolve" in capsys.readouterr().err
+    assert state.load(proj)["waiting"]["point"] == "точка 1"
+    state.wait_human(proj, "check", "q")
+    assert state.main(["-p", proj, "wait", "точка 2", "в2"]) == 3
+    assert "check.py --resolve" in capsys.readouterr().err
