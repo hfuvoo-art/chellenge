@@ -126,7 +126,8 @@ function buildDraft(text: string, user: User, top: Article | undefined): Draft |
   else if (has(text, "справк") && !has(text, "болезн", "медицин", "врач", "больнич")) type = "cert_study";
   else if (intent && hasWord(text, "пересда")) type = "retake";
   // Без явной просьбы черновик делаем в одном случае: пропуск экзамена или зачёта по болезни.
-  const missedExam = type === "retake" && has(text, "болезн", "заболел", "болел", "больнич", "пропуст") && hasWord(text, "экзамен", "зачет");
+  // «Как пересдать, если болела» и «болел и пропустил зачёт» ведут себя одинаково.
+  const missedExam = type === "retake" && has(text, "болезн", "заболел", "болел", "больнич", "пропуст") && hasWord(text, "экзамен", "зачет", "пересда");
   if (!type || !(intent || missedExam)) return null;
   const rt = requestType(type);
   if (!rt) return null;

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { IconBack } from "@/components/icons";
+import NotifPrefs from "@/components/NotifPrefs";
 import { requireStudent } from "@/lib/auth";
+import { mutedKinds } from "@/lib/data";
 
 export default async function ProfilePage() {
   const u = await requireStudent();
@@ -23,6 +25,12 @@ export default async function ProfilePage() {
           <div className="kv"><span>Группа</span><span>{u.group_name}</span></div>
           <div className="kv"><span>Студенческий билет</span><span>{u.student_card}</span></div>
           <div className="kv"><span>Почта</span><span>{u.email}</span></div>
+        </div>
+        <div className="sh">Уведомления</div>
+        <NotifPrefs muted={mutedKinds(u.id)} />
+        <div className="sh">Пароль</div>
+        <div className="card t2" style={{ lineHeight: 1.5 }}>
+          В этом демо смена пароля отключена: тестовыми аккаунтами пользуются все проверяющие, и новый пароль закрыл бы вход остальным. В рабочей версии пароль меняется здесь: старый пароль, новый дважды, выход на всех устройствах.
         </div>
         <div className="sh">Безопасность</div>
         <div className="card t2" style={{ lineHeight: 1.5 }}>

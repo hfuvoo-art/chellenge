@@ -127,6 +127,13 @@ export function messagesOfRequest(requestId: number): RequestMessage[] {
   return getDb().prepare("SELECT id,author,author_name,text,created_at FROM request_messages WHERE request_id = ? ORDER BY id").all(requestId) as RequestMessage[];
 }
 
+/** Виды уведомлений, которые студент отключил в профиле. Заявки отключить нельзя: это ответы на его же обращения. */
+export const MUTABLE_KINDS = ["schedule", "deadline", "announcement"] as const;
+export function mutedKinds(userId: number): string[] {
+  const row = getDb().prepare("SELECT value FROM meta WHERE key = ?").get(`mute:${userId}`) as { value: string } | undefined;
+  return row?.value ? row.value.split(",") : [];
+}
+
 export type Notification = { id: number; kind: string; title: string; body: string; link: string | null; created_at: string; read_at: string | null };
 export function notificationsOf(userId: number, limit = 50): Notification[] {
   return getDb().prepare("SELECT id,kind,title,body,link,created_at,read_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?").all(userId, limit) as Notification[];

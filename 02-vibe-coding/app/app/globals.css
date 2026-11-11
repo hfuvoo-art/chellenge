@@ -545,3 +545,9 @@ details.reset .card { text-align: left; margin-top: 8px; max-width: 520px; margi
     .side-user[aria-current="page"] { background: rgba(255,255,255,.1); }
   }
 }
+
+/* --- Настройки уведомлений в профиле --- */
+.pref { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; cursor: pointer; min-height: 44px; }
+.pref + .pref { border-top: 1px solid var(--sep); }
+.pref input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--brand-fill); flex: none; }
+.pref > span { display: flex; flex-direction: column; }

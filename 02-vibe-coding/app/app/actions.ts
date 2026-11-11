@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { answer } from "@/lib/assistant";
 import { login, logout, requireStaff, requireStudent } from "@/lib/auth";
-import { retakeSubjects } from "@/lib/data";
+import { MUTABLE_KINDS, mutedKinds, retakeSubjects } from "@/lib/data";
 import { getDb, nowIso, resetDemo } from "@/lib/db";
 import { roomLabel } from "@/lib/format";
 import { requestType, STATUS_LABEL } from "@/lib/request-types";
@@ -108,6 +108,7 @@ export async function clearChatAction(): Promise<void> {
 // ---------- Сотрудник учебного офиса ----------
 
 function notify(userId: number, kind: string, title: string, body: string, link: string | null) {
+  if (mutedKinds(userId).includes(kind)) return; // студент отключил этот вид уведомлений в профиле
   getDb().prepare("INSERT INTO notifications (user_id,kind,title,body,link,created_at) VALUES (?,?,?,?,?,?)").run(userId, kind, title, body, link, nowIso());
 }
 
@@ -230,4 +231,13 @@ export async function resetDemoAction(): Promise<void> {
   resetDemo();
   revalidatePath("/", "layout");
   redirect("/staff?reset=1");
+}
+
+/** Настройки уведомлений в профиле: какие виды студент хочет получать. */
+export async function saveNotifPrefsAction(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireStudent();
+  const muted = MUTABLE_KINDS.filter((k) => form.get(k) !== "on");
+  getDb().prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(`mute:${user.id}`, muted.join(","));
+  revalidatePath("/profile");
+  return { ok: muted.length ? "Сохранено. Отключённые уведомления больше не приходят." : "Сохранено. Приходят все уведомления." };
 }

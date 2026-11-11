@@ -291,3 +291,15 @@ test("помощник: «что горит на этой неделе» — п�
   assert.match(a.text, /сдать|срок/i);
   assert.doesNotMatch(a.text, /Понедельник, /);
 });
+
+test("помощник: «как пересдать, если болела» тоже даёт черновик пересдачи; отключённые уведомления хранятся по студенту", async () => {
+  const { answer } = await import("../lib/assistant.ts");
+  const user = (login: string) => db.prepare("SELECT id,login,role,last_name,first_name,middle_name,faculty,program,course,group_name,student_card,email,position,gender FROM users WHERE login = ?").get(login) as never;
+  const a = await answer(user("alina"), "как пересдать, если болела");
+  assert.equal(a.draft?.type, "retake");
+  assert.equal(a.draft?.details.reason, "Болезнь (есть справка)");
+  db.prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(`mute:${alina}`, "announcement");
+  assert.deepEqual(data.mutedKinds(alina), ["announcement"]);
+  assert.deepEqual(data.mutedKinds(timur), []);
+  db.prepare("DELETE FROM meta WHERE key = ?").run(`mute:${alina}`);
+});

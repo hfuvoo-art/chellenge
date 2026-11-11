@@ -141,6 +141,7 @@ const DEMO_TABLES = ["chat_messages", "notifications", "request_messages", "requ
 export function resetDemo(d: Database.Database = getDb()): void {
   d.transaction(() => {
     for (const t of DEMO_TABLES) d.prepare(`DELETE FROM ${t}`).run();
+    d.prepare("DELETE FROM meta WHERE key LIKE 'mute:%'").run();
     seed(d);
     d.prepare("INSERT INTO meta (key, value) VALUES ('seed_day', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(demoDay());
   })();
