@@ -451,7 +451,8 @@ def check_promises_static(slug) -> list[Finding]:
     for ln in sec["lines"]:
         if not ln.strip():
             continue
-        is_item = bool(BULLET_RE.match(ln)) or "→" in ln or "->" in ln
+        is_item = bool(BULLET_RE.match(ln)) or "→" in ln or "->" in ln or "«" in ln or ln.lstrip().startswith("|") \
+            or bool(re.search(r"F-\d+", ln))
         if not is_item:
             continue  # вводная строка-проза
         m = PROMISE_RE.match(ln)
@@ -460,18 +461,18 @@ def check_promises_static(slug) -> list[Finding]:
                           "Что сделать: перепиши как `- «обещание» → F-1`; нет функции — убери обещание или заведи planned со сроком."))
             continue
         n += 1
-        fid = m.group(2)
-        f = feats.get(fid)
-        if f is None:
-            if not err:
-                out.append(_f("FAIL", 7, fid, f"обещание «{m.group(1)[:40]}»: функции {fid} нет в product.yaml",
-                              "Что сделать: добавь функцию в product.yaml или убери обещание."))
-        elif f.get("status") not in FEATURE_STATUSES:
-            out.append(_f("FAIL", 7, fid, f"{fid}: status должен быть exists или planned, а не {f.get('status')!r}",
-                          "Что сделать: поправь status в product.yaml."))
-        elif f["status"] == "planned" and not str(f.get("available_from") or "").strip():
-            out.append(_f("FAIL", 7, fid, f"{fid} planned, но не указан срок (available_from)",
-                          "Что сделать: впиши available_from (например 2027-Q1) или убери обещание."))
+        for fid in dict.fromkeys(re.findall(r"F-\d+", ln)):  # все F-n строки, а не только первая
+            f = feats.get(fid)
+            if f is None:
+                if not err:
+                    out.append(_f("FAIL", 7, fid, f"обещание «{m.group(1)[:40]}»: функции {fid} нет в product.yaml",
+                                  "Что сделать: добавь функцию в product.yaml или убери обещание."))
+            elif f.get("status") not in FEATURE_STATUSES:
+                out.append(_f("FAIL", 7, fid, f"{fid}: status должен быть exists или planned, а не {f.get('status')!r}",
+                              "Что сделать: поправь status в product.yaml."))
+            elif f["status"] == "planned" and not str(f.get("available_from") or "").strip():
+                out.append(_f("FAIL", 7, fid, f"{fid} planned, но не указан срок (available_from)",
+                              "Что сделать: впиши available_from (например 2027-Q1) или убери обещание."))
     if n == 0 and not out:
         out.append(_f("FAIL", 7, "strategy.md", f"в разделе «{PROMISES}» нет ни одного обещания",
                       "Что сделать: добавь строки `- «обещание» → F-1` (или заведи функцию и обещание)."))
@@ -523,6 +524,8 @@ def _theses(section_lines) -> list[tuple[str, str]]:
     out: list[list[str]] = []
     for ln in section_lines:
         m = THESIS_RE.match(ln)
+        if m and m.group(2) and not REF_RE.search(ln):
+            m = None  # «1. …» без [C-…] — пункт плана действий, а не тезис
         if m:
             out.append([f"Т{m.group(1) or m.group(2)}", m.group(3).strip()])
         elif out and ln.strip() and ln[:1].isspace() and not BULLET_RE.match(ln):
@@ -606,8 +609,9 @@ def _fingerprint(c: dict) -> str:
 
 
 def _apply_confirmations(slug, findings: list[Finding]) -> list[Finding]:
-    conf = state.load(slug).get("confirmed") or {}
-    if not conf:
+    st, _ = _read_state(slug)
+    conf = (st or {}).get("confirmed") or {}
+    if not conf or not isinstance(conf, dict):
         return findings
     by_id = {c["id"]: c for c in claims.load(slug)}
     out = []
@@ -635,6 +639,44 @@ def confirm(slug, cid: str, minutes: float) -> bool:
     return True
 
 
+def _read_state(slug) -> tuple[dict | None, str]:
+    """state.yaml для CLI: битый или нечитаемый файл — не traceback, а сообщение (и проверки без пропусков)."""
+    try:
+        st = state.load(slug)
+        if not isinstance(st, dict) or not isinstance(st.get("done"), dict) or not isinstance(st.get("human"), list):
+            raise ValueError("структура")
+        return st, ""
+    except Exception:  # noqa: BLE001: любой разбор YAML/структуры сводится к одному понятному сообщению
+        return None, "state.yaml не читается (битый YAML или не та структура). Что сделать: исправь файл или верни его из шаблона projects/_template/state.yaml."
+
+
+def _step_n(st: dict):
+    step = st.get("step")
+    n = step.get("n") if isinstance(step, dict) else None
+    return n if isinstance(n, int) and not isinstance(n, bool) and n >= 0 else None
+
+
+def _early_skip(slug, st: dict) -> set[int]:
+    """Проверки документов пропускаются, только если шаг ранний И сам документ ещё не начат; иначе проверяем всё."""
+    n = _step_n(st)
+    cut: set[int] = set()
+    if n is None:
+        return cut
+    if n < 4:
+        text = _doc(slug, "options.md")
+        if text is None or not _options_blocks(text):
+            cut.add(5)
+    if n < 5:
+        text = _doc(slug, "strategy.md")
+        if text is None:
+            cut |= {6, 7, 8, 9, 10}
+        else:
+            secs = _sections(text)
+            if all(not (s := _find(secs, lv, t)) or not _body(s["lines"]) for lv, t, leaf in STRATEGY_SECTIONS if leaf):
+                cut |= {6, 7, 8, 9, 10}
+    return cut
+
+
 def _verdict(findings: list[Finding]) -> int:
     return 1 if any(f.level == "FAIL" for f in findings) else 2 if any(f.level == "WARN" for f in findings) else 0
 
@@ -642,7 +684,7 @@ def _verdict(findings: list[Finding]) -> int:
 def _track_iterations(slug, findings: list[Finding], ran: set[int]) -> int:
     """Считает подряд идущие запуски с FAIL в текущем шаге. Возвращает номер итерации (0 — FAIL нет)."""
     st = state.load(slug)
-    step = (st.get("step") or {}).get("n", 0)
+    step = _step_n(st)  # None, если шаг записан нестандартно: счётчик ведётся под ключом None
     prev = st.get("check_fails") or {}
     failed = sorted({f.check for f in findings if f.level == "FAIL"})
     if failed:
@@ -653,7 +695,8 @@ def _track_iterations(slug, findings: list[Finding], ran: set[int]) -> int:
         state.save(slug, st)
         if count >= MAX_ITERATIONS and (count == MAX_ITERATIONS or (st.get("waiting") or {}).get("point") != "check"):
             lines = [f"- п.{f.check} {f.target}: {f.msg}" for f in findings if f.level == "FAIL"][:15]
-            state.wait_human(slug, "check", f"Не прошло проверку: {len(lines)} замечаний после {count} итераций исправления.\n" + "\n".join(lines))
+            state.wait_human(slug, "check", f"Не прошло проверку: {len(lines)} замечаний после {count} итераций исправления.\n" + "\n".join(lines)
+                              + '\nПосле решения человека: `python tools/check.py --resolve "<что решил человек>" --minutes <N>`.')
         return count
     if prev and set(prev.get("checks", [])) <= ran:
         st.pop("check_fails", None)  # ожидание человека (point=check) снимает только state.resolve_human
@@ -682,8 +725,9 @@ def write_report(slug, findings: list[Finding], ran: set[int], iteration: int, s
     lines += ["", "## Итерации исправления",
               f"Подряд запусков с FAIL: {iteration} из {MAX_ITERATIONS}."
               + (" Лимит исчерпан: решение за человеком (state.yaml, waiting)." if iteration >= MAX_ITERATIONS else "")]
-    if iteration >= MAX_ITERATIONS or (state.load(slug).get("waiting") or {}).get("point") == "check":
-        lines += ["", "Лимит итераций был исчерпан: ожидание человека не снимается автоматически (`state.resolve_human`)."]
+    st, _ = _read_state(slug)
+    if iteration >= MAX_ITERATIONS or ((st or {}).get("waiting") or {}).get("point") == "check":
+        lines += ["", "Лимит итераций был исчерпан: ожидание человека не снимается автоматически: `python tools/check.py --resolve \"<что решил человек>\" --minutes <N>`."]
     if skipped:
         lines += ["", skipped]
     p = project_path(slug) / "check-report.md"
@@ -787,6 +831,8 @@ def main(argv=None) -> int:
     ap.add_argument("--confirm", action="append", metavar="C-014",
                     help="подтвердить WARN по утверждению (человек сверил цитату вручную); нужен --minutes; можно повторять")
     ap.add_argument("--minutes", type=float, help="сколько минут ушло на подтверждение (идут в статью «человек»)")
+    ap.add_argument("--resolve", metavar="РЕШЕНИЕ",
+                    help="после 3 неудачных итераций: записать, что решил человек (снимает ожидание point=check и счётчик FAIL); нужен --minutes")
     ap.add_argument("--repo", action="store_true", help="для проверки 11 просканировать и всю папку агента, а не только проект")
     a = ap.parse_args(argv)
     try:
@@ -799,6 +845,21 @@ def main(argv=None) -> int:
         slug = project_path(a.project).name
     except SystemExit:  # project_path уже объяснил, что делать; для CLI это ошибка использования
         sys.exit(3)
+    if a.resolve is not None:
+        if a.minutes is None or not math.isfinite(a.minutes) or a.minutes < 0:
+            die("--resolve требует --minutes <минуты ≥0>. Что сделать: например `--resolve \"переписал раздел\" --minutes 5`.", code=3)
+        if not (a.resolve or "").strip():
+            die("--resolve: нужно описание решения. Что сделать: `--resolve \"что решил человек\" --minutes 5`.", code=3)
+        st, err = _read_state(slug)
+        if err:
+            die(err, code=3)
+        if (st.get("waiting") or {}).get("point") != "check":
+            die("нет ожидания человека по проверке (waiting.point=check), снимать нечего. Что сделать: ожидание появляется после 3-го подряд FAIL.", code=3)
+        state.resolve_human(slug, "check", a.resolve.strip(), a.minutes)
+        st = state.load(slug)
+        st.pop("check_fails", None)
+        state.save(slug, st)
+        print(f"Решение человека записано ({a.minutes:g} мин), счётчик итераций обнулён.")
     if a.confirm:
         if a.minutes is None or not math.isfinite(a.minutes) or a.minutes < 0:
             die("--confirm требует --minutes <минуты ≥0>. Что сделать: например `--confirm C-014 --minutes 2`.", code=3)
@@ -817,17 +878,20 @@ def main(argv=None) -> int:
                   else f"{cid}: уже подтверждено, минуты не добавлены.")
     ran = set(only) if only else set(CHECKS)
     skipped = ""
-    if only is None:  # без --only: проверки документов ждут своего шага (ранний запуск не должен краснеть)
-        n_step = (state.load(slug).get("step") or {}).get("n", 0)
-        cut = {n for n in range(5, 11) if n_step < (4 if n == 5 else 5)}
+    st, st_err = _read_state(slug)
+    if st_err:
+        print(f"ВНИМАНИЕ: {st_err} Проверки выполняются без пропусков, счётчик итераций и подтверждения не учитываются.")
+    if only is None and st is not None:  # без --only: документы, которых ещё нет, не краснят ранний шаг
+        cut = _early_skip(slug, st)
         if cut:
             ran -= cut
-            skipped = (f"пропущено: проверки {', '.join(map(str, sorted(cut)))}: шаг {n_step} (нужны с шага 4 для п.5 и с шага 5 для п.6–10). "
+            skipped = (f"пропущено: проверки {', '.join(map(str, sorted(cut)))}: шаг {st['step']['n']}, документ ещё не начат "
+                       "(п.5 — нет вариантов, п.6–10 — пустая стратегия). "
                        "Это не подтверждение стратегии: перед точкой 3 запусти без пропусков (`--only 5,6,7,8,9,10`).")
     findings = run(slug, ran)
     if a.repo and (only is None or 11 in only):
         findings += check_secrets(Path(__file__).resolve().parent.parent)
-    iteration = _track_iterations(slug, findings, ran)
+    iteration = _track_iterations(slug, findings, ran) if st is not None else 0
     report_path = write_report(slug, findings, ran, iteration, skipped)
     if skipped:
         print(skipped)

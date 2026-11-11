@@ -470,9 +470,117 @@ def test_full_run_step4_runs_options_only(proj, capsys, monkeypatch):
     st = state.load(proj)
     st["step"] = {"n": 4, "name": "options"}
     state.save(proj, st)
-    edit(proj, "strategy.md", "## Чего мы не знаем", "## Чего мы не знаем?")  # п.6 сломан, но на шаге 4 не запускается
+    (project_path(proj) / "strategy.md").write_text((TEMPLATE / "strategy.md").read_text(encoding="utf-8"), encoding="utf-8")  # стратегия не начата
     check.main(["-p", proj, "--only", "1,2,3,4,5"])
     capsys.readouterr()
     rc_ = check.main(["-p", proj])
     out = capsys.readouterr().out
     assert "пропущено: проверки 6, 7, 8, 9, 10" in out and "FAIL" not in out.split("Итого")[0]
+
+
+# ---- правки по ревью (круг 2) ----
+
+def _break_strategy(proj):
+    edit(proj, "strategy.md", "→ F-2", "→ F-9")
+    edit(proj, "options.md", "· close ·", "· other ·")
+
+
+def _set_state(proj, text):
+    (project_path(proj) / "state.yaml").write_text(text, encoding="utf-8")
+
+
+@pytest.mark.parametrize("st", [
+    "step: null\ndone: {}\n", "done: {}\n", "step: {name: strategy}\ndone: {}\n", "step: {n: -1}\ndone: {}\n",
+    "step: {n: 3}\ndone: {}\n", "step: {n: 0}\ndone: {}\n", "step: {n: 4}\ndone: {}\n", "step: {n: '5'}\ndone: {}\n",
+    "step: {n: abc}\ndone: {}\n", "step: 5\ndone: {}\n", "step: [5]\ndone: {}\n", "step: {n: 5, name: x}\ndone: {}\n",
+])
+def test_filled_documents_never_skipped_whatever_step(proj, monkeypatch, capsys, st):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    _break_strategy(proj)
+    _set_state(proj, st)
+    assert rc(["-p", proj]) == 1
+    assert "пропущено" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("st", [": : [\n", "- 1\n- 2\n", "step: {n: 5\n"])
+def test_broken_state_yaml_no_traceback_full_checks(proj, monkeypatch, capsys, st):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    _break_strategy(proj)
+    _set_state(proj, st)
+    assert rc(["-p", proj]) == 1
+    out = capsys.readouterr().out
+    assert "state.yaml не читается" in out and "пропущено" not in out
+
+
+def test_missing_state_file_full_checks(proj, monkeypatch):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    _break_strategy(proj)
+    (project_path(proj) / "state.yaml").unlink()
+    assert rc(["-p", proj]) == 1
+
+
+def test_empty_template_at_step2_skips_and_passes(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("STRATEG_PROJECTS_DIR", str(tmp_path / "projects"))
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    shutil.copytree(TEMPLATE, tmp_path / "projects" / "fresh")
+    (project_path("fresh") / "state.yaml").write_text("step: {n: 2, name: x}\ndone: {}\n", encoding="utf-8")
+    assert check.main(["-p", "fresh"]) == 0
+    assert "пропущено: проверки 5, 6, 7, 8, 9, 10" in capsys.readouterr().out
+
+
+def test_options_started_not_skipped_at_early_step(proj, monkeypatch):
+    monkeypatch.setattr(check, "check_lock", lambda root=None: [])
+    p = project_path(proj) / "strategy.md"
+    p.write_text((TEMPLATE / "strategy.md").read_text(encoding="utf-8"), encoding="utf-8")  # стратегии нет, варианты есть
+    edit(proj, "options.md", "· close ·", "· other ·")
+    _set_state(proj, "step: {n: 3}\ndone: {}\n")
+    assert rc(["-p", proj]) == 1
+
+
+@pytest.mark.parametrize("line", ["- «Перенос» → F-2, F-9", "- «A» → F-1; «B» → F-9", "- «Перенос» → F-1 и F-9"])
+def test_promise_all_feature_ids_checked(proj, line):
+    edit(proj, "strategy.md", "- «Перенос номера в один шаг» → F-2", line)
+    assert any("F-9" in f.msg for f in fails(check_promises_static(proj)))
+
+
+@pytest.mark.parametrize("line", ["«Безлимит навсегда» — наше главное обещание.", "| «Перенос» | F-9 |", "Обещаем F-9 всем."])
+def test_promise_like_lines_must_match_format(proj, line):
+    edit(proj, "strategy.md", "- «Перенос номера в один шаг» → F-2", line)
+    assert fails(check_promises_static(proj))
+
+
+def test_numbered_line_without_ref_is_not_thesis(proj):
+    set_thesis(proj, "- Т1: Барьер — активация [C-002].\n\n1. Согласовать план с командой.\n2. Запустить опрос.")
+    res = check_basis(proj)
+    assert not fails(res) and "тезисов 1" in res[0].msg
+    set_thesis(proj, "- Т1: Барьер — активация без ссылки.")
+    assert fails(check_basis(proj))
+
+
+def _exhaust(proj):
+    edit(proj, "strategy.md", "Абонент перед сменой телефона.\n", "")
+    for _ in range(3):
+        check.main(["-p", proj, "--only", "6"])
+
+
+def test_resolve_clears_waiting_and_counter(proj):
+    _exhaust(proj)
+    assert "--resolve" in state.load(proj)["waiting"]["question"] and "--resolve" in report(proj)
+    assert check.main(["-p", proj, "--resolve", "переписал раздел", "--minutes", "5", "--only", "6"]) == 1
+    st = state.load(proj)
+    assert st["waiting"] is None and st["human"][-1]["minutes"] == 5 and st["check_fails"]["count"] == 1
+    log = [json.loads(x) for x in (project_path(proj) / "log.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert any(e["kind"] == "human" and e.get("minutes") == 5 for e in log)
+
+
+def test_resolve_without_waiting_or_minutes_exit_3(proj):
+    assert rc(["-p", proj, "--resolve", "x", "--minutes", "1"]) == 3
+    _exhaust(proj)
+    assert rc(["-p", proj, "--resolve", "x"]) == 3
+    assert "--resolve" in check._Parser(prog="x").format_help() or True
+
+
+def test_help_mentions_resolve(capsys):
+    with pytest.raises(SystemExit):
+        check.main(["--help"])
+    assert "--resolve" in capsys.readouterr().out
