@@ -5,7 +5,7 @@ files:
   rules/style.md: 40a3fd8ce0ce9cf53bbed4ff49d893e04d4a7389a285ca072e8cd0cd58dde40a
   prompts/critic-claims.md: 5bb34278fa85550fb258e39160c5f16d469b95476e8f35542d9da0c24c7e3ceb
   prompts/critic-promises.md: a8c60e5984a656fb4e73340aa7ffc80696bc3dbad4e21735a3a4845795c03977
-  prompts/critic.md: 6fa4cb6d119d01f67c5f8971c80ee19777b33344a1cb31d13d3cb00498a17d30
+  prompts/critic.md: b6f361ff7d37a302dbd3ec8e033a83968e174a8305b79497e77b342233cdc91c
   prompts/extract.md: daf0c6f1386b683624ab0e96b75ffea6238109d18ae4ce55f403bb1ada19c160
   prompts/interview-coding.md: 775efdb80287943424b320670a3239a7f83f11500febdd97d30acfa81613f4f9
   prompts/respondent.md: 3d0eca4e4601a50118c1d22ed470143f12ac61a7daf9aa40e3c42cd042d34161
@@ -73,3 +73,8 @@ history:
     замен'
   changed:
   - AGENTS.md
+- updated_at: '2026-11-11T17:16:26+03:00'
+  reason: 'задача 11: critic.md — поле reconsider (что заставит передумать) и блоки
+    данных'
+  changed:
+  - prompts/critic.md
