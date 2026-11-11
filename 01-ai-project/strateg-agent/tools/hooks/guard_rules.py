@@ -28,6 +28,14 @@ WRITE_PATTERNS = [
 ]
 CP_RE = re.compile(r"(?:^|\s)(?:cp|copy|xcopy|rsync|ln)\b", re.I)
 SHELLS = ("Bash", "PowerShell")
+# Оболочка или интерпретатор с кодом в кавычках (`pwsh -c '…'`, `python -c "…"`): кавычки — это команда, их не вырезаем.
+INNER_RE = re.compile(r"^\s*(?:&\s*)?(?:pwsh|powershell|bash|sh|zsh|cmd|python[\w.]*)(?:\.exe)?\b[^'\"]*?\s(?:-c|-command|/c)\b", re.I)
+# Остальное в кавычках — данные (сообщение коммита, JSON утверждения), кроме цели редиректа `> "rules/a.md"`.
+QUOTED_RE = re.compile(r"(?<!>)(?<!> )('[^']*'|\"[^\"]*\")")
+
+
+def _code_part(seg: str) -> str:
+    return seg if INNER_RE.search(seg) else QUOTED_RE.sub("''", seg)
 
 
 def _norm_path(p):
@@ -84,11 +92,12 @@ def bash_touches(cmd) -> bool:
     if not isinstance(cmd, str) or not (PROT_RE.search(cmd) or GIT_BARE.search(cmd)):
         return False
     for seg in _segments(cmd):
-        if GIT_WRITE.search(seg) and GIT_BARE.search(seg):
+        code = _code_part(seg)  # глаголы записи ищем только вне строк-данных
+        if GIT_WRITE.search(code) and GIT_BARE.search(seg):
             return True
         if not PROT_RE.search(seg):
             continue
-        if any(p.search(seg) for p in WRITE_PATTERNS):
+        if any(p.search(code) for p in WRITE_PATTERNS):
             return True
         if CP_RE.search(seg):  # копирование: опасна только цель (последний аргумент)
             last = re.split(r"\s+", seg.rstrip())[-1].strip("'\"")

@@ -46,7 +46,10 @@ def test_guard_silent_for_other_files():
                      ("Edit", {"file_path": str(ROOT / "README.md")}), ("Edit", {"file_path": "/other/rules/x.md"}),
                      ("Bash", {"command": "cat rules/style.md"}), ("Bash", {"command": "python tools/check.py -p x"}),
                      ("Bash", {"command": "python tools/lock.py --verify"}), ("Bash", {"command": "ls methods && grep -n a AGENTS.md"}),
-                     ("Bash", {"command": "python tools/check.py -p x > out.txt"}), ("Bash", {}), ("Edit", {})]:
+                     ("Bash", {"command": "python tools/check.py -p x > out.txt"}), ("Bash", {}), ("Edit", {}),
+                     ("Bash", {"command": 'git commit -m "rm rules/"'}), ("Bash", {"command": "git commit -m 'правки: git checkout rules'"}),
+                     ("Bash", {"command": 'python tools/claims.py add --json \'{"text":"правила rules/ и AGENTS.md, rm rules/x"}\''}),
+                     ("PowerShell", {"command": 'python tools/claims.py add --json \'{"text":"sed -i rules/"}\''})]:
         code, out, _ = guard(tool, **ti)
         assert (code, out.strip()) == (0, ""), (tool, ti)
 
