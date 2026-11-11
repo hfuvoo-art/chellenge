@@ -139,7 +139,7 @@ function buildDraft(text: string, user: User, top: Article | undefined): Draft |
     // Предмет подставляем, только если студент назвал его сам. Угадывать нельзя: заявление уйдёт не по тому предмету.
     details.subject = findSubject(text, [...debts, ...current])?.name ?? "";
     details.reason = has(text, "болезн", "заболел", "болел", "больнич") ? "Болезнь (есть справка)" : has(text, "долг", "задолжен", "хвост") ? "Академическая задолженность" : "";
-    details.comment = has(text, "болезн", "заболел", "болел") ? "Медицинскую справку принесу в учебный офис" : "";
+    details.comment = has(text, "болезн", "заболел", "болел") ? "Медицинскую справку прикреплю к заявке" : "";
   } else if (type === "cert_study") {
     details.place = has(text, "посольств", "виз") ? "В посольство" : has(text, "работ") ? "Работодателю" : has(text, "банк") ? "В банк" : "По месту требования";
     details.format = paper ? "Бумажная" : "Электронная (PDF с QR-кодом)";
