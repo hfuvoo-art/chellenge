@@ -547,7 +547,7 @@
   - `--apply` применяет ответ с теми же проверками, затем берётся следующая часть.
   - В журнал пишется `degraded: env-model`, цена идёт в статью «модель среды».
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_split_parts_limit_and_markers`; `test_parts_overlap_one_paragraph`;
   - `test_drops_table_facts`; `test_claims_get_extracted_by_and_questions`;
   - `test_resume_after_crash_no_duplicate_calls` (Фокус 2): исключение после 2 частей из 5; повторный запуск → всего 5 вызовов, дубликатов нет;
@@ -556,10 +556,10 @@
   - `test_dry_run_no_calls_prints_estimate`;
   - `test_emit_prompt_apply_roundtrip_logs_degraded`;
   - `test_suspicious_paragraphs_labeled_in_prompt`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_extract.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: extract.py — части, возобновление, эскалация, режим без ключа`.
+- [x] **Шаг 2.** `python -m pytest tests/test_extract.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: extract.py — части, возобновление, эскалация, режим без ключа`.
 
 ### Задача 11. critic.py и respond.py
 
@@ -680,17 +680,17 @@
   - «Пересмотр» (из `review.py`);
   - «Следующее действие: <одна команда>».
 
-- [ ] **Шаг 1. Тесты:**
+- [x] **Шаг 1. Тесты:**
   - `test_status_has_all_blocks`;
   - `test_costs_five_articles_no_double_count` (У2);
   - `test_status_ascii_console` (Фокус 1);
   - `test_red_line_when_lock_broken`;
   - `test_yellow_when_price_unknown_or_same_family`;
   - `test_hook_mode_short`: ≤25 строк.
-- [ ] **Шаг 2.** `python -m pytest tests/test_status.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: status.py и учёт стоимости по 5 статьям`.
+- [x] **Шаг 2.** `python -m pytest tests/test_status.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: status.py и учёт стоимости по 5 статьям`.
 
 ### Задача 14a. export.py: стратегия в читаемом виде
 
