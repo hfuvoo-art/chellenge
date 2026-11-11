@@ -17,7 +17,7 @@ files:
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
-  AGENTS.md: a34c40c6e802462e76f1f732c5a21698c910ca934dbe236412a62a57ed7d8c5e
+  AGENTS.md: 55bf15568d24f41b2bbf1aa9a3f921b918845970d4ff7b131fdf8b3fcabae7ba
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: cf9281aefd612f282dff06c5f97aa8809bdcee682c5edc02dd0d590391205abb
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
@@ -104,5 +104,9 @@ history:
 - updated_at: '2026-11-11T17:20:43+03:00'
   reason: 'задачи 11 и 12: critic.py, respond.py, ingest --reviews в AGENTS.md, строки
     убраны из Временных замен'
+  changed:
+  - AGENTS.md
+- updated_at: '2026-11-11T17:44:25+03:00'
+  reason: 'задача 14a: export.py в AGENTS.md, строка export убрана из «Временных замен»'
   changed:
   - AGENTS.md

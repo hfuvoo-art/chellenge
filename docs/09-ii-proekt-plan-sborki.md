@@ -708,11 +708,11 @@
   - в начале — блок «Решение за 1 минуту» из раздела «Рекомендация», в конце — список источников;
   - HTML — один файл без внешних зависимостей; DOCX — через python-docx.
 
-- [ ] **Шаг 1. Тесты:** `test_export_replaces_ids_with_footnotes`; `test_export_marks_hypotheses_and_synthetic`; `test_export_has_sources_and_summary`.
-- [ ] **Шаг 2.** `python -m pytest tests/test_export.py -q` → FAIL.
-- [ ] **Шаг 3.** Реализовать.
-- [ ] **Шаг 4.** pytest → PASS. HTML тонкого прогона (или фикстуры) открыть в браузере и прочитать глазами.
-- [ ] **Шаг 5.** Коммит: `ИИ-проект: export.py — читаемая стратегия`.
+- [x] **Шаг 1. Тесты:** `test_export_replaces_ids_with_footnotes`; `test_export_marks_hypotheses_and_synthetic`; `test_export_has_sources_and_summary`.
+- [x] **Шаг 2.** `python -m pytest tests/test_export.py -q` → FAIL.
+- [x] **Шаг 3.** Реализовать.
+- [x] **Шаг 4.** pytest → PASS. HTML тонкого прогона (или фикстуры) открыть в браузере и прочитать глазами.
+- [x] **Шаг 5.** Коммит: `ИИ-проект: export.py — читаемая стратегия`.
 
 ### Задача 15. Навыки, субагент, хуки, README v1
 
