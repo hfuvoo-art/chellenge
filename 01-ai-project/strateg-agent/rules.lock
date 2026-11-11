@@ -9,15 +9,15 @@ files:
   prompts/extract.md: daf0c6f1386b683624ab0e96b75ffea6238109d18ae4ce55f403bb1ada19c160
   prompts/interview-coding.md: 775efdb80287943424b320670a3239a7f83f11500febdd97d30acfa81613f4f9
   prompts/respondent.md: 3d0eca4e4601a50118c1d22ed470143f12ac61a7daf9aa40e3c42cd042d34161
-  methods/framing.md: e62cc87c7da0ed62dc6959c3c9af87adc848c30d3b015d0ee2976a08ae84d9fd
+  methods/framing.md: 0fccba83457d4db6ca902f2a4415149afa32538bd3660d1d35ada575e6e80fe8
   methods/interview-guide.md: 3edcb81d18e7b78511722007b3091712ca15cd56f40f9f9a4c5e784344f03804
   methods/jtbd.md: 27e4b19e36ae4e7895c87de57d215f142c3aa5f0ee36389940b127fba3925ec1
-  methods/options-premortem.md: 9348798c2173d1ed8d822e2571f9ffdbe64ca1a7d80b857697657c20237ba46a
+  methods/options-premortem.md: 58b0dd0ec25b376f00bef203e1cdae9d8749ae50e242e7eb9837c64e444a25bb
   methods/positioning.md: 0f174c8176e746ede50b16f87ef2433fb6791274cf2d64b538d7c3529373b037
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
-  AGENTS.md: 55bf15568d24f41b2bbf1aa9a3f921b918845970d4ff7b131fdf8b3fcabae7ba
+  AGENTS.md: 4acbd060dd378eea51443c8b694308c5727c4cd6430bef47085ffbb5d272490a
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: cf9281aefd612f282dff06c5f97aa8809bdcee682c5edc02dd0d590391205abb
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
@@ -110,3 +110,13 @@ history:
   reason: 'задача 14a: export.py в AGENTS.md, строка export убрана из «Временных замен»'
   changed:
   - AGENTS.md
+- updated_at: '2026-11-11T22:50:16+03:00'
+  reason: 'подготовка КТ-A: state.py step/wait/resolve в AGENTS.md'
+  changed:
+  - AGENTS.md
+- updated_at: '2026-11-11T22:54:04+03:00'
+  reason: 'подготовка КТ-A: methods — точки через state.py resolve'
+  changed:
+  - AGENTS.md
+  - methods/framing.md
+  - methods/options-premortem.md

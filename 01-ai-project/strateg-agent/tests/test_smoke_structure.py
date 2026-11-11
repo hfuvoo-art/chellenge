@@ -48,3 +48,11 @@ def test_smoke_structure():
             problems.append(f"{p.parent.name}/SKILL.md не ссылается на существующий playbook")
 
     assert not problems, "\n".join(problems)
+
+
+def test_no_log_human_for_points_in_instructions():
+    import re
+    for p in list((ROOT / "methods").glob("*.md")) + list((ROOT / "playbooks").glob("*.md")):
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if "log.py human" in line and re.search(r"точк", line, re.I) and "не вызывай" not in line and "не точка" not in line:
+                raise AssertionError(f"{p.name}: точка человека через log.py human (двойной счёт): {line[:80]}")

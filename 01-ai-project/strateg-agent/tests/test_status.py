@@ -153,3 +153,76 @@ def test_no_project_gives_next_step(tmp_path, monkeypatch, prices):
 def test_help_in_russian():
     r = subprocess.run([sys.executable, str(ROOT / "tools" / "status.py"), "--help"], capture_output=True, timeout=60)
     assert r.returncode == 0 and re.search("[а-яё]", r.stdout.decode("utf-8", "replace").lower())
+
+
+def _set_waiting(slug, value):
+    st = state.load(slug)
+    st["waiting"] = value
+    state.save(slug, st)
+
+
+def test_string_waiting_shown_like_dict(proj):
+    _set_waiting(proj, "точка 1")
+    out = status.render(proj)
+    assert "Ждёт от человека: точка 1" in out
+    nxt = out.split("Следующее действие:")[1]
+    assert "state.py resolve" in nxt and "точка 1" in nxt
+    assert "Ждёт от человека: точка 1" in status.render(proj, hook=True)
+
+
+def test_dict_waiting_next_action_is_resolve(proj):
+    state.wait_human(proj, "точка 2", "Какой вариант?")
+    out = status.render(proj)
+    assert "точка 2: Какой вариант?" in out
+    assert 'state.py resolve "точка 2"' in out.split("Следующее действие:")[1]
+
+
+def test_step0_with_project_points_to_playbook(proj):
+    out = status.render(proj)
+    nxt = out.split("Следующее действие:")[1]
+    assert "playbooks/1-frame.md" in nxt and "project.py new" not in nxt
+
+
+def test_next_action_by_step_opens_playbook(proj):
+    state.set_step(proj, 4, "options")
+    assert "playbooks/4-options.md" in status.render(proj).split("Следующее действие:")[1]
+
+
+def test_prices_and_lock_dates_in_full_status_not_hook(proj, monkeypatch):
+    p = status.PRICES_PATH
+    d = yaml.safe_load(p.read_text(encoding="utf-8"))
+    d["as_of"] = "2026-11-09"
+    p.write_text(yaml.safe_dump(d), encoding="utf-8")
+    monkeypatch.setattr(status.lock, "last_update",
+                        lambda root: {"updated_at": "2026-11-12T10:00:00+00:00", "reason": "правка AGENTS.md"})
+    out = status.render(proj)
+    assert "2026-11-09" in out and "2026-11-12T10:00:00" in out and "правка AGENTS.md" in out
+    hook = status.render(proj, hook=True)
+    assert "2026-11-09" not in hook and "Цены" not in hook
+
+
+def test_dates_unknown_when_missing(proj, monkeypatch):
+    monkeypatch.setattr(status.lock, "last_update", lambda root: None)
+    out = status.render(proj)
+    assert "Цены (config/prices.yaml): на неизвестно" in out
+    assert "Правила обновлены (lock.py --update): неизвестно" in out
+
+
+def test_state_cli_flow_costs_minutes_once(proj):
+    assert state.main(["-p", proj, "step", "1", "frame"]) == 0
+    assert state.main(["-p", proj, "wait", "точка 1", "Подтверждаете?"]) == 0
+    assert "точка 1: Подтверждаете?" in status.render(proj)
+    assert state.main(["-p", proj, "resolve", "точка 1", "--summary", "ок", "--minutes", "6"]) == 0
+    out = status.render(proj)
+    assert "Ждёт от человека: ничего" in out
+    assert status.costs(proj)["minutes"] == pytest.approx(6.0)
+    assert status.costs(proj)["human"] == pytest.approx(120.0)
+
+
+@pytest.mark.parametrize("content", ["step: [unclosed\n  : :", "[1, 2]\n"])
+def test_broken_state_yaml_red_line_not_traceback(proj, tmp_path, content):
+    (tmp_path / "projects" / proj / "state.yaml").write_text(content, encoding="utf-8")
+    out = status.render(proj)
+    assert "[КРАСНАЯ]" in out and "state.yaml не читается" in out
+    assert "Следующее действие:" in out
+    assert "state.yaml не читается" in status.render(proj, hook=True) or "Статус" in status.render(proj, hook=True)
