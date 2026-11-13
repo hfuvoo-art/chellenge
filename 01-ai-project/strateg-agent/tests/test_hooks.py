@@ -169,3 +169,12 @@ def test_post_hooks_mask_yandex_tokens_powershell(tmp_project, tmp_path):
     blob = json.dumps(ev)
     for secret in ("y0_ABCDEFGHIJKLMN", "t1.9euelZq", "abc.def", "zzz999"):
         assert secret not in blob
+
+
+def test_log_tool_records_all_scripts_of_compound_command(tmp_project, tmp_path):
+    pd = tmp_path / "projects"
+    (pd / "CURRENT").write_text("p1", encoding="utf-8")
+    run_hook("log_tool.py", {"tool_name": "PowerShell", "tool_input": {
+        "command": "python tools/critic.py --promises; python tools/check.py; Get-Content x"}}, {"STRATEG_PROJECTS_DIR": str(pd)})
+    ev = [e for e in _journal(pd) if e["kind"] == "tool"]
+    assert ev[-1]["script"] == "critic.py" and ev[-1]["scripts"] == ["critic.py", "check.py"]

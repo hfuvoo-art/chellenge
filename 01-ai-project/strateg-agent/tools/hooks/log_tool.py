@@ -36,11 +36,14 @@ def main() -> int:
     try:
         data = json.loads(sys.stdin.buffer.read().decode("utf-8", errors="replace"))
         cmd = data["tool_input"]["command"]
-        m = TOOL_RE.search(cmd) if isinstance(cmd, str) else None
+        found = TOOL_RE.findall(cmd) if isinstance(cmd, str) else []
+        scripts = list(dict.fromkeys(f"{x}.py" for x in found))  # составная команда: все скрипты, по порядку
+        m = bool(scripts)
         slug = current_project() if m else None
         if m and slug:
             from tools.log import event
-            event(slug, "tool", script=f"{m.group(1)}.py", command=mask(cmd))
+            extra = {"scripts": scripts} if len(scripts) > 1 else {}
+            event(slug, "tool", script=scripts[0], command=mask(cmd), **extra)
     except BaseException:  # noqa: BLE001 — хук не должен ронять сессию
         pass
     return 0

@@ -46,7 +46,7 @@ def _items(path) -> list[tuple[str | None, str]]:
     if not p.is_file():
         raise ValueError(f"файла вопросов {p} нет. Что сделать: укажите questions.md проекта или файл с вопросами интервью (по одному в строке списка).")
     text = COMMENT_RE.sub("", read_text(p))
-    qs = extract.QLINE_RE.findall(text)
+    qs = extract.parse_questions(text)
     out: list[tuple[str | None, str]] = [(c, t) for c, t in qs] if qs else [(None, t) for t in ITEM_RE.findall(text)]
     if not out:
         raise ValueError(f"в {p.name} нет вопросов. Что сделать: запишите вопросы списком: `- Q1: …` или `- …`.")

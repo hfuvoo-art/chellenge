@@ -30,6 +30,15 @@ CELL_LOC_RE = ingest.CELL_LOC_RE
 CELL_QUOTE_RE = re.compile(r"^\S+!\$?[A-Za-z]{1,3}\$?\d+\s")  # строка таблицы «Лист!C14 …»
 HEADER_RE = re.compile(r"^<!--\s*S-\d+\s*\|.*-->$")
 QLINE_RE = re.compile(r"^\s*(?:[-*]\s*)?(Q\d+)\s*[:.)]?\s*(.+?)\s*$", re.M)
+
+
+def parse_questions(text: str) -> list[tuple[str, str]]:
+    """Вопросы «- Qn: …» из questions.md: берётся первое вхождение каждого кода. Строки «- Q1: S-001 …» в разделах ниже
+    (покрытие источниками, статусы) вопросами не считаются — иначе они попадают в промпт и меняют action_id."""
+    seen: dict[str, str] = {}
+    for code, txt in QLINE_RE.findall(text):
+        seen.setdefault(code, txt)
+    return list(seen.items())
 SID_RE = re.compile(r"^S-\d+$")
 
 
@@ -137,7 +146,7 @@ def load_prompt() -> str:
 
 def _questions(slug: str, wanted: list[str] | None) -> list[tuple[str, str]]:
     qfile = project_path(slug) / "questions.md"
-    allq = QLINE_RE.findall(read_text(qfile)) if qfile.is_file() else []
+    allq = parse_questions(read_text(qfile)) if qfile.is_file() else []
     if wanted is None:
         return allq
     byc = dict(allq)

@@ -446,3 +446,11 @@ def test_emit_hint_has_project_flag(tmp_project, capsys):
     sid = _ingest(tmp_project, _paras(2))
     extract.extract_source(tmp_project, sid, emit_prompt=True)
     assert f"-p {tmp_project}" in capsys.readouterr().out
+
+
+def test_questions_first_occurrence_ignores_coverage_lines(tmp_project):
+    (project_path(tmp_project) / "questions.md").write_text(
+        "# Вопросы\n- Q1: Сколько выезжают?\n- Q2: Где дешевле?\n\n## Покрытие источниками\n- Q1: S-001, S-002.\n- Q2: частично — S-003.\n",
+        encoding="utf-8")
+    assert extract._questions(tmp_project, None) == [("Q1", "Сколько выезжают?"), ("Q2", "Где дешевле?")]
+    assert extract._questions(tmp_project, ["Q1"]) == [("Q1", "Сколько выезжают?")]
