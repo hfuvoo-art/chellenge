@@ -1,2 +1,9 @@
 # Функции продукта: {id: F-1, what: "...", status: exists|planned, available_from: 2027-Q1, basis: [C-001]}
-features: []
+# Все функции planned: внутренних данных о продукте нет (brief.md). Сроки — предложение агента, подтверждает человек в точке 3.
+features:
+  - {id: F-1, what: "Пакеты eSIM для Турции 5 ГБ и 10 ГБ на 30 дней с покупкой в приложении оператора", status: planned, available_from: 2027-05-01, basis: [C-115, C-145]}
+  - {id: F-2, what: "Проверка совместимости телефона с eSIM до оплаты (модель устройства и наличие EID)", status: planned, available_from: 2027-05-01, basis: [C-054, C-037]}
+  - {id: F-3, what: "Возврат денег, если eSIM не заработала в Турции (заявка в приложении)", status: planned, available_from: 2027-05-01, basis: [C-151, C-074]}
+  - {id: F-4, what: "Поддержка в приложении на русском языке 24/7", status: planned, available_from: 2027-05-01, basis: [C-077, C-056]}
+  - {id: F-5, what: "Предложение eSIM на экране роуминга и поездки в приложении оператора", status: planned, available_from: 2027-05-01, basis: [C-096]}
+  - {id: F-6, what: "Остаток трафика eSIM в приложении", status: planned, available_from: 2027-05-01, basis: [C-061, C-126]}
