@@ -197,3 +197,8 @@ def test_ping_ok(fake_llm, capsys):
     fake_llm.add("pong")
     assert llm.main(["ping", "--role", "pro"]) == 0
     assert "LLM OK · test-model · 1500 ток. · 0.40 ₽" in capsys.readouterr().out
+
+
+def test_log_hides_cloud_folder_in_model_uri():
+    assert llm.public_model_name("gpt://b1gFOLDER123/yandexgpt-5.1") == "yandexgpt-5.1"
+    assert llm.public_model_name("aliceai-llm-flash") == "aliceai-llm-flash"

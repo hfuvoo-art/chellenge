@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import os
 import sys
 import time
@@ -162,9 +163,19 @@ def _retryable(e: BaseException) -> bool:
     return type(e).__name__ in {"APITimeoutError", "APIConnectionError"}
 
 
+_MODEL_URI_RE = re.compile(r"^[a-z]+://[^/]+/")
+
+
+def public_model_name(model) -> str:
+    """«gpt://<ID каталога>/yandexgpt-5.1» → «yandexgpt-5.1»: ID каталога облака не попадает в журнал и репозиторий."""
+    return _MODEL_URI_RE.sub("", str(model)) if model else model
+
+
 def _log(slug, kind: str, **fields) -> None:
     if slug is None and current_slug() is None:
         return
+    if "model" in fields:
+        fields["model"] = public_model_name(fields["model"])
     log.event(slug, kind, **fields)
 
 
