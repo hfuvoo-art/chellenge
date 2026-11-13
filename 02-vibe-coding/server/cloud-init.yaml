@@ -1,0 +1,54 @@
+#cloud-config
+# Вставляется в поле «Пользовательские данные» (user-data) при создании ВМ в Yandex Cloud.
+# Ставит Docker и запускает: сайт (образ из GHCR), Caddy с HTTPS на адресе <IP>.sslip.io и
+# watchtower, который раз в 5 минут подтягивает новую версию сайта. Секретов здесь нет.
+# DOMAIN_HERE заменяется на <IP>.sslip.io командой создания ВМ (см. vykladka-yandex-cloud.md).
+# Знак доллара в этом файле не использовать: при передаче в ВМ переменные со знаком доллара стираются.
+users:
+  - name: dekanat
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys: [ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDBvgr4oyTC7ZEVGJdJaQCDxX8cuWjUoYSpV9lr+L6vh dekanat-vm]
+package_update: true
+packages: [ca-certificates, curl]
+write_files:
+  - path: /opt/dekanat/docker-compose.yml
+    content: |
+      services:
+        app:
+          image: ghcr.io/hfuvoo-art/dekanat:latest
+          restart: unless-stopped
+          env_file: .env
+          volumes: [dekanat-data:/data]
+          labels: [com.centurylinklabs.watchtower.enable=true]
+        caddy:
+          image: caddy:2.10-alpine
+          restart: unless-stopped
+          ports: ["80:80", "443:443"]
+          env_file: .env
+          volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy-data:/data]
+          depends_on: [app]
+        watchtower:
+          image: containrrr/watchtower:1.7.1
+          restart: unless-stopped
+          command: --interval 300 --label-enable --cleanup
+          environment: [DOCKER_API_VERSION=1.44]
+          volumes: [/var/run/docker.sock:/var/run/docker.sock]
+      volumes:
+        dekanat-data:
+        caddy-data:
+  - path: /opt/dekanat/.env
+    content: |
+      # Ключи YandexGPT (по желанию): строки LLM_* из app/.env.example
+  - path: /opt/dekanat/Caddyfile
+    content: |
+      DOMAIN_HERE {
+        encode zstd gzip
+        header Strict-Transport-Security "max-age=31536000"
+        reverse_proxy app:3000
+      }
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - cd /opt/dekanat && docker compose up -d
+  # Для диагностики: состояние и логи видны в «Последовательном порте».
+  - sleep 60; cd /opt/dekanat && head -1 Caddyfile && docker compose ps -a && docker compose logs --tail 15
