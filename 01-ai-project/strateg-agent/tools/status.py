@@ -165,6 +165,10 @@ def _degraded_lines(slug, s: dict, st: dict) -> tuple[list[str], list[str]]:
         yellows.append(f"{YELLOW} цена неизвестна у {s['unknown_search']} поисковых запросов: ₽ занижены")
     if s["no_human_rate"]:
         yellows.append(f"{YELLOW} цена неизвестна: нет human_rub_per_hour в config/prices.yaml, время человека не переведено в ₽")
+    step_n = (st.get("step") or {}).get("n") if isinstance(st.get("step"), dict) else 0
+    if isinstance(step_n, int) and step_n >= 2 and not s["env_model"]:
+        yellows.append(f"{YELLOW} расход модели среды не записан: статья 0 ₽ занижена. Что сделать: `/cost` в Claude Code (или счётчик среды) → "
+                       f"`python tools/log.py model <usd> --manual`")
     if s["errors"]:
         yellows.append(f"{YELLOW} сбоев вызова модели: {s['errors']} (см. log.jsonl, kind=error)")
     if s["bad_lines"]:

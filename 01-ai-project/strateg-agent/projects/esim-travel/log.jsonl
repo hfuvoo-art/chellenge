@@ -19,8 +19,6 @@
 {"ts": "2026-11-13T21:34:07+03:00", "kind": "ingest", "id": "S-006", "source_kind": "reviews", "chars": 1707, "warnings": [], "suspicious": [], "supersedes": null, "pii_removed": 0}
 {"ts": "2026-11-13T21:34:18+03:00", "kind": "search", "query": "МегаФон роуминг Турция тарифы интернет", "engine": "claude"}
 {"ts": "2026-11-13T21:34:20+03:00", "kind": "search", "query": "МТС роуминг Турция интернет пакет цена", "engine": "claude"}
-{"ts": "2026-11-13T21:34:26+03:00", "kind": "search", "query": "МегаФон роуминг Турция тарифы интернет", "engine": "other"}
-{"ts": "2026-11-13T21:34:26+03:00", "kind": "search", "query": "МТС роуминг Турция интернет пакет цена", "engine": "other"}
 {"ts": "2026-11-13T21:34:29+03:00", "kind": "ingest", "id": "S-007", "source_kind": "html", "chars": 1861, "warnings": [], "suspicious": [], "supersedes": null}
 {"ts": "2026-11-13T21:34:31+03:00", "kind": "ingest", "id": "S-008", "source_kind": "html", "chars": 5889, "warnings": [], "suspicious": ["¶39"], "supersedes": null}
 {"ts": "2026-11-13T21:34:34+03:00", "kind": "ingest", "id": "S-009", "source_kind": "html", "chars": 4533, "warnings": [], "suspicious": [], "supersedes": null}
@@ -267,3 +265,6 @@
 {"ts": "2026-11-13T22:10:53+03:00", "kind": "tool", "script": "export.py", "command": "cd /d/claude_projects/chellenge/01-ai-project/strateg-agent; source .venv/Scripts/activate; export PYTHONIOENCODING=utf-8 python tools/export.py; grep -c \"C-\" projects/esim-travel/export/strategy.html; grep -i -o \"неизвест[^<]\\{0,60\\}\\|отозван[^<]\\{0,60\\}\" projects/esim-travel/export/strategy.html |…"}
 {"ts": "2026-11-13T22:37:07+03:00", "kind": "human", "point": "точка 3", "summary": "Стратегия принята; сроки F-1…F-6 (2027-05-01) подтверждены как предложение для пилота", "minutes": 6.0}
 {"ts": "2026-11-13T22:37:07+03:00", "kind": "step", "n": 6, "name": "after-decision"}
+{"ts": "2026-11-13T22:37:22+03:00", "kind": "tool", "script": "state.py", "command": "cd /d/claude_projects/chellenge/01-ai-project/strateg-agent; source .venv/Scripts/activate; export PYTHONIOENCODING=utf-8 python tools/state.py resolve \"точка 3\" --summary \"Стратегия принята; сроки F-1…F-6 (2027-05-01) подтверждены как предложение для пилота\" --minutes 6 | tail -1 python tools/state…"}
+{"ts": "2026-11-13T22:47:08+03:00", "kind": "lock_update", "reason": "КТ-A: учёт поиска (хук в Claude Code, вручную вне) и модели среды по /cost", "changed": ["AGENTS.md"]}
+{"ts": "2026-11-13T22:48:12+03:00", "kind": "note", "text": "Оркестратор 13.11: удалены 2 ручных дубликата поиска (21:34:26, engine other) — те же запросы уже записал хук; удалены 54 строки, которые писал pytest (lock_update, llm test-model) до изоляции тестов"}

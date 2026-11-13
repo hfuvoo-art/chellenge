@@ -226,3 +226,12 @@ def test_broken_state_yaml_red_line_not_traceback(proj, tmp_path, content):
     assert "[КРАСНАЯ]" in out and "state.yaml не читается" in out
     assert "Следующее действие:" in out
     assert "state.yaml не читается" in status.render(proj, hook=True) or "Статус" in status.render(proj, hook=True)
+
+
+def test_yellow_when_env_model_cost_not_logged(tmp_project):
+    from tools import state as st_mod
+    st_mod.set_step(tmp_project, 3, "research")
+    assert "расход модели среды не записан" in status.render(tmp_project)
+    from tools.log import event
+    event(tmp_project, "model", usd=0.5, manual=True)
+    assert "расход модели среды не записан" not in status.render(tmp_project)
