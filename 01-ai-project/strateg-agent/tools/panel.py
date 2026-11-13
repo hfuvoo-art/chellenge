@@ -34,7 +34,7 @@ section{background:var(--card);border:1px solid var(--line);border-radius:8px;pa
 .steps li{flex:1 1 120px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:.9rem}
 .steps .done{border-color:var(--ok);color:var(--ok)}.steps .cur{border-color:var(--cur);color:var(--cur);font-weight:700;border-width:2px}
 .steps .next{color:var(--mut)}ul,ol{padding-left:20px;margin:4px 0}li{margin:3px 0}
-table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top;font-size:.92rem}
+table{border-collapse:collapse;width:100%}td,th{overflow-wrap:anywhere;border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top;font-size:.92rem}
 .tag{display:inline-block;border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:.8rem;margin-left:4px}
 .wait{border-left:4px solid var(--cur)}a{color:var(--cur);word-break:break-all}
 @media(max-width:480px){body{padding:10px}td,th{font-size:.85rem}}
@@ -71,9 +71,13 @@ def _err(msg: str) -> str:
     return f'<p class="red">{_e(msg)}</p>'
 
 
+COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+
+
 def _read(p: Path) -> str | None:
+    """Текст файла без HTML-комментариев (подсказки шаблонов не данные)."""
     try:
-        return read_text(p) if p.is_file() else None
+        return COMMENT_RE.sub("", read_text(p)) if p.is_file() else None
     except (OSError, UnicodeDecodeError):
         return None
 
@@ -93,9 +97,15 @@ def _load_yaml(p: Path):
         return None, f"{p.name} не читается (битый YAML). Что сделать: исправь файл."
 
 
+def _first_par(text: str, limit: int = 300) -> str:
+    par = re.split(r"\n\s*\n", text.strip())[0] if text.strip() else ""
+    par = " ".join(par.split())
+    return par if len(par) <= limit else par[: limit - 1].rstrip() + "…"
+
+
 def _title_block(d: Path, slug: str) -> str:
     brief = _read(d / "brief.md")
-    q = _section_md(brief, "Вопрос") if brief else ""
+    q = _first_par(re.sub(r"^\s*Запрос дословно:\s*", "", _section_md(brief, "Вопрос"))) if brief else ""
     body = f'<p class="mut">Проект: {_e(slug)}</p>'
     body += f"<p>{_e(q)}</p>" if q else _empty("запроса пока нет (brief.md)")
     return f"<h1>{_e(slug)}</h1>{body}"
@@ -105,7 +115,7 @@ def _steps_block(st, err: str) -> str:
     if err:
         return _sec("Шаги", _err(err))
     step = st.get("step") if isinstance(st, dict) and isinstance(st.get("step"), dict) else {}
-    n = step.get("n") if isinstance(step.get("n"), int) else 0
+    n = step.get("n") if type(step.get("n")) is int else 0
     items = []
     for i, name in STEPS:
         cls, mark = ("done", "сделан") if i < n else (("cur", "текущий") if i == n else ("next", "впереди"))
@@ -150,7 +160,9 @@ def _sources_block(d: Path) -> str:
     data, err = _load_yaml(d / "sources.yaml")
     if err:
         return _sec("Источники", _err(err))
-    srcs = [s for s in ((data or {}).get("sources") or []) if isinstance(s, dict)] if isinstance(data, dict) else []
+    if data is not None and not (isinstance(data, dict) and isinstance(data.get("sources") or [], list)):
+        return _sec("Источники", _err("sources.yaml: неверная структура (ожидается список sources). Что сделать: исправь файл."))
+    srcs = [s for s in ((data or {}).get("sources") or []) if isinstance(s, dict)]
     if not srcs:
         return _sec("Источники", _empty())
     rows = []
@@ -198,28 +210,25 @@ def _options_block(d: Path) -> str:
     if not opts:
         return _sec("Варианты", _empty())
     lis = "".join(f"<li><b>{_e(i)}</b> <span class=\"tag\">{_e(k)}</span> {_e(n)}</li>" for i, k, n in opts)
-    choice = _section_md(text, "Выбор")
+    choice = _first_par(re.sub(r"^\s*Выбрано:\s*", "", _section_md(text, "Выбор")))
     ch = f"<p><b>Выбрано.</b> {_e(choice)}</p>" if choice else _empty("выбор ещё не сделан")
     return _sec("Варианты", f"<ul>{lis}</ul>{ch}")
 
 
-def _cost_block(slug: str, st) -> str:
+def _cost_block(slug: str, st, st_err: str = "") -> str:
     try:
-        c = status.costs(slug)
-    except Exception:  # noqa: BLE001
+        v = status.cost_view(slug, st if isinstance(st, dict) else {})
+    except (OSError, ValueError, TypeError, KeyError):  # ошибки данных; AttributeError (смена API) не глушим
         return _sec("Стоимость", _err("не удалось посчитать стоимость (log.jsonl). Что сделать: python tools/status.py"))
-    rub = status._rub
+    c, rub = v["costs"], status._rub
     names = [("yandex", "Yandex"), ("env_model", "Модель среды"), ("search", "Поиск"), ("retries", "Повторы и сбои"), ("human", "Человек")]
     rows = "".join(f"<tr><td>{n}</td><td>{_e(rub(c[k]))}</td></tr>" for k, n in names)
     rows += f"<tr><td><b>Итого</b></td><td><b>{_e(rub(c['total']))}</b></td></tr>"
     body = f"<table>{rows}</table><p class=\"mut\">Минуты человека: {c['minutes']:g}</p>"
-    if isinstance(st, dict):
-        try:
-            reds, yellows = status._degraded_lines(slug, status._scan(slug), st)
-        except Exception:  # noqa: BLE001
-            reds, yellows = [], []
-        body += "".join(f'<p class="red">{_e(x)}</p>' for x in reds)
-        body += "".join(f'<p class="yel">{_e(x)}</p>' for x in yellows)
+    if st_err:
+        body += _err("стоимость может быть неполной: state.yaml не прочитан")
+    body += "".join(f'<p class="red">{_e(x)}</p>' for x in v["reds"])
+    body += "".join(f'<p class="yel">{_e(x)}</p>' for x in v["yellows"])
     return _sec("Стоимость", body)
 
 
@@ -248,7 +257,7 @@ def render_panel(slug: str) -> str:
     else:
         blocks += [_waiting_block(st), _human_block(st)]
     blocks += [_questions_block(d), _sources_block(d), _claims_block(d), _options_block(d),
-               _cost_block(d.name, st), _files_block(d),
+               _cost_block(d.name, st, err), _files_block(d),
                f'<p class="mut">Обновлено: {_e(now_iso())}</p>']
     return (f'<!doctype html>\n<html lang="ru"><head><meta charset="utf-8">'
             f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'

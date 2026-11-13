@@ -120,13 +120,23 @@ def _scan(slug) -> dict:
     return s
 
 
-def costs(slug=None) -> dict:
-    """₽ по 5 статьям (yandex, env_model, search, retries, human), total и minutes (минуты человека)."""
-    s = _scan(slug)
+def _costs_from(s: dict) -> dict:
     out = {k: round(s[k], 4) for k in ("yandex", "env_model", "search", "retries", "human")}
     out["total"] = round(sum(out.values()), 4)
     out["minutes"] = round(s["minutes"], 2)
     return out
+
+
+def costs(slug=None) -> dict:
+    """₽ по 5 статьям (yandex, env_model, search, retries, human), total и minutes (минуты человека)."""
+    return _costs_from(_scan(slug))
+
+
+def cost_view(slug, st: dict | None = None) -> dict:
+    """Для панели: {costs, reds, yellows} за один разбор log.jsonl; st — state.yaml (пустой словарь, если не прочитан)."""
+    s = _scan(slug)
+    reds, yellows = _degraded_lines(slug, s, st if isinstance(st, dict) else {})
+    return {"costs": _costs_from(s), "reds": reds, "yellows": yellows}
 
 
 def _one_line(text, limit=160) -> str:
