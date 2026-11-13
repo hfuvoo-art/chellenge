@@ -14,3 +14,13 @@
 {"ts": "2026-11-13T21:26:33+03:00", "kind": "ingest", "id": "S-003", "source_kind": "html", "chars": 5839, "warnings": [], "suspicious": [], "supersedes": null}
 {"ts": "2026-11-13T21:26:34+03:00", "kind": "ingest", "id": "S-004", "source_kind": "html", "chars": 4192, "warnings": [], "suspicious": [], "supersedes": null}
 {"ts": "2026-11-13T21:26:58+03:00", "kind": "tool", "script": "status.py", "command": "cd \"D:/claude_projects/chellenge/01-ai-project/strateg-agent/projects/esim-travel\" && cat >> questions.md <<'EOF' ## Покрытие источниками (шаг 2) - Q1: S-001 (ЕМИСС 38480, выезд по странам и кварталам), S-002 (ЦСР, итоги 2025). - Q2: частично — S-003, S-004 (цены eSIM для Турции и Стамбула). Не знае…"}
+{"ts": "2026-11-13T21:34:01+03:00", "kind": "human", "minutes": 2.0, "what": "Ответ на вопросы шага 2: Google Play и роуминг МегаФона/МТС"}
+{"ts": "2026-11-13T21:34:06+03:00", "kind": "ingest", "id": "S-005", "source_kind": "reviews", "chars": 9983, "warnings": [], "suspicious": [], "supersedes": null, "pii_removed": 0}
+{"ts": "2026-11-13T21:34:07+03:00", "kind": "ingest", "id": "S-006", "source_kind": "reviews", "chars": 1707, "warnings": [], "suspicious": [], "supersedes": null, "pii_removed": 0}
+{"ts": "2026-11-13T21:34:18+03:00", "kind": "search", "query": "МегаФон роуминг Турция тарифы интернет", "engine": "claude"}
+{"ts": "2026-11-13T21:34:20+03:00", "kind": "search", "query": "МТС роуминг Турция интернет пакет цена", "engine": "claude"}
+{"ts": "2026-11-13T21:34:26+03:00", "kind": "search", "query": "МегаФон роуминг Турция тарифы интернет", "engine": "other"}
+{"ts": "2026-11-13T21:34:26+03:00", "kind": "search", "query": "МТС роуминг Турция интернет пакет цена", "engine": "other"}
+{"ts": "2026-11-13T21:34:29+03:00", "kind": "ingest", "id": "S-007", "source_kind": "html", "chars": 1861, "warnings": [], "suspicious": [], "supersedes": null}
+{"ts": "2026-11-13T21:34:31+03:00", "kind": "ingest", "id": "S-008", "source_kind": "html", "chars": 5889, "warnings": [], "suspicious": ["¶39"], "supersedes": null}
+{"ts": "2026-11-13T21:34:34+03:00", "kind": "ingest", "id": "S-009", "source_kind": "html", "chars": 4533, "warnings": [], "suspicious": [], "supersedes": null}

@@ -53,3 +53,71 @@ sources:
   warnings: []
   suspicious: []
   supersedes: null
+- id: S-005
+  kind: reviews
+  title: Отзывы Google Play com.mobillium.airalo 2026-09-13…2026-11-13
+  url: https://play.google.com/store/apps/details?id=com.mobillium.airalo
+  found_by: user
+  fetched_at: '2026-11-13T21:34:06+03:00'
+  sha256: c9d71d8eeee77c9a6af7b28a33ed1f6cc6890ba7d79fb2a23443a1b34be06a6b
+  as_of: '2026-11-13'
+  as_of_source: fetched
+  chars: 9983
+  warnings: []
+  suspicious: []
+  supersedes: null
+  pii_removed: 0
+- id: S-006
+  kind: reviews
+  title: Отзывы Google Play com.holafly.holafly 2026-09-13…2026-11-13
+  url: https://play.google.com/store/apps/details?id=com.holafly.holafly
+  found_by: user
+  fetched_at: '2026-11-13T21:34:06+03:00'
+  sha256: b6d0bd0454b59eabfaa903d165b87037eda97958e8b3e8214b979289fb25f8a5
+  as_of: '2026-11-13'
+  as_of_source: fetched
+  chars: 1707
+  warnings: []
+  suspicious: []
+  supersedes: null
+  pii_removed: 0
+- id: S-007
+  kind: html
+  title: Путешествия по миру
+  url: https://moscow.megafon.ru/roaming/world/
+  found_by: search:роуминг Турция тарифы интернет
+  fetched_at: '2026-11-13T21:34:29+03:00'
+  sha256: e7d473d012a7ae6e2e6b7036af3ce27f69dac97df0659613bf43fe84e30bff25
+  as_of: null
+  as_of_source: none
+  chars: 1861
+  warnings: []
+  suspicious: []
+  supersedes: null
+- id: S-008
+  kind: html
+  title: Как подготовиться к поездке в Турцию
+  url: https://support.mts.ru/mts_rouming_i_mezhgorod/svyaz-i-internet-v-populyarnih-stranah/kak-podgotovitsya-k-poyezdke-v-turtsiyu
+  found_by: search:роуминг Турция тарифы интернет
+  fetched_at: '2026-11-13T21:34:31+03:00'
+  sha256: 45d55c20fa94c0c9729a9b773bb3a7c0f5d5a7278c4fe10e053fb1245bd84a6b
+  as_of: null
+  as_of_source: none
+  chars: 5889
+  warnings: []
+  suspicious:
+  - ¶39
+  supersedes: null
+- id: S-009
+  kind: html
+  title: Купить eSIM с интернетом в Турции - оформить виртуальную SIM-карту онлайн
+  url: https://payment.mts.ru/esim/turkey
+  found_by: search:роуминг Турция тарифы интернет
+  fetched_at: '2026-11-13T21:34:34+03:00'
+  sha256: bdbabd87be0b848ff56f5d5f7fbd3b9594f3d6915d2e88622e99bea5d424d8bd
+  as_of: null
+  as_of_source: none
+  chars: 4533
+  warnings: []
+  suspicious: []
+  supersedes: null

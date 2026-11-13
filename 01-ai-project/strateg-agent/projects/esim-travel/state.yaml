@@ -14,6 +14,21 @@ done:
   ingest:S-004:1854d82fc30a:
     at: '2026-11-13T21:26:34+03:00'
     kind: html
+  ingest:S-005:e9ad056e3e4d:
+    at: '2026-11-13T21:34:06+03:00'
+    kind: reviews
+  ingest:S-006:a3bb7791d3b0:
+    at: '2026-11-13T21:34:07+03:00'
+    kind: reviews
+  ingest:S-007:84c63ca216b2:
+    at: '2026-11-13T21:34:29+03:00'
+    kind: html
+  ingest:S-008:f5cf07c4373d:
+    at: '2026-11-13T21:34:31+03:00'
+    kind: html
+  ingest:S-009:401237c94add:
+    at: '2026-11-13T21:34:34+03:00'
+    kind: html
 waiting: null
 human:
 - point: точка 1
