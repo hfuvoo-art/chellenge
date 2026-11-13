@@ -5,6 +5,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
 from tools.common import append_jsonl, now_iso, project_path, setup_stdio  # noqa: E402
 
 

@@ -7,6 +7,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__, require_libs=False)
+
 
 def main() -> int:
     try:

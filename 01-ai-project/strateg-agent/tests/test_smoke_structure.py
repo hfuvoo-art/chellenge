@@ -42,7 +42,12 @@ def test_smoke_structure():
         if '__name__ == "__main__"' in p.read_text(encoding="utf-8") and f"tools/{p.name}" not in agents_text:
             problems.append(f"AGENTS.md не упоминает tools/{p.name}")
 
+    command_skills = {"status", "new", "continue"}  # навыки-команды чата: без своего playbook, ссылаются на AGENTS.md
     for p in sorted((ROOT / ".claude" / "skills").glob("*/SKILL.md")):
+        if p.parent.name in command_skills:
+            if "AGENTS.md" not in p.read_text(encoding="utf-8"):
+                problems.append(f"{p.parent.name}/SKILL.md (команда) не ссылается на AGENTS.md")
+            continue
         refs = re.findall(r"playbooks/([\w-]+\.md)", p.read_text(encoding="utf-8"))
         if not refs or not all((ROOT / "playbooks" / r).exists() for r in refs):
             problems.append(f"{p.parent.name}/SKILL.md не ссылается на существующий playbook")

@@ -17,7 +17,7 @@ files:
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
-  AGENTS.md: db17c43f4101e72089f47e9ca87e81df4b2bd6d4be93b216866d7876f4a06237
+  AGENTS.md: 98720ebe49ae099c4cd5dfa0980310b5b56735cc6bfc3c68aa465c5cb67dfbc1
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: cf9281aefd612f282dff06c5f97aa8809bdcee682c5edc02dd0d590391205abb
   tools/lock.py: c84a1c2d7087d6ce2bd35b29825424d004b732fd3f437fe34eff4a64ea76bae4
@@ -122,5 +122,9 @@ history:
   - methods/options-premortem.md
 - updated_at: '2026-11-13T22:47:08+03:00'
   reason: 'КТ-A: учёт поиска (хук в Claude Code, вручную вне) и модели среды по /cost'
+  changed:
+  - AGENTS.md
+- updated_at: '2026-11-13T23:02:54+03:00'
+  reason: 'удобство: запуск без терминала, строка прогресса, команды'
   changed:
   - AGENTS.md

@@ -10,6 +10,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
 from tools import lock, review as review_mod, state  # noqa: E402
 from tools.common import ROOT, current_slug, project_path, projects_dir, read_text, read_yaml, setup_stdio  # noqa: E402
 

@@ -11,6 +11,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
 from tools import reviews, state  # noqa: E402
 from tools.common import (  # noqa: E402
     ROOT, die, next_id, normalize_url, now_iso, project_path, read_text, read_yaml, setup_stdio, sha256_file, sha256_text,
