@@ -86,7 +86,7 @@ def test_hooks_do_not_fail_without_libs(monkeypatch, tmp_path, entry):
 
 def test_every_cli_and_hook_calls_ensure_venv():
     root = Path(__file__).resolve().parent.parent
-    skip = {"check.py", "lock.py", "export.py"}  # заперты или вне задачи: см. отчёт
+    skip: set[str] = set()  # все CLI, включая запертые check.py и lock.py
     for p in sorted((root / "tools").glob("*.py")) + sorted((root / "tools" / "hooks").glob("*.py")):
         t = p.read_text(encoding="utf-8")
         if '__name__ == "__main__"' in t and p.name not in skip:

@@ -29,9 +29,14 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
+import yaml  # noqa: E402
 
 from rapidfuzz import fuzz  # noqa: E402
 
