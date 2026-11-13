@@ -1,0 +1,25 @@
+step:
+  n: 2
+  name: collect
+done:
+  ingest:S-001:17057da15899:
+    at: '2026-11-13T21:26:16+03:00'
+    kind: table
+  ingest:S-002:4a2202c93ddc:
+    at: '2026-11-13T21:26:31+03:00'
+    kind: pdf
+  ingest:S-003:148a2767363c:
+    at: '2026-11-13T21:26:33+03:00'
+    kind: html
+  ingest:S-004:1854d82fc30a:
+    at: '2026-11-13T21:26:34+03:00'
+    kind: html
+waiting: null
+human:
+- point: точка 1
+  summary: Постановка и 6 вопросов подтверждены без правок; Q3 при отсутствии открытых
+    данных — пробел
+  minutes: 3.0
+  at: '2026-11-13T21:26:10+03:00'
+degraded: []
+created: '2026-11-13T21:21:18+03:00'
