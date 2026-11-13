@@ -24,3 +24,192 @@
 {"ts": "2026-11-13T21:34:29+03:00", "kind": "ingest", "id": "S-007", "source_kind": "html", "chars": 1861, "warnings": [], "suspicious": [], "supersedes": null}
 {"ts": "2026-11-13T21:34:31+03:00", "kind": "ingest", "id": "S-008", "source_kind": "html", "chars": 5889, "warnings": [], "suspicious": ["¶39"], "supersedes": null}
 {"ts": "2026-11-13T21:34:34+03:00", "kind": "ingest", "id": "S-009", "source_kind": "html", "chars": 4533, "warnings": [], "suspicious": [], "supersedes": null}
+{"ts": "2026-11-13T21:36:30+03:00", "kind": "step", "n": 3, "name": "research"}
+{"ts": "2026-11-13T21:36:32+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 17, "completion_tokens": 2, "total_tokens": 19}, "rub": 0.0021, "latency_s": 1.875, "attempts": 1, "category": "yandex", "truncated": false, "action_id": null}
+{"ts": "2026-11-13T21:37:16+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 4989, "completion_tokens": 4000, "total_tokens": 8989}, "rub": 1.2989, "latency_s": 37.782, "attempts": 1, "category": "retry", "truncated": true, "action_id": "extract:S-002:part-01:7d01d7f10b66"}
+{"ts": "2026-11-13T21:37:17+03:00", "kind": "repair", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "action_id": "extract:S-002:part-01:7d01d7f10b66", "reason": "невалидный или обрезанный JSON", "truncated": true}
+{"ts": "2026-11-13T21:38:03+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 9018, "completion_tokens": 4000, "total_tokens": 13018}, "rub": 1.7018, "latency_s": 46.093, "attempts": 1, "category": "retry", "truncated": true, "action_id": "extract:S-002:part-01:7d01d7f10b66"}
+{"ts": "2026-11-13T21:38:03+03:00", "kind": "escalation", "step": "lite->pro", "unit": "S-002:part-01", "part": 1, "reason": "ответ не JSON даже после ремонта", "action_id": "extract:S-002:part-01:7d01d7f10b66"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "llm", "role": "pro", "model": "gpt://b1g7bcmtqkg0ri2ku785/yandexgpt-5.1", "usage": {"prompt_tokens": 4988, "completion_tokens": 1470, "total_tokens": 6458}, "rub": 5.1664, "latency_s": 6.797, "attempts": 1, "category": "retry", "truncated": false, "action_id": "extract:S-002:part-01:7d01d7f10b66"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "claims_dropped", "action_id": "extract:S-002:part-01:7d01d7f10b66", "role": "pro", "count": 9, "reasons": ["«Прирост к 2024 г. +2,2%. За 2025 г. по России совершено >92 »: цитата почти совпала, но её числа отличаются от источника", "«Больше всего туристов (75% всех турпоездок) посетило регионы»: цитата почти совпала, но её числа отличаются от источника", "«По Уралу наблюдается увеличение доли в приросте турпоездок с»: цитата почти совпала, но её числа отличаются от источника", "«Темпы роста туризма на Дальнем Востоке оказались медленнее п»: цитата совпала не дословно (сходство 98%)", "«Средняя продолжительность поездок сохранилась на уровне пред»: цитата почти совпала, но её числа отличаются от источника"]}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "claim_add", "id": "C-001", "type": "fact", "extracted_by": "extract.py:yandexgpt-5.1"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "claim_add", "id": "C-002", "type": "fact", "extracted_by": "extract.py:yandexgpt-5.1"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "claim_add", "id": "C-003", "type": "fact", "extracted_by": "extract.py:yandexgpt-5.1"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "claim_add", "id": "C-004", "type": "fact", "extracted_by": "extract.py:yandexgpt-5.1"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "claim_add", "id": "C-005", "type": "forecast", "extracted_by": "extract.py:yandexgpt-5.1"}
+{"ts": "2026-11-13T21:38:10+03:00", "kind": "extract_part", "source": "S-002", "part": 1, "claims": 5, "via": "yandex"}
+{"ts": "2026-11-13T21:38:30+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 2279, "completion_tokens": 2010, "total_tokens": 4289}, "rub": 0.6299, "latency_s": 20.203, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-002:part-02:aec4b5e7e4e7"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claims_dropped", "action_id": "extract:S-002:part-02:aec4b5e7e4e7", "role": "extract", "count": 9, "reasons": ["«в 2025 г. увеличилось количество туристов из Индии (+56% г/г»: цитата почти совпала, но её числа отличаются от источника", "«и Саудовской Аравии (+33% г/г или +35,4 тыс. турпоездок)»: цитата почти совпала, но её числа отличаются от источника", "«В 2,5 раза увеличилось количество туристов из Омана (47,6 ты»: цитата совпала не дословно (сходство 96%)", "«В 2025 г. россияне совершили 29,75 млн поездок за рубеж Это »: цитата почти совпала, но её числа отличаются от источника", "«снижение в IV квартале 2025 г. цен на услуги выездного туриз»: цитата почти совпала, но её числа отличаются от источника"]}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-006", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-007", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-008", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-009", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-010", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-011", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-012", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-013", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-014", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:31+03:00", "kind": "claim_add", "id": "C-015", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:32+03:00", "kind": "claim_add", "id": "C-016", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:32+03:00", "kind": "claim_add", "id": "C-017", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:32+03:00", "kind": "claim_add", "id": "C-018", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:32+03:00", "kind": "claim_add", "id": "C-019", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:32+03:00", "kind": "claim_add", "id": "C-020", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:32+03:00", "kind": "extract_part", "source": "S-002", "part": 2, "claims": 15, "via": "yandex"}
+{"ts": "2026-11-13T21:38:45+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 2972, "completion_tokens": 1310, "total_tokens": 4282}, "rub": 0.5592, "latency_s": 13.281, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-003:part-01:886657f4afdf"}
+{"ts": "2026-11-13T21:38:45+03:00", "kind": "claim_add", "id": "C-021", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:45+03:00", "kind": "claim_add", "id": "C-022", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:45+03:00", "kind": "claim_add", "id": "C-023", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-024", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-025", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-026", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-027", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-028", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-029", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-030", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-031", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-032", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-033", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-034", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-035", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-036", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-037", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "claim_add", "id": "C-038", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:38:46+03:00", "kind": "extract_part", "source": "S-003", "part": 1, "claims": 18, "via": "yandex"}
+{"ts": "2026-11-13T21:39:00+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 2136, "completion_tokens": 1204, "total_tokens": 3340}, "rub": 0.4544, "latency_s": 13.625, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-004:part-01:b8f5b5b69c1e"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-039", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-040", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-041", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-042", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-043", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-044", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-045", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-046", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-047", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-048", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-049", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-050", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-051", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-052", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-053", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-054", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-055", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:01+03:00", "kind": "claim_add", "id": "C-056", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:02+03:00", "kind": "extract_part", "source": "S-004", "part": 1, "claims": 18, "via": "yandex"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 5111, "completion_tokens": 2161, "total_tokens": 7272}, "rub": 0.9433, "latency_s": 27.313, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-005:part-01:a33686c34b82"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-057", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-058", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-059", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-060", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-061", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-062", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-063", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-064", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:29+03:00", "kind": "claim_add", "id": "C-065", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-066", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-067", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-068", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-069", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-070", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-071", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-072", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-073", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-074", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-075", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-076", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-077", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-078", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-079", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-080", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "claim_add", "id": "C-081", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:30+03:00", "kind": "extract_part", "source": "S-005", "part": 1, "claims": 25, "via": "yandex"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 1503, "completion_tokens": 931, "total_tokens": 2434}, "rub": 0.3365, "latency_s": 9.625, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-006:part-01:7f44855d1f39"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "claim_add", "id": "C-082", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "claim_add", "id": "C-083", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "claim_add", "id": "C-084", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "claim_add", "id": "C-085", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "claim_add", "id": "C-086", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:40+03:00", "kind": "claim_add", "id": "C-087", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:41+03:00", "kind": "claim_add", "id": "C-088", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:41+03:00", "kind": "extract_part", "source": "S-006", "part": 1, "claims": 7, "via": "yandex"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 1443, "completion_tokens": 394, "total_tokens": 1837}, "rub": 0.2231, "latency_s": 4.844, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-007:part-01:c607c96c9462"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "claim_add", "id": "C-089", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "claim_add", "id": "C-090", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "claim_add", "id": "C-091", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "claim_add", "id": "C-092", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "claim_add", "id": "C-093", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "claim_add", "id": "C-094", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:39:46+03:00", "kind": "extract_part", "source": "S-007", "part": 1, "claims": 6, "via": "yandex"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 2760, "completion_tokens": 1722, "total_tokens": 4482}, "rub": 0.6204, "latency_s": 17.875, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-008:part-01:28f2ebdec3a4"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claims_dropped", "action_id": "extract:S-008:part-01:28f2ebdec3a4", "role": "extract", "count": 4, "reasons": ["«Проверить её наличие можно: в Личном кабинете в разделе Мои »: цитата не найдена в разделе (лучшее сходство 67%)", "«В приложении Мой МТС. 1. Перейдите в раздел Каталог. 2. Выбе»: число отрицаний (не/нет/без/ни/not/no) в цитате и в источнике различается", "«На сайте МТС. 1. Перейдите в раздел Роуминг. 2. Выберите Тур»: цитата почти совпала, но её числа отличаются от источника", "«Отключите доступ к мобильному интернету за границей. Сделать»: цитата почти совпала, но её числа отличаются от источника"]}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-095", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-096", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-097", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-098", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-099", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-100", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:04+03:00", "kind": "claim_add", "id": "C-101", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:05+03:00", "kind": "claim_add", "id": "C-102", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:05+03:00", "kind": "claim_add", "id": "C-103", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:05+03:00", "kind": "claim_add", "id": "C-104", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:05+03:00", "kind": "claim_add", "id": "C-105", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:05+03:00", "kind": "extract_part", "source": "S-008", "part": 1, "claims": 11, "via": "yandex"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "llm", "role": "extract", "model": "gpt://b1g7bcmtqkg0ri2ku785/aliceai-llm-flash", "usage": {"prompt_tokens": 2573, "completion_tokens": 2000, "total_tokens": 4573}, "rub": 0.6573, "latency_s": 30.0, "attempts": 1, "category": "yandex", "truncated": false, "action_id": "extract:S-009:part-01:6297ba1b77e0"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-106", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-107", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-108", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-109", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-110", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-111", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-112", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-113", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-114", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:35+03:00", "kind": "claim_add", "id": "C-115", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-116", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-117", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-118", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-119", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-120", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-121", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-122", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-123", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-124", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-125", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-126", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-127", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-128", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-129", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-130", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-131", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:36+03:00", "kind": "claim_add", "id": "C-132", "type": "fact", "extracted_by": "extract.py:aliceai-llm-flash"}
+{"ts": "2026-11-13T21:40:37+03:00", "kind": "extract_part", "source": "S-009", "part": 1, "claims": 27, "via": "yandex"}
+{"ts": "2026-11-13T21:40:41+03:00", "kind": "tool", "script": "check.py", "command": "cd \"D:/claude_projects/chellenge/01-ai-project/strateg-agent\" && .venv/Scripts/python.exe tools/check.py --only 1,2,3,4; echo \"exit=$?\""}
+{"ts": "2026-11-13T21:41:31+03:00", "kind": "claim_status", "id": "C-003", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:31+03:00", "kind": "claim_status", "id": "C-006", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:32+03:00", "kind": "claim_status", "id": "C-008", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:32+03:00", "kind": "claim_status", "id": "C-010", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:32+03:00", "kind": "claim_status", "id": "C-018", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:32+03:00", "kind": "claim_status", "id": "C-019", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:32+03:00", "kind": "claim_status", "id": "C-020", "status": "retracted", "by": null, "reason": "Не относится к вопросам (внутренний и въездной туризм, макропоказатели); год добавлен в текст вне цитаты"}
+{"ts": "2026-11-13T21:41:32+03:00", "kind": "claim_status", "id": "C-007", "status": "retracted", "by": null, "reason": "Неверное толкование: «рост в 2,5 раза» в цитате нет"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-011", "status": "retracted", "by": null, "reason": "Год 2025 вне цитаты; импорт туруслуг не отвечает на вопросы напрямую"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-013", "status": "retracted", "by": null, "reason": "Год 2025 вне цитаты; выезд по странам берём из ЕМИСС S-001 через analyze.py cell"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-014", "status": "retracted", "by": null, "reason": "Год 2025 вне цитаты; выезд по странам берём из ЕМИСС S-001 через analyze.py cell"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-015", "status": "retracted", "by": null, "reason": "Год 2025 вне цитаты; выезд по странам берём из ЕМИСС S-001 через analyze.py cell"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-016", "status": "retracted", "by": null, "reason": "Год 2025 вне цитаты; выезд по странам берём из ЕМИСС S-001 через analyze.py cell"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-084", "status": "retracted", "by": null, "reason": "Дата пересказана словами, не совпадает с форматом цитаты; S-006 — 5 отзывов, мало для вывода"}
+{"ts": "2026-11-13T21:41:33+03:00", "kind": "claim_status", "id": "C-085", "status": "retracted", "by": null, "reason": "Дата пересказана словами, не совпадает с форматом цитаты; S-006 — 5 отзывов, мало для вывода"}
+{"ts": "2026-11-13T21:41:34+03:00", "kind": "claim_status", "id": "C-086", "status": "retracted", "by": null, "reason": "Дата пересказана словами, не совпадает с форматом цитаты; S-006 — 5 отзывов, мало для вывода"}
+{"ts": "2026-11-13T21:41:34+03:00", "kind": "claim_status", "id": "C-088", "status": "retracted", "by": null, "reason": "Дата пересказана словами, не совпадает с форматом цитаты; S-006 — 5 отзывов, мало для вывода"}
+{"ts": "2026-11-13T21:41:34+03:00", "kind": "claim_add", "id": "C-133", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:35+03:00", "kind": "claim_add", "id": "C-134", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:35+03:00", "kind": "claim_add", "id": "C-135", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:35+03:00", "kind": "claim_add", "id": "C-136", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:36+03:00", "kind": "claim_add", "id": "C-137", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:36+03:00", "kind": "claim_add", "id": "C-138", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:37+03:00", "kind": "claim_add", "id": "C-139", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:37+03:00", "kind": "claim_add", "id": "C-140", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:38+03:00", "kind": "claim_add", "id": "C-141", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:38+03:00", "kind": "claim_add", "id": "C-142", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:38+03:00", "kind": "claim_add", "id": "C-143", "type": "fact", "extracted_by": "analyze.py"}
+{"ts": "2026-11-13T21:41:43+03:00", "kind": "tool", "script": "check.py", "command": "cd \"D:/claude_projects/chellenge/01-ai-project/strateg-agent\" && .venv/Scripts/python.exe tools/check.py --only 1,2,3,4; echo \"exit=$?\""}
