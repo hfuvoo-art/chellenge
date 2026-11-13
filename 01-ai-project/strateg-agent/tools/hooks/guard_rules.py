@@ -5,6 +5,12 @@ import sys
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
+
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__, require_libs=False)
+
 DIRS = ("rules", "prompts", "methods")
 FILES = ("agents.md", "claude.md", "tools/lock.py", "tools/check.py")
 # Запертый путь в тексте команды (регистр не важен, слэш любой). Каталоги rules/prompts/methods считаются только

@@ -10,6 +10,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
 from tools.common import now_iso, project_path, read_yaml, setup_stdio, sha256_text, write_yaml_atomic  # noqa: E402
 from tools.log import event  # noqa: E402
 

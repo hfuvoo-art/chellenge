@@ -7,6 +7,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
 from tools.common import (  # noqa: E402
     ROOT, current_slug, die, now_iso, projects_dir, read_yaml, setup_stdio, write_text_atomic, write_yaml_atomic,
 )

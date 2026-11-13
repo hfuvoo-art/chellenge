@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__, require_libs=False)
+
 TOOL_RE = re.compile(r"\bpython[\w.]*\s+(?:-\w+\s+)*(?:[^\s'\"]*[\\/])?tools[\\/](\w+)\.py\b", re.I)
 MASKS = [
     (re.compile(r"(Bearer\s+)\S+", re.I), r"\1***"),

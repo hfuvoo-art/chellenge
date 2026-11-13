@@ -8,6 +8,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from tools.venv_boot import ensure_venv  # noqa: E402
+
+ensure_venv(__file__)
+
 from tools import claims, extract, llm, state  # noqa: E402
 from tools.common import ROOT, now_iso, project_path, read_text, setup_stdio, write_text_atomic  # noqa: E402
 from tools.critic import defang  # noqa: E402
