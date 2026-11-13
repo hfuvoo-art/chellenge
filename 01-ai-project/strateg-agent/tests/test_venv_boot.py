@@ -93,3 +93,27 @@ def test_every_cli_and_hook_calls_ensure_venv():
             assert "ensure_venv(__file__" in t, p.name
             if "from __future__" in t:
                 assert t.index("from __future__") < t.index("ensure_venv(__file__")
+
+
+def _boom(*a, **k):
+    raise OSError("битый venv")
+
+
+def test_broken_venv_hook_continues(monkeypatch, tmp_path, entry):
+    _fake_venv(tmp_path)
+    monkeypatch.setattr(venv_boot.subprocess, "run", _boom)
+    venv_boot.ensure_venv(str(entry), require_libs=False, root=tmp_path)
+
+
+def test_broken_venv_cli_message_exit3(monkeypatch, tmp_path, entry, capsys):
+    _fake_venv(tmp_path)
+    monkeypatch.setattr(venv_boot.subprocess, "run", _boom)
+    with pytest.raises(SystemExit) as e:
+        venv_boot.ensure_venv(str(entry), root=tmp_path)
+    assert e.value.code == 3
+    assert ".venv не запускается" in capsys.readouterr().err
+
+
+def test_no_libs_message_points_to_existing_readme_section():
+    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    assert "Шпаргалка для маркетолога" in venv_boot.NO_LIBS_MSG and "## Шпаргалка для маркетолога" in readme

@@ -10,8 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GUARD_ENV = "STRATEG_VENV_BOOT"
 NO_LIBS_MSG = ("Библиотеки агента не установлены. Что сделать: попросите агента выполнить установку "
-               "(README, «Первый запуск») или `python -m venv .venv` и `.venv/Scripts/pip install -r requirements.txt` "
+               "(README, «Шпаргалка для маркетолога») или `python -m venv .venv` и `.venv/Scripts/pip install -r requirements.txt` "
                "(macOS и Linux: `.venv/bin/pip`).")
+BROKEN_VENV_MSG = (".venv не запускается: удалите папку .venv и попросите агента установить библиотеки заново "
+                   "(README, «Шпаргалка для маркетолога»).")
 
 
 def venv_python(root: Path | None = None) -> Path | None:
@@ -56,7 +58,13 @@ def ensure_venv(script: str | None = None, require_libs: bool = True, root: Path
         if _is_venv_active(py) or os.environ.get(GUARD_ENV):
             return
         env = {**os.environ, GUARD_ENV: "1"}
-        r = subprocess.run([str(py), str(Path(script or sys.argv[0]).resolve()), *sys.argv[1:]], env=env)
+        try:
+            r = subprocess.run([str(py), str(Path(script or sys.argv[0]).resolve()), *sys.argv[1:]], env=env)
+        except OSError:
+            if not require_libs:
+                return  # хук: работаем в текущем интерпретаторе
+            print(BROKEN_VENV_MSG, file=sys.stderr)
+            sys.exit(3)
         sys.exit(r.returncode)
     if require_libs and importlib.util.find_spec("yaml") is None:
         print(NO_LIBS_MSG, file=sys.stderr)
