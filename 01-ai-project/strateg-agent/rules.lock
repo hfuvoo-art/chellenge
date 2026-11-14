@@ -19,7 +19,7 @@ files:
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
   AGENTS.md: 8d6dd0501c611ced4f990b9ed002f6ac3a4f42b6e43c0db557575c089c4c6ab0
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
-  tools/check.py: a8d71decf8aeab5532130330a115c1504927db4dfe9962d378927be126e6632d
+  tools/check.py: ed909447d98439221f4dac862128f89b15c700f3b1714863f3288a239f5f5a02
   tools/lock.py: 3dc00d2620a76f2b6aa6cfd6d85b80d129dcfc6bbf26931124c4b6e378a3ff54
 history:
 - updated_at: '2026-11-09T19:38:15+03:00'
@@ -138,3 +138,7 @@ history:
   - AGENTS.md
   - tools/check.py
   - tools/lock.py
+- updated_at: '2026-11-13T23:26:18+03:00'
+  reason: 'задача 18: check.py calc'
+  changed:
+  - tools/check.py
