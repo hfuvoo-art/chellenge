@@ -42,3 +42,29 @@ def test_impact_write_idempotent_per_date(tmp_project):
     impact.write_block(tmp_project, r2, today=date(2026, 12, 1), reason="C-005")
     tail = (project_path(tmp_project) / "strategy.md").read_text(encoding="utf-8").split("## Пересмотр от 2026-12-01")[1]
     assert "C-004" not in tail
+
+
+def test_impact_rewrite_after_supersede_keeps_agent_text(tmp_project):
+    from tools import check, claims
+    root = build(tmp_project)
+    d = date(2026, 11, 13)
+    r = impact.impact(tmp_project, source="S-002")
+    impact.write_block(tmp_project, r, today=d, reason="источник S-002")
+    p = root / "strategy.md"
+    p.write_text(p.read_text(encoding="utf-8") + "\nТекст агента: цена выросла, решение D-1 затронуто.\n", encoding="utf-8")
+    claims.set_status(tmp_project, "C-002", "superseded", by="C-003", reason="новая версия")
+    p.write_text(p.read_text(encoding="utf-8").replace("Цена [C-002].", "Цена [C-003]."), encoding="utf-8")  # агент заменил ссылку в теле
+    before = [f for f in check.check_refs(tmp_project) if f.level == "FAIL" and f.msg.startswith("strategy.md")]
+    assert before, "в блоке остался [C-002] после supersede: именно это чинится повторным --write"
+    assert impact.write_block(tmp_project, impact.impact(tmp_project, source="S-002"), today=d, reason="источник S-002") is True
+    text = p.read_text(encoding="utf-8")
+    assert text.count("## Пересмотр от 2026-11-13") == 1 and "Текст агента: цена выросла" in text
+    assert "№002 (superseded)" in text
+    assert not [f for f in check.check_refs(tmp_project) if f.level == "FAIL" and f.msg.startswith("strategy.md")]
+
+
+def test_impact_unknown_source_or_claim_rc3(tmp_project, capsys):
+    build(tmp_project)
+    assert impact.main(["S-999", "-p", tmp_project]) == 3
+    assert "S-999" in capsys.readouterr().out
+    assert impact.main(["--claim", "C-999", "-p", tmp_project]) == 3

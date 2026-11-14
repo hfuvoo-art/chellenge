@@ -63,3 +63,18 @@ def test_status_shows_review_items(tmp_project, monkeypatch, tmp_path):
     block = out.split("Пересмотр:")[1]
     assert "overdue" in block and "D-1" in block and "stale_basis" in block and "D-2" in block
     assert "нет" not in block.splitlines()[1]
+
+
+def test_review_unknown_status_not_hidden(tmp_project):
+    build(tmp_project, [_dec("D-1", status="actvie")])
+    items = review.review(tmp_project, date(2026, 11, 13))
+    assert [(i.kind, i.decision_id) for i in items] == [("revisit", "D-1")] and "actvie" in items[0].msg
+
+
+def test_status_broken_decisions_yaml_yellow(tmp_project, monkeypatch, tmp_path):
+    build(tmp_project)
+    (project_path(tmp_project) / "decisions.yaml").write_text("decisions: [\n  {id: D-1", encoding="utf-8")
+    monkeypatch.setattr(status.lock, "verify", lambda root: [])
+    monkeypatch.setattr(status, "PRICES_PATH", tmp_path / "nope.yaml")
+    block = status.render(tmp_project).split("Пересмотр:")[1]
+    assert "[ЖЁЛТАЯ]" in block and "decisions.yaml" in block

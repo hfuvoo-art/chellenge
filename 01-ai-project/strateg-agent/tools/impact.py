@@ -21,6 +21,7 @@ from tools.log import event  # noqa: E402
 REF_RE = re.compile(r"\bC-\d+\b")
 SRC_RE = re.compile(r"\bS-\d+\b")
 BLOCK_PREFIX = "## Пересмотр от "
+MARKER = "Что изменилось и что осталось: заполняет агент после пересчёта (`claims.py supersede|retract|dispute`, затем `check.py --only 1,2,3,4`)."
 LIVE = ("active", "disputed")
 
 
@@ -52,7 +53,7 @@ def graph(slug) -> dict:
         "claim_source": {c["id"]: c["source"] for c in cl if c.get("source")},
         "source_supersedes": {new: old for old, new in review_mod.superseded_sources(slug).items()},
         "claim_supersedes": {c["id"]: c["supersedes"] for c in cl if c.get("supersedes")},
-        "options": {}, "sections": {}, "features": {}, "promises": {}, "decisions": {},
+        "sources": review_mod.source_ids(slug), "options": {}, "sections": {}, "features": {}, "promises": {}, "decisions": {},
     }
     opt = check._doc(slug, "options.md")
     for b in check._options_blocks(opt) if opt else []:
@@ -114,11 +115,10 @@ def impact(slug, *, source: str | None = None, claim: str | None = None) -> Impa
     if source:
         sources = _source_chain(g, source)
         start = {c for c, s in g["claim_source"].items() if s in sources}
-        if not start and source not in g["source_supersedes"] and source not in g["source_supersedes"].values() \
-                and not (project_path(slug) / "sources.yaml").is_file():
+        if source not in g["sources"]:
             raise ValueError(f"источник {source} не найден. Что сделать: `python tools/ingest.py` или проверь sources.yaml.")
     else:
-        if claim not in known:
+        if claim not in known:  # claims.jsonl — единственный реестр утверждений
             raise ValueError(f"утверждения {claim} нет. Что сделать: `python tools/claims.py list`.")
         start = {claim}
     aff = _claim_closure(g, start)
@@ -137,7 +137,7 @@ def impact(slug, *, source: str | None = None, claim: str | None = None) -> Impa
 
 
 def render_block(slug, r: ImpactReport, today: date, reason: str) -> str:
-    """Текст блока для strategy.md. Заменённые и отозванные утверждения даны номером без «C-», чтобы check.py (проверка 4) не принял их за ссылки."""
+    """Автосписок блока для strategy.md (от заголовка до строки «Что изменилось…», её дописывает write_block). Заменённые и отозванные утверждения даны номером без «C-», чтобы check.py (проверка 4) не принял их за ссылки."""
     status = {c["id"]: c.get("status") for c in claims.load(slug)}
     live = [f"[{c}]" for c in r.claims if status.get(c) in LIVE]
     dead = [f"№{c[2:]} ({status.get(c)})" for c in r.claims if status.get(c) not in LIVE]
@@ -153,21 +153,34 @@ def render_block(slug, r: ImpactReport, today: date, reason: str) -> str:
         line("разделы стратегии", [f"«{t}»" for t in r.sections]),
         line("решения", r.decisions),
         line("обещания (функции продукта)", r.promises),
-        "", "Что изменилось и что осталось: заполняет агент после пересчёта (`claims.py supersede|retract|dispute`, затем `check.py --only 1,2,3,4`).", "",
+        "",
     ])
 
 
 def write_block(slug, r: ImpactReport, *, today: date | None = None, reason: str = "") -> bool:
-    """Дописывает в конец strategy.md блок «Пересмотр от <дата>». Не больше одного на дату: повтор ничего не меняет и возвращает False."""
+    """Пишет в конец strategy.md блок «Пересмотр от <дата>»; один блок на дату. Повтор в тот же день пересобирает автосписок
+    (от заголовка до строки «Что изменилось…»), текст агента ниже сохраняется. True, если файл изменился."""
     today = today or date.today()
     p = project_path(slug) / "strategy.md"
     if not p.is_file():
         raise ValueError("strategy.md нет. Что сделать: пересмотр пишется в готовую стратегию (шаг 5).")
     text = read_text(p)
     head = f"{BLOCK_PREFIX}{today.isoformat()}"
-    if any(ln.strip() == head for ln in text.splitlines()):
+    auto = render_block(slug, r, today, reason or "новые данные")
+    lines = text.split("\n")
+    start = next((i for i, ln in enumerate(lines) if ln.strip() == head), None)
+    if start is None:
+        new = text.rstrip("\n") + "\n\n" + auto + "\n" + MARKER + "\n"
+    else:
+        end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+        mark = next((i for i in range(start + 1, end) if lines[i].startswith("Что изменилось")), None)
+        if mark is None:  # агент убрал строку-маркер: пересобираем весь блок и возвращаем её
+            new = "\n".join(lines[:start] + auto.split("\n") + [MARKER, ""] + lines[end:])
+        else:
+            new = "\n".join(lines[:start] + auto.split("\n") + lines[mark:])
+    if new == text:
         return False
-    write_text_atomic(p, text.rstrip("\n") + "\n\n" + render_block(slug, r, today, reason or "новые данные"))
+    write_text_atomic(p, new)
     event(slug, "impact_block", date=today.isoformat(), claims=r.claims, options=r.options, decisions=r.decisions)
     return True
 
@@ -197,7 +210,7 @@ def main(argv=None) -> int:
         except ValueError as e:
             print(e)
             return 3
-        print("Блок записан в strategy.md." if wrote else "Блок за сегодня уже есть в strategy.md: не дублирую.")
+        print("Блок записан или обновлён в strategy.md." if wrote else "Блок за сегодня уже актуален: strategy.md не менялся.")
     return 0
 
 

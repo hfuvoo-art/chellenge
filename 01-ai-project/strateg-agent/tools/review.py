@@ -19,7 +19,8 @@ import yaml  # noqa: E402
 from tools import claims  # noqa: E402
 from tools.common import project_path, read_yaml, setup_stdio  # noqa: E402
 
-OPEN_STATUSES = ("active", "revisit")  # done и dropped не пересматриваются
+CLOSED_STATUSES = ("done", "dropped")  # закрытые не пересматриваются
+KNOWN_STATUSES = ("active", "revisit") + CLOSED_STATUSES
 DEAD_CLAIM = ("retracted", "disputed", "superseded")
 ID_RE = re.compile(r"\b([CS]-\d+)\b")
 KINDS = ("overdue", "stale_basis", "revisit")
@@ -62,6 +63,19 @@ def superseded_sources(slug) -> dict[str, str]:
     return out
 
 
+def source_ids(slug) -> set[str]:
+    """Все S-id из sources.yaml."""
+    p = project_path(slug) / "sources.yaml"
+    if not p.is_file():
+        return set()
+    try:
+        data = read_yaml(p)
+    except yaml.YAMLError:
+        return set()
+    rows = data.get("sources") if isinstance(data, dict) else data
+    return {str(s["id"]) for s in rows or [] if isinstance(s, dict) and s.get("id")}
+
+
 def _date(v) -> date | None:
     if isinstance(v, datetime):
         return v.date()
@@ -88,8 +102,10 @@ def review(slug: str | None = None, today: date | None = None) -> list[ReviewIte
     for d in load_decisions(slug):
         did = str(d["id"])
         st = str(d.get("status") or "active")
-        if st not in OPEN_STATUSES:
+        if st in CLOSED_STATUSES:
             continue
+        if st not in KNOWN_STATUSES:  # опечатка в статусе не должна прятать решение
+            out.append(ReviewItem("revisit", did, f"статус не распознан: {st}. Что сделать: active, done, revisit или dropped."))
         dl = _date(d.get("deadline"))
         if st == "active" and dl is not None and dl < today:
             out.append(ReviewItem("overdue", did, f"срок {dl.isoformat()} прошёл ({(today - dl).days} дн.). Что сделать: назвать итог по метрике «{d.get('metric') or '?'}» или перенести срок."))
