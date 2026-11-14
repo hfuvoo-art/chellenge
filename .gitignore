@@ -5,3 +5,6 @@ __pycache__/
 .obsidian/workspace*.json
 .obsidian/cache
 .trash/
+
+# черновые нарезки видео
+01-ai-project/submission/draft/
