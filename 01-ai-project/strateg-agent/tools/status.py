@@ -248,7 +248,10 @@ def render(slug=None, hook: bool = False) -> str:
     s = _scan(slug)
     c = costs(slug)
     reds, yellows = _degraded_lines(slug, s, st)
-    review_lines = review_mod.review(slug)
+    try:
+        review_lines = review_mod.format_items(review_mod.review(slug))
+    except Exception as e:  # noqa: BLE001 — битый decisions.yaml не должен ронять статус
+        review_lines = [f"{YELLOW} {e}"]
     step = st.get("step") if isinstance(st.get("step"), dict) else {}
     waiting = st.get("waiting")
     point, question = _waiting_parts(waiting)
