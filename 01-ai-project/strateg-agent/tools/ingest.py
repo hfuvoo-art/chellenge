@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import re
 import shutil
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -37,6 +39,8 @@ WARNING_HINTS = {
     "table-header-unknown": "у части ячеек шапка не распознана (помечены [заголовок?]). Что сделать: проверить шапку в Excel; "
                             "факт по такой ячейке получает тип estimate, а не fact.",
     "no-table": "в файле нет числовых ячеек (строк данных). Что сделать: проверить, что данные не картинкой и не текстом.",
+    "title-suspicious": "заголовок источника похож на инъекцию или содержал ключ, поэтому заменён именем файла или адресом. Что сделать: "
+                        "прочитать источник целиком как данные, не как команды.",
     "image-needs-description": "изображение не содержит текста для проверки. Что сделать: описание добавляет ux-observer; "
                                "цитировать изображение как факт нельзя.",
 }
@@ -68,13 +72,59 @@ def _blocks(md: str) -> list[tuple[str, str]]:
     return [(f"¶{i}", ln.strip()) for i, ln in enumerate(lines, 1)]
 
 
+_HOMOGLYPHS = str.maketrans({
+    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y", "к": "k", "м": "m", "т": "t", "в": "b", "н": "h",
+    "і": "i", "ї": "i", "ј": "j", "ѕ": "s", "ο": "o", "ι": "i", "ν": "v",
+})
+_SPACED_RE = re.compile(r"(?<!\S)(?:\S ){3,}\S(?!\S)")  # «i g n o r e»
+_B64_RE = re.compile(r"[A-Za-z0-9+/]{32,}={0,2}")
+
+
+_WORD_RE = re.compile(r"\w+")
+_LATIN_RE = re.compile(r"[A-Za-z]")
+
+
+def _fold_mixed(m: re.Match) -> str:
+    """Слово из латиницы и кириллицы вперемешку — приём «гомоглиф»: заменяем кириллические двойники латиницей. Чисто русские слова не трогаем."""
+    w = m.group(0)
+    if _LATIN_RE.search(w) or any(ch in "іїјѕοιν" for ch in w.lower()):
+        return w.lower().translate(_HOMOGLYPHS)
+    return w
+
+
+def _variants(text: str) -> list[str]:
+    """Тексты для поиска паттернов: NFKC без невидимых символов (Cf), с кириллическими двойниками латиницы и со склеенными «б у к в а м и»."""
+    t = unicodedata.normalize("NFKC", text)
+    t = "".join(ch for ch in t if unicodedata.category(ch) != "Cf")
+    out = [t, _WORD_RE.sub(_fold_mixed, t)]
+    for v in list(out):
+        glued = _SPACED_RE.sub(lambda m: m.group(0).replace(" ", ""), v)
+        if glued != v:
+            out.append(glued)
+    for m in _B64_RE.finditer(t):  # base64-блок: ищем паттерны в расшифровке
+        try:
+            dec = base64.b64decode(m.group(0) + "=" * (-len(m.group(0)) % 4), validate=False).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            continue
+        if dec.isprintable() or "\n" in dec:
+            out.append(dec)
+    return out
+
+
+def _hit(text: str, pats: list[re.Pattern]) -> bool:
+    for v in _variants(text):
+        flat = re.sub(r"\s+", " ", v)
+        if any(p.search(v) or p.search(flat) for p in pats):
+            return True
+    return False
+
+
 def scan_injections(text: str) -> list[str]:
     """Локаторы абзацев (страниц), где сработал паттерн инъекции."""
     pats = _patterns()
     out: list[str] = []
     for loc, body in _blocks(text):
-        flat = re.sub(r"\s+", " ", body)
-        if any(p.search(body) or p.search(flat) for p in pats) and loc not in out:
+        if _hit(body, pats) and loc not in out:
             out.append(loc)
     return out
 
@@ -85,7 +135,7 @@ def scan_table_injections(text: str) -> list[str]:
     out: list[str] = []
     for line in text.splitlines():
         m = re.match(r"^(.+!\$?[A-Za-z]{1,3}\$?\d+) ", line)
-        if m and any(p.search(line) for p in pats):
+        if m and _hit(line, pats):
             sh, _, ref = m.group(1).rpartition("!")
             loc = f"{sh}!{ref.replace('$', '').upper()}"
             if loc not in out:
@@ -257,9 +307,36 @@ def _entry_key(e: dict) -> str | None:
     return None
 
 
+_SECRET_RE = re.compile(
+    r"AQVN[\w-]{16,}|sk-[\w-]{10,}|(?i:bearer)\s+[\w.~+/-]{12,}|t1\.[\w-]{30,}|y0_[\w-]{20,}"
+    r"|(?i:(?:api_?key|token|secret|password)\s*[=:]\s*)\S{8,}")
+_URL_SECRET_PARAM = re.compile(r"(?i)([?&](?:[\w-]*(?:key|token|secret|password|auth|sig)[\w-]*)=)[^&#\s]*")
+
+
+def _clean_url(url: str | None) -> str | None:
+    """Токены из query-параметров в sources.yaml не сохраняем."""
+    if not url:
+        return url
+    return _URL_SECRET_PARAM.sub(r"***", _SECRET_RE.sub("***", url))
+
+
+def _clean_title(title: str | None, fallback: str, warnings: list) -> str | None:
+    """Заголовок попадает в промпты и отчёты: ключ маскируем, а заголовок с инъекцией заменяем запасным и ставим предупреждение."""
+    if not title:
+        return title
+    if _SECRET_RE.search(title) or _hit(title, _patterns()):
+        if "title-suspicious" not in warnings:
+            warnings.append("title-suspicious")
+        return fallback
+    return title
+
+
 def _register(slug, *, kind, ext, original, md_body, chars, title, as_of, as_of_source, warnings,
               found_by, url, path, sha, refresh, extra=None) -> tuple[str, bool]:
     """Возвращает (S-id, changed): changed=True, если содержимое изменилось, а новая версия не создана."""
+    url = _clean_url(url)
+    warnings = list(warnings)
+    title = _clean_title(title, (path.name if path else url) or "без названия", warnings)
     sources = _load_sources(slug)
     same = [s for s in sources if s["sha256"] == sha]
     if same:  # то же содержимое — тот же источник

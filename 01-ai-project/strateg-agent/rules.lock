@@ -1,6 +1,6 @@
 files:
   rules/evidence.md: c78bc82a50679f20c2de0d053ccae05b9df8e8dbc45266f9199315d36cec83be
-  rules/injection-patterns.yaml: f2365724b23a9a3a863bfa55307b57026db2c80f6e2db441e30ce094f341bfc6
+  rules/injection-patterns.yaml: 211142ee00bdf88815eb3546be4f683f5e99022d46ad635dce191b6858a7e3dc
   rules/safety.md: a073aaf1e3e8538400d884995b446de92a1d68fd68f29e1458100da23ef48f75
   rules/style.md: 40a3fd8ce0ce9cf53bbed4ff49d893e04d4a7389a285ca072e8cd0cd58dde40a
   prompts/critic-claims.md: 5bb34278fa85550fb258e39160c5f16d469b95476e8f35542d9da0c24c7e3ceb
@@ -138,3 +138,7 @@ history:
   - AGENTS.md
   - tools/check.py
   - tools/lock.py
+- updated_at: '2026-11-14T19:28:36+03:00'
+  reason: 'задача 19: расширены и сужены паттерны инъекций (закрытие дыр red-team)'
+  changed:
+  - rules/injection-patterns.yaml

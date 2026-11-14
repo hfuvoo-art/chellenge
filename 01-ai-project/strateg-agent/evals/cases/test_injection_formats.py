@@ -145,7 +145,6 @@ def test_suspicious_locator_xlsx_cell(rt_project, tmp_path):
     assert "previous instructions" in ingest.section(rt_project, sid, "Тарифы!B4")
 
 
-@HOLE
 def test_pdf_metadata_title_scanned(rt_project, tmp_path):
     """Заголовок из метаданных (title) попадает в sources.yaml без проверки на инъекции."""
     f = _pdf(tmp_path / "t.pdf", ["Price 100 rub."], title=INJ)

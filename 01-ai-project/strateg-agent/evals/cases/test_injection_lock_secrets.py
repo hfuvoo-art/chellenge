@@ -131,7 +131,6 @@ def test_secret_shapes_should_be_caught(tmp_path, secret):
     assert any(f.level == "FAIL" for f in check.check_secrets(p))
 
 
-@HOLE
 def test_ingest_does_not_copy_key_into_sources_yaml_title(rt_project, tmp_path):
     """Заголовок источника = первая строка текста: ключ из материала дублируется в sources.yaml."""
     f = tmp_path / "k.txt"
@@ -140,7 +139,6 @@ def test_ingest_does_not_copy_key_into_sources_yaml_title(rt_project, tmp_path):
     assert FAKE_YC not in read_text(project_path(rt_project) / "sources.yaml")
 
 
-@HOLE
 def test_ingest_does_not_store_token_from_url_query(rt_project, tmp_path):
     f = tmp_path / "u.txt"
     f.write_text("Page about price 5 rub", encoding="utf-8")
