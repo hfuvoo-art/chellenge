@@ -1,6 +1,6 @@
 files:
   rules/evidence.md: c78bc82a50679f20c2de0d053ccae05b9df8e8dbc45266f9199315d36cec83be
-  rules/injection-patterns.yaml: f2365724b23a9a3a863bfa55307b57026db2c80f6e2db441e30ce094f341bfc6
+  rules/injection-patterns.yaml: ed9fead27b54d07ac28409cff49822ab08f6bc802e1d7c4727275a4d0699363b
   rules/safety.md: a073aaf1e3e8538400d884995b446de92a1d68fd68f29e1458100da23ef48f75
   rules/style.md: 40a3fd8ce0ce9cf53bbed4ff49d893e04d4a7389a285ca072e8cd0cd58dde40a
   prompts/critic-claims.md: 5bb34278fa85550fb258e39160c5f16d469b95476e8f35542d9da0c24c7e3ceb
@@ -19,7 +19,7 @@ files:
   methods/ux-review.md: 1bb17ae57dc3ad94112962fc3c4a6b6eea1882e47495835a2cbd65364e30cb89
   AGENTS.md: 6a568deacade0b3bc1c7a6fd2828104eee4c1269571013204d4883a4631e0bfd
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
-  tools/check.py: ed909447d98439221f4dac862128f89b15c700f3b1714863f3288a239f5f5a02
+  tools/check.py: 636c6d6e63290d9e01e8fdecf51e5a2056acaadf8207628de0331d98365d66f1
   tools/lock.py: 3dc00d2620a76f2b6aa6cfd6d85b80d129dcfc6bbf26931124c4b6e378a3ff54
 history:
 - updated_at: '2026-11-09T19:38:15+03:00'
@@ -138,6 +138,10 @@ history:
   - AGENTS.md
   - tools/check.py
   - tools/lock.py
+- updated_at: '2026-11-14T19:28:36+03:00'
+  reason: 'задача 19: расширены и сужены паттерны инъекций (закрытие дыр red-team)'
+  changed:
+  - rules/injection-patterns.yaml
 - updated_at: '2026-11-13T23:26:18+03:00'
   reason: 'задача 18: check.py calc'
   changed:
@@ -160,3 +164,11 @@ history:
     из main)'
   changed:
   - AGENTS.md
+- updated_at: '2026-11-14T19:33:59+03:00'
+  reason: 'задача 19: слияние с main'
+  changed: []
+- updated_at: '2026-11-14T19:36:34+03:00'
+  reason: 'задача 19: правки ревью (SECRET_RES, паттерны инъекций)'
+  changed:
+  - rules/injection-patterns.yaml
+  - tools/check.py

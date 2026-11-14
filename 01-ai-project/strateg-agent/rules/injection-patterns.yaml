@@ -1,30 +1,46 @@
 # Паттерны инъекций в источниках: по ним ingest.py помечает абзацы как suspicious (источник не бракуется); без них команды из чужих текстов проходят незамеченными.
-# Применяются с re.IGNORECASE | re.MULTILINE. Абзац помечается, если сработал любой паттерн.
+# Применяются с re.IGNORECASE | re.MULTILINE к тексту после NFKC, удаления невидимых символов, замены кириллических двойников латиницы и склейки «б у к в». Абзац помечается, если сработал любой паттерн.
+# Регулярками всё не закрыть: главная защита — модель без инструментов и check.py; здесь только дешёвый первый фильтр.
 patterns:
   - id: ignore-en
-    pattern: '\b(?:(?:ignore|disregard)\b[^.\n]{0,40}\b(?:previous|prior|above|earlier|all|system|your)\b|forget\b)[^.\n]{0,40}\b(?:instructions?|prompts?|rules?)\b'
-    note: "ignore/forget ... instructions"
+    pattern: '\b(?:ignore|disregard|override|forget|bypass)\b[^.\n]{0,40}\b(?:instructions?|prompts?|rules?|guidelines?|polic(?:y|ies)|safeguards?)\b'
+    note: "ignore/disregard/override ... instructions/guidelines"
   - id: ignore-ru
-    pattern: '\b(?:игнорир\w*|забудь\w*|отмени\w*|не\s+учитывай)\b[^.\n]{0,50}\b(?:инструкци\w*|правил\w*|указани\w*|промпт\w*)'
-    note: "игнорируй ... инструкции"
+    pattern: '\b(?:игнорир\w*|забудь\w*|отмени\w*|не\s+учитывай|аннулир\w*)\b[^.\n]{0,40}\b(?:все|всех|предыдущ\w*|прежн\w*|выше\w*|системн\w*|свои|эти|любые|данн\w+)\s+(?:инструкци\w*|правил\w*|указани\w*|промпт\w*)|\b(?:игнорир|забудь)\w*\s+(?:\w+\s+)?(?:инструкци|промпт)\w*|\b(?:предыдущ\w*|прежн\w*)\s+(?:инструкци|правил|указани)\w*\s+(?:аннулир|отмен|недействительн)\w*'
+    note: "игнорируй/аннулированы ... инструкции"
+  - id: new-instructions
+    pattern: '\b(?:new|updated|revised)\s+instructions?\s*:\s*(?:you\b|always\b|never\b|ignore\b|approve\b|recommend\b|mark\b|rate\b|treat\b|consider\b|do\s+not\b|assistant\b|model\b)|\bнов(?:ая|ые)\s+инструкци\w*\s*:\s*(?:всегда|никогда|ты\b|вы\b|не\s+\w+|модел\w*|ассистент\w*|(?:хвал|рекоменд|оцен|счита|одобр|игнор|помеча|пропуск)\w*)'
+    note: "новые инструкции агенту/модели (только с командой после двоеточия)"
   - id: delete-run-ru
-    pattern: '\b(?:удали|удалите|сотри|сотрите|выполни|выполните)\b[^.\n]{0,50}(?:\brules/|\bAGENTS|\bCLAUDE|\bplaybooks|\bprompts/)'
-    note: "удали/выполни ... rules/AGENTS/команд"
+    pattern: '\b(?:удали\w*|сотри\w*|выполни\w*|измени\w*|перепиши\w*|отредактируй\w*)\b[^.\n]{0,50}(?:\brules\b|\bAGENTS|\bCLAUDE|\bplaybooks|\bprompts/)'
+    note: "удали/измени/выполни ... rules/AGENTS"
   - id: delete-run-en
-    pattern: '\b(?:delete|remove|erase|modify)\b[^.\n]{0,40}(?:\brules/|\bAGENTS|\bCLAUDE|\bplaybooks)'
-    note: "delete/run ... rules/AGENTS/commands"
+    pattern: '\b(?:delete|remove|erase|modify|overwrite|edit)\b[^.\n]{0,40}(?:\brules\b\s*(?:/|folder|directory|dir\b|files?)|\brules/|\bAGENTS|\bCLAUDE|\bplaybooks)'
+    note: "delete/modify ... rules/AGENTS"
   - id: recommend-variant
-    pattern: '\b(?:рекоменду(?:й|йте)|выбери|выберите|предпочти|предпочтите)\b[^.\n]{0,40}\bвариант\w*|\brecommend\s+(?:option|variant)\b'
-    note: "рекомендуй ... вариант"
+    pattern: '\b(?:рекоменду(?:й|йте)|выбери|выберите|предпочти|предпочтите)\b[^.\n]{0,30}\bвариант\w*\s*[«\"(]?\s*(?:(?-i:[A-ZА-Я0-9]{1,2})|единственн\w*|правильн\w*)(?![\w])|\bрекоменду(?:й|йте)\b[^.\n]{0,40}\b(?:во\s+всех\s+(?:выводах|ответах)|всегда|только)\b|(?:^|[.!?:;]\s*|\b(?:always|must|should|please)\s+)recommend\s+(?:option|variant)\s+[A-Za-z0-9]{1,2}\b|\balways\s+recommend\s+(?:option|variant|plan|tier)\b'
+    note: "рекомендуй вариант + метка, «во всех выводах/только»; «выберите тариф B» и «we recommend option 2» — честный текст"
   - id: role-prefix
-    pattern: '^\s*(?:system|assistant|developer)\s*:(?!\s*(?:android|ios|ipados|windows|macos|linux|ubuntu|harmonyos|hyperos|miui|tizen|watchos|tvos|wear\s*os|chrome\s*os|kaios)\b)'
-    note: "строка начинается с роли (кроме названий ОС)"
+    pattern: '(?:^|[.!?]\s+)\s*(?:system|assistant|developer)\s*:(?!\s*(?:android|ios|ipados|windows|macos|linux|ubuntu|harmonyos|hyperos|miui|tizen|watchos|tvos|wear\s*os|chrome\s*os|kaios|siri|alexa|google|alice|алис\w*|маруся|салют|gigachat|яндекс\w*|bixby|cortana)\b)'
+    note: "роль в начале строки или предложения (кроме названий ОС и голосовых помощников)"
+  - id: role-markup
+    pattern: '<\|im_(?:start|end)\|>|\[/?INST\]|<<\s*/?SYS\s*>>|^\s*#{1,6}\s*(?:system|developer|assistant)\s*$'
+    note: "разметка ролей чат-шаблонов"
   - id: shell-download
-    pattern: '\b(?:curl|wget)\b[^\n]{0,60}https?://'
-    note: "curl/wget http"
+    pattern: '\b(?:curl|wget)\b[^\n|]{0,80}\|\s*(?:sudo\s+)?(?:sh|bash|zsh|python\d?)\b|\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b[^\n|]{0,80}\|\s*(?:iex|invoke-expression)\b|\bcurl\b[^\n]{0,80}(?:\s-X\s*POST\b|\s--data\S*|\s-d\s|\s-F\s|\s-T\s|\s--upload-file\b)'
+    note: "curl/wget в оболочку, iwr | iex, curl с выгрузкой данных (справка «выполни curl» не флаг)"
   - id: rm-rf
     pattern: '\brm\s+-(?:rf|fr)\b'
     note: "rm -rf"
   - id: exfil
-    pattern: '\b(?:send|print|reveal|show|leak|upload|отправь\w*|покажи\w*|выведи\w*|раскрой\w*)\b[^.\n]{0,60}(?:\.env\b|\bapi[\s_-]?keys?\b|\bsystem\s+prompt\b|\bAPI-ключ\w*|\bсистемн\w+\s+промпт\w*)'
-    note: "вынести .env / ключ / системный промпт"
+    pattern: '\b(?:cat|type|less|more|echo)\s+\.env\b|(?:\.env\b|\bsystem\s+prompt\b|\bсистемн\w+\s+промпт\w*)[^.\n]{0,20}\b(?:send|print|reveal|leak|upload|show|пришли\w*|отправь\w*|выведи\w*|раскрой\w*|покажи\w*)|\b(?:send|print|reveal|leak|upload|email|show\s+me|show\s+us|отправь\w*|пришли\w*|выведи\w*|раскрой\w*|покажи\w*)\b[^.\n]{0,60}(?:\.env\b|\bsystem\s+prompt\b|\bсистемн\w+\s+промпт\w*)|\b(?:send|reveal|leak|upload|show\s+me|пришли\w*|отправь\w*|выведи\s+мне|покажи\s+мне)\b[^.\n]{0,40}(?:\bapi[\s_-]?keys?\b|\bAPI-ключ\w*|\bключ\w*\s+(?:api|из))'
+    note: "вынести .env / ключ / системный промпт (повелительное, не справка про настройки)"
+  - id: skip-checks
+    pattern: '\b(?:skip|bypass|disable)\s+(?:all\s+|the\s+|any\s+)*(?:check\.py|claims?\b|citations?\b|source\s+verification|rules\b|verification\s+checks?)|\bmark\s+(?:this\s+)?claim\s+as\s+fact\b|\b(?:пропусти\w*|отключи\w*|обойди\w*)\s+(?:все\s+)?(?:проверк\w*\s+)?(?:источник|цитат|утвержден|фактов|правил|check\.py)'
+    note: "пропусти check.py/проверку источников и цитат / пометь как fact"
+  - id: lock-tamper
+    pattern: '\block\.py\s+--update\b|\btools[/\\]lock\.py\b|\brules\.lock\b'
+    note: "обновление rules.lock"
+  - id: base64-hint
+    pattern: '\b(?:decode|decrypt|расшифруй\w*|декодируй\w*)\b[^.\n]{0,30}\b(?:and|и)\s+(?:follow|execute|run|выполни\w*)\b'
+    note: "decode and follow"
