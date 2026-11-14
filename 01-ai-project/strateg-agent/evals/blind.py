@@ -20,7 +20,9 @@ SCORES = (0, 1, 2)
 
 # служебные метки агента: ссылки на утверждения, источники, функции, решения, вопросы, варианты
 _BRACKET_REF = re.compile(r"\[\s*(?:[CSFDQO]-?\d+)(?:\s*[,;]\s*(?:[CSFDQO]-?\d+))*\s*\]")
-_BARE_REF = re.compile(r"\b[CSFD]-\d+\b|\b[QO]\d{1,2}\b")
+_BARE_REF = re.compile(r"(?<![\w-])[CSFD]-\d+\b")  # Q и O без контекста не трогаем: «2027-Q2», «Q4 2026»
+_CTX_REF = re.compile(r"(?:(?<=\()|(?<=вариант )|(?<=вопрос )|(?<=вопросы ))[QO]\d{1,2}(?=\)|\W|$)")
+_PATH_REF = re.compile(r"\b\w+/[\w./-]+\.(?:md|py|yaml|json|csv)\b")  # calc/…, methods/… — следы работы агента
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 _SYNTH = re.compile(r"\[SYNTHETIC\]", re.I)
 
@@ -31,6 +33,8 @@ def strip_labels(text: str) -> str:
     t = _SYNTH.sub("", t)
     t = _BRACKET_REF.sub("", t)
     t = _BARE_REF.sub("", t)
+    t = _CTX_REF.sub("", t)
+    t = _PATH_REF.sub("", t)
     lines = []
     for ln in t.splitlines():
         if re.fullmatch(r"\s*\|?[\s:\-|]+\|?\s*", ln) and "-" in ln:  # разделитель таблицы

@@ -124,7 +124,6 @@ def test_lock_verify_cannot_be_neutered_with_check_py_in_same_tree(agent_copy):
     "AQVN" + "abcdefgh​ijklmnopqrst",                    # ключ с символом нулевой ширины
     "LLM_API_KEY=" + "abc123secretvalue",                     # присваивание переменной окружения
 ])
-@HOLE
 def test_secret_shapes_should_be_caught(tmp_path, secret):
     p = tmp_path / "s.txt"
     p.write_text(f"x {secret} y\n", encoding="utf-8")
@@ -144,3 +143,17 @@ def test_ingest_does_not_store_token_from_url_query(rt_project, tmp_path):
     f.write_text("Page about price 5 rub", encoding="utf-8")
     ingest.ingest(rt_project, str(f), found_by="user", url="http://example.test/p?api_key=" + FAKE_YC)
     assert FAKE_YC not in read_text(project_path(rt_project) / "sources.yaml")
+
+
+@pytest.mark.parametrize("secret", ["sk-" + "A1b2C3d4E5f6G7h8", "t1." + "9euelZq" + "x" * 40, "y0_AgAAAAA" + "x" * 30])
+def test_title_and_url_secret_shapes_masked(rt_project, tmp_path, secret):
+    f = tmp_path / "k.txt"
+    f.write_text(f"Key {secret}\n\nPrice 100 rub\n", encoding="utf-8")
+    ingest.ingest(rt_project, str(f), found_by="user", url=f"http://example.test/p?x=1&{secret}")
+    assert secret not in read_text(project_path(rt_project) / "sources.yaml")
+
+
+def test_url_secret_param_value_masked_name_kept():
+    assert ingest._clean_url("http://e.test/p?a=1&token=abc") == "http://e.test/p?a=1&token=***"
+    assert ingest._clean_url("http://e.test/p?design=1&author=bob&signup=2") == "http://e.test/p?design=1&author=bob&signup=2"
+    assert ingest._clean_url("http://e.test/p?api_key=zzz&x=1") == "http://e.test/p?api_key=***&x=1"

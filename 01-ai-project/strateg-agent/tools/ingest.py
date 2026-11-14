@@ -309,16 +309,21 @@ def _entry_key(e: dict) -> str | None:
 
 
 _SECRET_RE = re.compile(
-    r"AQVN[\w-]{16,}|sk-[\w-]{10,}|(?i:bearer)\s+[\w.~+/-]{12,}|t1\.[\w-]{30,}|y0_[\w-]{20,}"
+    r"AQVN[\w-]{16,}|\bsk-[\w-]{10,}|(?i:bearer)\s+[\w.~+/-]{12,}|\bt1\.[\w-]{30,}|\by0_[\w-]{20,}"
     r"|(?i:(?:api_?key|token|secret|password)\s*[=:]\s*)\S{8,}")
-_URL_SECRET_PARAM = re.compile(r"(?i)([?&](?:[\w-]*(?:key|token|secret|password|auth|sig)[\w-]*)=)[^&#\s]*")
+_URL_PARAM = re.compile(r"([?&])([^=&#\s]+)=([^&#\s]*)")
+_SECRET_PARAM_NAME = re.compile(r"(?i)(?:^|[-_])(?:api[-_]?key|key|token|secret|password|passwd|auth|sig|signature)(?:$|[-_])")
 
 
 def _clean_url(url: str | None) -> str | None:
-    """Токены из query-параметров в sources.yaml не сохраняем."""
+    """Токены из query-параметров в sources.yaml не сохраняем: имя параметра остаётся, значение заменяется на ***."""
     if not url:
         return url
-    return _URL_SECRET_PARAM.sub(r"***", _SECRET_RE.sub("***", url))
+
+    def mask(m: re.Match) -> str:
+        return f"{m.group(1)}{m.group(2)}=***" if _SECRET_PARAM_NAME.search(m.group(2)) else m.group(0)
+
+    return _URL_PARAM.sub(mask, _SECRET_RE.sub("***", url))
 
 
 def _clean_title(title: str | None, fallback: str, warnings: list) -> str | None:

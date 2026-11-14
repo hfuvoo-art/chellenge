@@ -58,3 +58,13 @@ def test_injection_case_flagged_on_ingest(tmp_project):
         sid = ingest.ingest(rt_project, str(f), found_by="user")
         src = next(s for s in read_yaml(project_path(rt_project) / "sources.yaml")["sources"] if s["id"] == sid)
         assert src["suspicious"], f"{f.name}: инъекция не помечена"
+
+
+def test_blind_keeps_dates_and_strips_paths(tmp_path):
+    a, c = tmp_path / "agent.md", tmp_path / "chat.md"
+    a.write_text("Пилот к 2027-Q2, оценка на Q4 2026. Расчёт: calc/market.md и methods/jtbd.md.\n", encoding="utf-8")
+    c.write_text("ок", encoding="utf-8")
+    blind.prepare(a, c, seed=3, out_dir=tmp_path / "o")
+    text = (tmp_path / "o" / "A.txt").read_text(encoding="utf-8") + (tmp_path / "o" / "B.txt").read_text(encoding="utf-8")
+    assert "2027-Q2" in text and "Q4 2026" in text
+    assert "calc/" not in text and "methods/" not in text

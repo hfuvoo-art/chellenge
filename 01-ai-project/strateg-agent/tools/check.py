@@ -26,6 +26,7 @@ import argparse
 import json
 import math
 import re
+import unicodedata
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,7 +57,10 @@ REF_FILES = ("brief.md", "questions.md", "options.md", "critique.md", "strategy.
 SECRET_RES = {
     "ключ Yandex (AQVN…)": re.compile(r"AQVN[A-Za-z0-9_\-]{16,}"),
     "ключ sk-…": re.compile(r"(?<![A-Za-z0-9_\-])sk-[A-Za-z0-9_\-]{16,}"),
-    "заголовок Bearer": re.compile(r"Bearer\s+(?=[A-Za-z0-9._~+/=\-]*\d)[A-Za-z0-9._~+/=\-]{16,}"),
+    "заголовок Bearer": re.compile(r"(?i:bearer)\s+(?=[A-Za-z0-9._~+/=\-]*\d)[A-Za-z0-9._~+/=\-]{16,}"),
+    "IAM-токен Yandex (t1.…)": re.compile(r"(?<![A-Za-z0-9_\-])t1\.[A-Za-z0-9_\-]{30,}"),
+    "OAuth-токен Яндекса (y0_…)": re.compile(r"(?<![A-Za-z0-9_\-])y0_[A-Za-z0-9_\-]{30,}"),
+    "присвоение ключа (…_API_KEY=)": re.compile(r"(?i:(?:api_?key|token|secret)\s*[=:]\s*)['\"]?(?=[A-Za-z0-9_\-./+]*\d)[A-Za-z0-9_\-./+]{12,}"),
 }
 SKIP_DIRS = {".venv", ".git", "__pycache__", ".pytest_cache", "node_modules"}
 SKIP_FILES = {".env"}
@@ -257,6 +261,7 @@ def check_secrets(root) -> list[Finding]:
                 fh.seek(0)
                 for i, raw in enumerate(fh, 1):
                     line = raw.decode("utf-8", errors="ignore")
+                    line = "".join(ch for ch in line if unicodedata.category(ch) != "Cf")  # ZWSP внутри ключа не прячет его
                     for label, rx in SECRET_RES.items():
                         if rx.search(line):  # сам ключ в сообщение не пишем
                             out.append(_f("FAIL", 11, shown, f"строка {i}: похоже на {label}",
