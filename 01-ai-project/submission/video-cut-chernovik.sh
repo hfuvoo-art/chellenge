@@ -23,7 +23,7 @@ cut 07 22-08-38 0:05 15   # точка 2
 cut 08 22-08-38 2:10 20   # стратегия, export
 cut 09 22-36-36 0:25 20   # точка 3 и итог
 
-ls "$OUT"/cuts/*.mp4 | sed "s|^|file '|; s|$|'|" > "$OUT/list.txt"
+(cd "$OUT" && ls cuts/*.mp4 | sed "s|^|file '|; s|$|'|" > list.txt)  # пути относительно list.txt — так их читает concat
 ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i "$OUT/list.txt" -c copy "$OUT/chernovik.mp4"
 echo "Итог: $(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT/chernovik.mp4") с (должно быть ≤ 590)"
 
@@ -32,3 +32,7 @@ echo "Итог: $(ffprobe -v error -show_entries format=duration -of csv=p=0 "$O
 #   -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 160k "$OUT/chernovik-voice.mp4"
 # Кадр для проверки на ключи/ID каталога перед публикацией (1 кадр в 5 с):
 # ffmpeg -i "$OUT/chernovik.mp4" -vf fps=1/5 "$OUT/check-%03d.png"
+# ОБЯЗАТЕЛЬНО перед показом: в записи 13.11 в log.jsonl виден ID облачного каталога (gpt://<каталог>/…, 45–64 с и 140–163 с черновика).
+# Блюр по шаблону (нужны opencv-python-headless, numpy; шаблон — кадр 150 с: ffmpeg -ss 150 -i chernovik.mp4 -frames:v 1 draft/f150.png):
+# python blur-folder-id.py draft/chernovik.mp4 draft/f150.png draft/noaudio.mp4
+# ffmpeg -i draft/noaudio.mp4 -i draft/chernovik.mp4 -map 0:v -map 1:a -c:v libx264 -crf 20 -pix_fmt yuv420p -c:a copy draft/chernovik-blur.mp4
