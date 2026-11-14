@@ -67,6 +67,7 @@ class ExtractReport:
     dropped_injection: int = 0  # отброшено: цитата с паттерном инъекции или из suspicious-локатора
     emitted: list[Path] = field(default_factory=list)  # пути для ответа модели среды
     action_ids: dict[int, str] = field(default_factory=dict)
+    legacy_unknown: list[str] = field(default_factory=list)  # новые для старых записей без списка вопросов: не проверить
     parts_previous: list[int] = field(default_factory=list)  # извлечены ранее при другом action_id (без --force не повторяются)
 
 
@@ -498,20 +499,22 @@ def _estimate(model_role: str, parts: list[Part], qs) -> tuple[float | None, int
     return (round(total, 4) if known else None), tokens
 
 
-def _previously_extracted(slug, sid: str, part: Part, aid: str, codes: list[str], done: dict) -> bool:
+def _previously_extracted(slug, sid: str, part: Part, aid: str, codes: list[str], done: dict) -> tuple[bool, list[str]]:
     """Часть уже извлечена при другом action_id (изменились промпт, нарезка или текст вопросов) по тем же вопросам.
     Новый вопрос (код, которого раньше не было) — это не «извлечено ранее»: такая часть запускается как обычно."""
     prefix = f"extract:{sid}:part-{part.idx:02d}:"
     old = [k for k in done if k.startswith(prefix) and k != aid]
     if not old:
-        return False
+        return False, []
     prev: set[str] = set()
     for k in old:
         qs = (done[k] or {}).get("questions")
         if qs is None:
-            return True  # запись до появления поля: какие вопросы задавались, неизвестно (в утверждениях только те, по которым нашлись ответы) — считаем «по всем»; новый вопрос запускают с --force
+            # запись до появления поля: какие вопросы задавались, неизвестно; в утверждениях только вопросы, по которым нашлись ответы
+            seen = {q for c in claims.load(slug) if c.get("source") == sid for q in (c.get("question") or [])}
+            return True, [q for q in codes if q not in seen]
         prev.update(qs)
-    return set(codes) <= prev
+    return set(codes) <= prev, []
 
 
 def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=False, emit_prompt=False,
@@ -530,12 +533,20 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
         rep.action_ids[part.idx] = aid
         if aid in done:
             rep.parts_cached += 1
-        elif not force and _previously_extracted(slug, sid, part, aid, codes, done):
-            rep.parts_previous.append(part.idx)
-            if not dry_run:
-                print(f"Часть {part.idx} источника {sid} уже извлечена ранее (другая версия кода/промпта); повторить — --force.")
         else:
-            todo.append(part)
+            skip, unknown = (False, []) if force else _previously_extracted(slug, sid, part, aid, codes, done)
+            if not skip:
+                todo.append(part)
+                continue
+            rep.parts_previous.append(part.idx)
+            if unknown:
+                rep.legacy_unknown = sorted(set(rep.legacy_unknown) | set(unknown))
+            if not dry_run:
+                if unknown:
+                    print(f"Часть {part.idx} источника {sid}: запись без списка вопросов — новый вопрос {', '.join(unknown)} не проверить; "
+                          f"для нового вопроса: --force --question {unknown[0]}.")
+                else:
+                    print(f"Часть {part.idx} источника {sid} уже извлечена ранее (другая версия кода/промпта); повторить — --force.")
     if todo and not dry_run and not emit_prompt:
         llm._require_config(model_role, None)  # NoKeyError до вызовов: CLI подскажет --emit-prompt (кеш и «извлечено ранее» проверены выше)
     if dry_run:
@@ -544,6 +555,9 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
         price = f"≈ {rub:.2f} ₽" if rub is not None else "цена неизвестна (модель или цена не заданы: config/prices.yaml, .env)"
         prev = (f", извлечено ранее {len(rep.parts_previous)} (части {', '.join(map(str, rep.parts_previous))}; "
                 f"без --force не повторяются, не платные)") if rep.parts_previous else ""
+        if rep.legacy_unknown:
+            print(f"Запись без списка вопросов: новый вопрос {', '.join(rep.legacy_unknown)} не проверить; "
+                  f"для нового вопроса: --force --question {rep.legacy_unknown[0]}.")
         print(f"Оценка для {sid}: платных частей {len(todo)} из {len(parts)} (в кеше {rep.parts_cached}{prev}), "
               f"≈ {tokens} токенов, {price}; эскалации на pro не входят; вызовов не делаю.")
         return rep
@@ -661,6 +675,8 @@ def main(argv=None) -> int:
         return 2
     if a.dry_run or a.emit_prompt:
         return 0
+    if rep.parts_previous and not rep.claims_added and len(rep.parts_previous) + rep.parts_cached == rep.parts_total and not rep.pending:
+        print(f"Ничего не извлекалось ({len(rep.parts_previous)} частей извлечены ранее; повторить — --force).")
     print(f"Источник {a.source}: частей {rep.parts_total} (из кеша {rep.parts_cached}), утверждений добавлено {rep.claims_added}, "
           f"цитат отброшено {rep.dropped_quotes}, табличных отброшено {rep.dropped_table_facts}, с инъекцией отброшено {rep.dropped_injection}, эскалаций {rep.escalations}, "
           f"стоимость {_fmt_rub(rep.rub)}.")

@@ -638,3 +638,16 @@ def test_legacy_done_entry_without_questions_counts_as_previous(fake_llm, tmp_pr
     state.mark_done(tmp_project, f"extract:{sid}:part-01:000000000000", {"part": 1, "claims": 3})  # старая запись без поля questions
     rep = extract.extract_source(tmp_project, sid)
     assert rep.parts_previous == [part.idx] and fake_llm.calls == []
+
+
+def test_legacy_entry_new_question_gets_distinct_message(fake_llm, tmp_project, capsys):
+    sid = _ingest(tmp_project, _paras(2))
+    (project_path(tmp_project) / "questions.md").write_text("- Q1: Первый\n- Q99: Новый\n", encoding="utf-8")
+    state.mark_done(tmp_project, f"extract:{sid}:part-01:000000000000", {"part": 1, "claims": 3})
+    rep = extract.extract_source(tmp_project, sid, dry_run=True)
+    out = capsys.readouterr().out
+    assert "новый вопрос" in out and "--force --question" in out and fake_llm.calls == []
+    assert rep.parts_previous == [1]
+    assert extract.main([sid, "-p", tmp_project]) == 0
+    out = capsys.readouterr().out
+    assert "не проверить" in out and "Ничего не извлекалось" in out
