@@ -226,41 +226,50 @@ TABLE_LINE_RE = re.compile(r"^(\S+!\$?[A-Za-z]{1,3}\$?\d+)\s")
 BARE_CELL_RE = re.compile(r"^\$?([A-Za-z]{1,3})\$?(\d+)$")
 
 
-def _norm_table_loc(model_loc: str, body: str, quote: str = "") -> str:
-    """Табличный локатор модели «A4» -> «csv!A4» по строкам материала «Лист!A4 …» (иначе WARN suspicious в check.py п.1 не сработает).
-    Без совпадения возвращает локатор как есть."""
-    m = BARE_CELL_RE.match(model_loc.strip())
-    lines = [(TABLE_LINE_RE.match(ln), ln) for ln in body.split(chr(10))]
-    lines = [(mm.group(1), ln) for mm, ln in lines if mm]
-    if m:
-        want = (m.group(1) + m.group(2)).upper()
-        for loc, _ in lines:
-            sh, _, ref = loc.rpartition("!")
-            if ref.replace("$", "").upper() == want:
-                return f"{sh}!{want}"
-    elif quote and not model_loc.strip():
-        nq = re.sub(r"\s+", " ", quote).strip()
-        hits = [loc for loc, ln in lines if nq and nq in re.sub(r"\s+", " ", ln)]
-        if len(hits) == 1:
-            return hits[0]
-    return model_loc
+def _table_locator(quote: str, body: str, model_loc: str) -> tuple[str | None, str]:
+    """Табличная часть: локатор берётся из строки материала «Лист!A4 …», где реально лежит цитата, а не из ответа модели.
+    Одно совпадение — его локатор. Несколько — только то, что совпадает с model_loc (ячейка с листом или голая «A3»), при неоднозначности отказ.
+    Ноль — отказ. (локатор | None, причина)."""
+    nq = normalize_quote(quote)
+    hits = []
+    for ln in body.split(chr(10)):
+        m = TABLE_LINE_RE.match(ln)
+        if m and nq and nq in normalize_quote(ln[m.end():]):
+            hits.append(m.group(1))
+    if not hits:
+        return None, "цитата не найдена в строке таблицы"
+    if len(hits) == 1:
+        return hits[0], ""
+    ml = model_loc.strip()
+    bare = BARE_CELL_RE.match(ml)
+    want = [h for h in hits if check._loc_key(h) == check._loc_key(ml)]
+    if not want and bare:
+        ref = (bare.group(1) + bare.group(2)).upper()
+        want = [h for h in hits if h.rpartition("!")[2].replace("$", "").upper() == ref]
+    if len(want) == 1:
+        return want[0], ""
+    return None, "цитата есть в нескольких строках таблицы, локатор модели не выбирает одну"
 
 
 def _find_locator(quote: str, part: Part, model_loc: str) -> tuple[str | None, str]:
     """Локатор определяет код: маркер того абзаца, где цитата найдена дословно (проверка 1). (локатор | None, причина отказа).
     Короче MIN_QUOTE принимается, только если после нормализации равна целому абзацу («Цена: 650 ₽ в месяц»)."""
     nq = normalize_quote(quote)
+    if any(TABLE_LINE_RE.match(ln) for ln in part.text.split(chr(10))):  # табличный источник: маркеров ¶ нет, локатор по строке
+        if len(nq) < MIN_QUOTE:
+            return None, f"цитата короче {MIN_QUOTE} символов"
+        return _table_locator(quote, part.text, model_loc)
     segs = _segments(part)
     if len(nq) < MIN_QUOTE:
         for marker, body in segs:
             if nq and normalize_quote(body) == nq:
-                return (marker or _norm_table_loc(model_loc, body, quote) or None), ""
+                return (marker or model_loc or None), ""
         return None, f"цитата короче {MIN_QUOTE} символов и не равна целому абзацу"
     reason = "цитаты нет в тексте части"
     for marker, body in segs:
         f = check.check_quote({"id": "?", "quote": quote}, body)
         if f.level == "OK":
-            return (marker or _norm_table_loc(model_loc, body, quote) or None), ""
+            return (marker or model_loc or None), ""
         if "цитаты нет в указанном разделе" not in f.msg:
             reason = f.msg
     return None, reason
@@ -270,7 +279,6 @@ def _screen(items, part: Part, codes: list[str], who: str, suspicious=(), inj: l
     """(принятые, отброшено табличных, причины отбора). Поштучно: дословная цитата в одном абзаце проходит, остальные отбрасываются.
     Табличных fact LLM не создаёт. Цитата с паттерном инъекции или из suspicious-локатора не принимается: (локатор, цитата) -> inj."""
     sus = {check._loc_key(x) for x in (suspicious or [])}
-    pats = ingest._patterns()
     ok: list[dict] = []
     tables = 0
     rejected: list[str] = []
@@ -295,7 +303,7 @@ def _screen(items, part: Part, codes: list[str], who: str, suspicious=(), inj: l
         if loc is None:
             rejected.append(f"«{quote[:60]}»: {why}")
             continue
-        if ingest._hit(quote, pats) or check._loc_key(loc) in sus:
+        if ingest.is_injection(quote) or check._loc_key(loc) in sus:
             if inj is not None:
                 inj.append(loc)
             continue
