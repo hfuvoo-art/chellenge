@@ -138,7 +138,7 @@ def test_short_html_flagged(tmp_project, capsys):
     assert s2["chars"] > 1500 and s2["warnings"] == ["short-text"]  # длинно, но без цифр — флаг именно по цифрам
     body = " ".join(l for l in _md(tmp_project, sid2).splitlines() if not l.startswith("<!--"))
     assert not any(ch.isdigit() for ch in body)
-    assert "snap.py" in ingest.warning_hint("short-text")
+    assert "snap.py" not in ingest.warning_hint("short-text") and "PDF" in ingest.warning_hint("short-text")
     assert sid == "S-001"
 
 

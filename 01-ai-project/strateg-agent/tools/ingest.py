@@ -31,7 +31,7 @@ TABLE_EXT = {".xlsx", ".xlsm", ".csv"}
 CELL_LOC_RE = re.compile(r"^.+!\$?[A-Za-z]{1,3}\$?\d+$")  # Лист!C14
 MARKER_RE = re.compile(r"^<!--\s*(p\.\d+|¶\d+)\s*-->\s*$")
 WARNING_HINTS = {
-    "short-text": "текста мало или нет цифр (вероятно, страница строится JS). Что сделать: snap.py (если есть) или ручной обход: "
+    "short-text": "текста мало или нет цифр (вероятно, страница строится JS). Что сделать: ручной обход: "
                   "Ctrl+P → сохранить PDF → `python tools/ingest.py page.pdf --found-by user --url <адрес>`.",
     "no-text-layer": "в PDF нет текстового слоя (скан). Что сделать: распознать текст (OCR) и добавить как docx/txt, "
                      "либо перепечатать нужные цифры вручную.",

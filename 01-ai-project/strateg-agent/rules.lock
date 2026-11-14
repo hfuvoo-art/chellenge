@@ -16,7 +16,7 @@ files:
   methods/positioning.md: 0f174c8176e746ede50b16f87ef2433fb6791274cf2d64b538d7c3529373b037
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
-  methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
+  methods/ux-review.md: 1bb17ae57dc3ad94112962fc3c4a6b6eea1882e47495835a2cbd65364e30cb89
   AGENTS.md: 8d6dd0501c611ced4f990b9ed002f6ac3a4f42b6e43c0db557575c089c4c6ab0
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: a8d71decf8aeab5532130330a115c1504927db4dfe9962d378927be126e6632d
@@ -142,3 +142,7 @@ history:
   reason: 'аудит КТ-A: критик без подсказок'
   changed:
   - prompts/critic.md
+- updated_at: '2026-11-14T19:25:25+03:00'
+  reason: 'аудит КТ-A: уборка snap.py из methods/ux-review.md'
+  changed:
+  - methods/ux-review.md
