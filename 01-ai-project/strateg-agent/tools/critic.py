@@ -33,10 +33,10 @@ REF_RE = re.compile(r"\bC-\d+\b")
 PROMISE_RE = re.compile(r"^\s*[-*]\s*[«\"“](.+?)[»\"”]\s*(?:(?:→|->)\s*(.*?))?\s*$", re.M)
 MAX_QUOTE = 600
 # Порог «повтор возражения агента» (rapidfuzz, после нижнего регистра и снятия пунктуации). Подобран на русских парах из options.md:
-# token_set_ratio ≥ 80 ловит перефраз и «то же + уточнение» (100 для вложенного набора слов, 86-ниже у одной общей фразы), а разные по смыслу
-# возражения дают 16-61. Если одна из сторон короче 3 слов, вложенность почти ничего не доказывает («бренд» ⊂ любой фразы про бренд),
+# token_set_ratio ≥ 75 ловит перефраз и «то же + уточнение»; на 10 реальных парах esim-travel порог 75 даёт 5 из 8 перефразов без
+# ложных совпадений (максимум у разных по смыслу пар — 68; при 80 ловилось меньше перефразов). Если одна из сторон короче 3 слов, вложенность почти ничего не доказывает («бренд» ⊂ любой фразы про бренд),
 # поэтому там вдобавок длины должны быть сопоставимы: длинная сторона не больше чем вдвое длиннее короткой.
-REPEAT_THRESHOLD = 80
+REPEAT_THRESHOLD = 75
 REPEAT_MIN_WORDS = 3
 TAG_NEW, TAG_REPEAT = "новое", "повтор возражения агента"
 VERDICT_RU = {"faithful": "верно", "overreach": "неточно", "contradiction": "неверно"}
@@ -185,10 +185,16 @@ def _label_of(line: str) -> str | None:
 def strip_objections(text: str) -> str:
     """options.md без блоков «Возражения:» (строка-метка и список под ней до следующей метки или заголовка): критик не должен видеть возражения агента.
     Границы блока — те же фиксированные метки шаблона, что и в check.py (OPT_LABELS)."""
-    out, skipping = [], False
+    out, skipping, in_crit = [], False, False
     for ln in text.splitlines():
         if ln.startswith("#"):
-            skipping = False
+            skipping = in_crit = False
+        if re.match(r"^\s*\**Критика\**\s*:", ln):  # итог прошлой критики в преамбуле — якорь для критика
+            in_crit = True
+        elif not ln.strip():
+            in_crit = False
+        if in_crit:
+            continue
         label = _label_of(ln)
         if label:
             skipping = label == "возражения"
@@ -249,7 +255,7 @@ def _options(slug) -> tuple[str, list[dict]]:
 def _options_job(slug) -> Job:
     text, opts = _options(slug)
     reg = {c["id"]: c for c in claims.active(slug)}
-    cited = [c for c in dict.fromkeys(REF_RE.findall(text)) if c in reg]  # только утверждения, на которые ссылаются варианты
+    cited = [c for c in dict.fromkeys(REF_RE.findall(strip_objections(text))) if c in reg]  # только утверждения, на которые ссылаются варианты вне возражений агента
     sources = {s.get("id"): s for s in ingest._load_sources(slug)}
     lines = []
     for cid in cited:

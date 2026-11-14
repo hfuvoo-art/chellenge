@@ -383,7 +383,7 @@ def ingest_html_text(slug, html: str, *, url: str, found_by: str, allow_domain=N
     return _ingest_html(slug, html, url=url, found_by=found_by, refresh=False)[0]
 
 
-def _fetch(url: str) -> tuple[bytes, str]:
+def _fetch(url: str, slug=None, allow_domain=None) -> tuple[bytes, str]:
     import requests
     try:
         r = requests.get(url, headers={"User-Agent": UA}, timeout=60)
@@ -391,6 +391,9 @@ def _fetch(url: str) -> tuple[bytes, str]:
     except requests.RequestException as e:
         die(f"не удалось скачать {url}: {type(e).__name__}. Что сделать: открой страницу в браузере, сохрани как PDF (Ctrl+P) "
             f"и запусти `ingest.py файл.pdf --found-by user --url {url}`.")
+    final = str(getattr(r, "url", "") or url)
+    if slug is not None and final != url:
+        check_domain(slug, final, allow_domain)  # редирект на чужой домен — тот же отказ
     return r.content, r.headers.get("Content-Type", "").lower()
 
 
@@ -415,7 +418,7 @@ def ingest_ex(slug, target, *, found_by: str, url: str | None = None, refresh: b
     target = str(target)
     if re.match(r"^https?://", target, re.IGNORECASE):
         check_domain(slug, target, allow_domain)
-        data, ctype = _fetch(target)
+        data, ctype = _fetch(target, slug, allow_domain)
         kind = _kind_from_bytes(data, ctype, target)
         if kind == "html":
             from trafilatura.utils import decode_file

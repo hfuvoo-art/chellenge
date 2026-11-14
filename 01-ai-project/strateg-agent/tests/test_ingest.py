@@ -251,3 +251,20 @@ def test_no_section_warns_not_refuses(tmp_project, capsys):
     _brief(tmp_project, "# Бриф\nбез раздела\n")
     ingest.ingest_html_text(tmp_project, long_html(), url="https://example.com/a", found_by="user")
     assert "Белый список" in capsys.readouterr().err
+
+
+def test_redirect_to_foreign_domain_refused(tmp_project, monkeypatch):
+    import requests
+    _brief(tmp_project, WL)
+
+    class R:
+        url = "https://evil.example/landing"
+        content = b"x"
+        headers = {"Content-Type": "text/html"}
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(requests, "get", lambda *a, **k: R())
+    with pytest.raises(ValueError, match="evil.example"):
+        ingest.ingest(tmp_project, "https://megafon.ru/a", found_by="user")

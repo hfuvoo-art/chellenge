@@ -31,9 +31,9 @@ def _setup(slug):
     (root / "questions.md").write_text("- Q1: Почему падает спрос на пакеты?\n", encoding="utf-8")
     (root / "options.md").write_text(
         "# Варианты\n\n<!-- шаблон: ## O1 · status_quo · Название -->\n\n"
-        "## O1 · status_quo · Оставить как есть\nСуть: ничего не менять.\nВозражения:\n- В1: отток растёт [C-001]\n- В2: цена не меняется\n"
+        "## O1 · status_quo · Оставить как есть\nСуть: ничего не менять, опора [C-001].\nВозражения:\n- В1: отток растёт [C-001]\n- В2: цена не меняется\n"
         "Что заставит передумать: отток упадёт ниже 3 %.\n\n"
-        "## O2 · close · Закрыть направление\nСуть: закрыть.\nВозражения:\n- В1: потеряем выручку [C-002]\n- В2: бренд\n"
+        "## O2 · close · Закрыть направление\nСуть: закрыть, опора [C-002].\nВозражения:\n- В1: потеряем выручку [C-002]\n- В2: бренд\n"
         "Что заставит передумать: убыток превысит порог.\n\n"
         "## O3 · option · Снизить цену\nСуть: цена вниз.\nВозражения:\n- В1: конкурент уже снизил [C-002]\n- В2: маржа\n"
         "Что заставит передумать: эластичность спроса ниже 0,5.\n", encoding="utf-8")
@@ -287,7 +287,7 @@ def test_strip_objections_removes_agent_blocks_keeps_rest(tmp_project):
     text, opts = critic._options(tmp_project)
     stripped = critic.strip_objections(text)
     assert "Возражения" not in stripped and "отток растёт" not in stripped and "потеряем выручку" not in stripped
-    assert "Суть: ничего не менять." in stripped and "Что заставит передумать: отток упадёт ниже 3 %." in stripped
+    assert "Суть: ничего не менять, опора [C-001]." in stripped and "Что заставит передумать: отток упадёт ниже 3 %." in stripped
     assert [o["id"] for o in opts] == ["O1", "O2", "O3"]
     assert opts[0]["agent_objections"] == ["отток растёт [C-001]", "цена не меняется"]
 
@@ -297,7 +297,7 @@ def test_critic_payload_has_no_agent_objections(fake_llm, tmp_project):
     fake_llm.add(json.dumps(_good(), ensure_ascii=False))
     critic.critique_options(tmp_project)
     payload = "\n".join(m["content"] for m in fake_llm.calls[0]["messages"])
-    assert "потеряем выручку" not in payload and "отток растёт" not in payload and "Суть: закрыть." in payload
+    assert "потеряем выручку" not in payload and "отток растёт" not in payload and "Суть: закрыть, опора [C-002]." in payload
 
 
 def test_critique_marks_new_vs_repeat(fake_llm, tmp_project):
@@ -321,3 +321,15 @@ def test_novelty_threshold_short_and_subset():
     assert not critic.is_repeat("Закрытие навредит бренду МегаФона у путешественников", agent)  # одно слово — не повод считать повтором
     assert critic.is_repeat("Конкурент уже снизил цену на такой пакет", agent)
     assert not critic.is_repeat("Продукт съедает собственную выручку от роуминга", agent)
+
+
+def test_critic_payload_no_previous_critique_preamble_and_no_objection_only_claims(fake_llm, tmp_project):
+    _setup(tmp_project)
+    root = project_path(tmp_project)
+    t = read_text(root / "options.md").replace(", опора [C-001]", "").replace(", опора [C-002]", "").replace("# Варианты\n", "# Варианты\n\nКритика: критик подтвердил всё, новых не дал.\nвторая строка итога.\n\nПрочий абзац.\n", 1)
+    (root / "options.md").write_text(t, encoding="utf-8")
+    fake_llm.add(json.dumps(_good(), ensure_ascii=False))
+    critic.critique_options(tmp_project)
+    payload = "\n".join(m["content"] for m in fake_llm.calls[0]["messages"])
+    assert "подтвердил всё" not in payload and "вторая строка итога" not in payload and "Прочий абзац" in payload
+    assert P[0] not in payload and P[1] not in payload  # утверждения C-001/C-002 процитированы только в возражениях агента

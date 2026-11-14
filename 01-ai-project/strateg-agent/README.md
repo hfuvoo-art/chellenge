@@ -122,7 +122,7 @@
 | Поддержка решений | нет (задачи 17–19 в работе) | `projects/esim-travel/decisions.yaml` пуст |
 | Пересмотр при новых данных | нет (задачи 17–19 в работе) | `tools/impact.py` нет |
 | Маршрутизация | есть | `grep escalation projects/esim-travel/log.jsonl` (эскалация lite→pro с причиной); критик на другой модели |
-| Навыки, хуки, субагенты | частично | 6 навыков в `.claude/skills/`, 4 хука в `tools/hooks/` (в живой сессии срабатывали 2), `ux-observer` не вызывался |
+| Навыки, хуки, субагенты | частично | 9 навыков в `.claude/skills/`, 4 хука в `tools/hooks/` (в `projects/esim-travel/log.jsonl` есть события хуков: 28 `tool` и 2 `search`; `guard_rules` в живой сессии не доказан), `ux-observer` не вызывался |
 | Интеграции MCP и CLI | частично (только CLI) | `tools/*.py`; MCP нет |
 | База знаний | частично | `projects/esim-travel/claims.jsonl`: отозванные и спорные записи с причинами; поиска по смыслу нет |
 | Устойчивость к сбоям | частично | `tests/test_llm.py`, `tests/test_state.py`: ретраи, ремонт JSON, `action_id`, повтор из кеша |
@@ -140,7 +140,7 @@
 | `rules.lock` | хеши запертых файлов (`rules/`, `prompts/`, `methods/`, `AGENTS.md`, `CLAUDE.md`, `check.py`, `lock.py`) | подмену правил не заметить; сверка — `python tools/lock.py --verify` |
 | `tools/` | скрипты: проекты, загрузка источников, извлечение, реестр, проверки, критик, статус | нет доверия: проверки делают они |
 | `tools/hooks/` и `.claude/settings.json` | 4 хука Claude Code: статус при старте, вопрос перед правкой запертых файлов, запись `tool` и `search` в журнал | нет статуса при старте, запертые файлы правятся без вопроса, журнал неполный |
-| `.claude/skills/`, `.claude/agents/` | 6 навыков-обёрток, команды `/status`, `/new`, `/continue` над playbooks и субагент `ux-observer` (читает скриншоты, только `Read`) | нет вызова шагов по названию и изолированного разбора скриншотов |
+| `.claude/skills/`, `.claude/agents/` | 9 навыков-обёрток, команды `/status`, `/new`, `/continue` над playbooks и субагент `ux-observer` (читает скриншоты, только `Read`) | нет вызова шагов по названию и изолированного разбора скриншотов |
 | `config/prices.yaml` | цены моделей и поиска; `null` — цена неизвестна | стоимость не посчитать, статус жёлтый |
 | `personas/` | персоны модельных респондентов | `respond.py` не из чего строить |
 | `projects/` | проекты: `brief.md`, `claims.jsonl`, `options.md`, `strategy.md`, `state.yaml`, `log.jsonl`; `CURRENT` — текущий | нет состояния и журнала |
