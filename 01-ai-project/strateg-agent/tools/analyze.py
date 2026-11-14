@@ -24,7 +24,7 @@ CALC_TIMEOUT = 60  # секунд на один расчёт
 RESULT_RE = re.compile(r"^RESULT=\s*([-+−]?\d+(?:[.,]\d+)?(?:[eE][-+]?\d+)?)\s*(.*)$")
 YEAR_KEYS = ("год", "year")
 QUARTER_KEYS = ("квартал", "quarter")
-UNIT_HINT = re.compile(r"(тыс\.?|млн|млрд|%|руб\w*|₽|\$|€|чел\w*|поезд\w*|шт\.?|единиц\w*|гб|мб)", re.IGNORECASE)
+UNIT_HINT = re.compile(r"(?<![а-яёa-z])(тыс\.?|млн|млрд|руб\w*|чел\w*|поезд\w*|шт\.?|единиц\w*|гб|мб)(?![а-яёa-z])|(%|₽|\$|€)", re.IGNORECASE)
 MAX_LIST = 10  # строк в каждом списке профиля
 
 
@@ -129,8 +129,8 @@ def build_profile(path: Path, sid: str) -> str:
     hints: dict[str, int] = defaultdict(int)
     texts = [t for _, t in notes] + [str(v) for c in cells[:2000] for v in list(c.dims.keys()) + list(c.dims.values())]
     for text in texts:
-        for m in UNIT_HINT.findall(text):
-            hints[m.lower()] += 1
+        for m in UNIT_HINT.finditer(text):
+            hints[m.group(0).lower()] += 1
     lines += ["", "## Единицы"]
     if hints:
         lines.append("- упоминания в шапках и примечаниях: " + ", ".join(f"«{k}» x{v}" for k, v in sorted(hints.items(), key=lambda x: -x[1])[:MAX_LIST]))
@@ -243,7 +243,7 @@ def run_calc_ex(slug, cid: str, timeout: float = CALC_TIMEOUT) -> tuple[float, s
     if not script.is_file():
         raise ValueError(f"расчёта calc/{cid}.py нет. Что сделать: положи скрипт в calc/{cid}.py (последняя строка вывода `RESULT=<число> <единица>`).")
     try:
-        r = subprocess.run([sys.executable, str(script)], cwd=str(root), capture_output=True, timeout=timeout,
+        r = subprocess.run([sys.executable, str(script)], cwd=str(root), capture_output=True, timeout=timeout, stdin=subprocess.DEVNULL,
                            env={**os.environ, "PYTHONIOENCODING": "utf-8"})
     except subprocess.TimeoutExpired:
         raise ValueError(f"расчёт calc/{cid}.py не уложился в {timeout:g} с. Что сделать: упрости расчёт или убери из него долгие циклы.") from None
