@@ -53,9 +53,20 @@ def warning_hint(code: str) -> str:
 
 # ---------- инъекции ----------
 
+_PAT_CACHE: dict = {}
+
+
 def _patterns() -> list[re.Pattern]:
-    data = read_yaml(PATTERNS_FILE) or {}
-    return [re.compile(p["pattern"], re.IGNORECASE | re.MULTILINE) for p in data.get("patterns", [])]
+    """Паттерны инъекций; YAML читается заново только при смене файла (путь или mtime)."""
+    try:
+        key = (str(PATTERNS_FILE), Path(PATTERNS_FILE).stat().st_mtime_ns)
+    except OSError:
+        key = (str(PATTERNS_FILE), None)
+    if _PAT_CACHE.get("key") != key:
+        data = read_yaml(PATTERNS_FILE) or {}
+        _PAT_CACHE["key"] = key
+        _PAT_CACHE["pats"] = [re.compile(p["pattern"], re.IGNORECASE | re.MULTILINE) for p in data.get("patterns", [])]
+    return _PAT_CACHE["pats"]
 
 
 def _blocks(md: str) -> list[tuple[str, str]]:
@@ -118,6 +129,11 @@ def _hit(text: str, pats: list[re.Pattern]) -> bool:
         if any(p.search(v) or p.search(flat) for p in pats):
             return True
     return False
+
+
+def is_injection(text: str) -> bool:
+    """Публичная проверка: совпадает ли текст (с обходами регистра, пробелов, base64) с паттернами rules/injection-patterns.yaml."""
+    return _hit(text, _patterns())
 
 
 def scan_injections(text: str) -> list[str]:

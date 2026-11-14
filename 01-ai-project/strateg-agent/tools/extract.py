@@ -64,6 +64,7 @@ class ExtractReport:
     rub: float | None = 0.0  # None: цена хотя бы одного вызова неизвестна (У12)
     pending: list[int] = field(default_factory=list)  # части без результата (ждут человека или модель среды)
     dropped_quotes: int = 0  # отброшено поштучно (цитата не прошла проверку 1)
+    dropped_injection: int = 0  # отброшено: цитата с паттерном инъекции или из suspicious-локатора
     emitted: list[Path] = field(default_factory=list)  # пути для ответа модели среды
     action_ids: dict[int, str] = field(default_factory=dict)
 
@@ -221,10 +222,43 @@ def _segments(part: Part) -> list[tuple[str | None, str]]:
     return [(mk, "\n".join(ls).strip()) for mk, ls in segs if "".join(ls).strip()]
 
 
+TABLE_LINE_RE = re.compile(r"^(\S+!\$?[A-Za-z]{1,3}\$?\d+)\s")
+BARE_CELL_RE = re.compile(r"^\$?([A-Za-z]{1,3})\$?(\d+)$")
+
+
+def _table_locator(quote: str, body: str, model_loc: str) -> tuple[str | None, str]:
+    """Табличная часть: локатор берётся из строки материала «Лист!A4 …», где реально лежит цитата, а не из ответа модели.
+    Одно совпадение — его локатор. Несколько — только то, что совпадает с model_loc (ячейка с листом или голая «A3»), при неоднозначности отказ.
+    Ноль — отказ. (локатор | None, причина)."""
+    nq = normalize_quote(quote)
+    hits = []
+    for ln in body.split(chr(10)):
+        m = TABLE_LINE_RE.match(ln)
+        if m and nq and nq in normalize_quote(ln[m.end():]):
+            hits.append(m.group(1))
+    if not hits:
+        return None, "цитата не найдена в строке таблицы"
+    if len(hits) == 1:
+        return hits[0], ""
+    ml = model_loc.strip()
+    bare = BARE_CELL_RE.match(ml)
+    want = [h for h in hits if check._loc_key(h) == check._loc_key(ml)]
+    if not want and bare:
+        ref = (bare.group(1) + bare.group(2)).upper()
+        want = [h for h in hits if h.rpartition("!")[2].replace("$", "").upper() == ref]
+    if len(want) == 1:
+        return want[0], ""
+    return None, "цитата есть в нескольких строках таблицы, локатор модели не выбирает одну"
+
+
 def _find_locator(quote: str, part: Part, model_loc: str) -> tuple[str | None, str]:
     """Локатор определяет код: маркер того абзаца, где цитата найдена дословно (проверка 1). (локатор | None, причина отказа).
     Короче MIN_QUOTE принимается, только если после нормализации равна целому абзацу («Цена: 650 ₽ в месяц»)."""
     nq = normalize_quote(quote)
+    if any(TABLE_LINE_RE.match(ln) for ln in part.text.split(chr(10))):  # табличный источник: маркеров ¶ нет, локатор по строке
+        if len(nq) < MIN_QUOTE:
+            return None, f"цитата короче {MIN_QUOTE} символов"
+        return _table_locator(quote, part.text, model_loc)
     segs = _segments(part)
     if len(nq) < MIN_QUOTE:
         for marker, body in segs:
@@ -241,9 +275,10 @@ def _find_locator(quote: str, part: Part, model_loc: str) -> tuple[str | None, s
     return None, reason
 
 
-def _screen(items, part: Part, codes: list[str], who: str) -> tuple[list[dict], int, list[str]]:
+def _screen(items, part: Part, codes: list[str], who: str, suspicious=(), inj: list | None = None) -> tuple[list[dict], int, list[str]]:
     """(принятые, отброшено табличных, причины отбора). Поштучно: дословная цитата в одном абзаце проходит, остальные отбрасываются.
-    Табличных fact LLM не создаёт."""
+    Табличных fact LLM не создаёт. Цитата с паттерном инъекции или из suspicious-локатора не принимается: (локатор, цитата) -> inj."""
+    sus = {check._loc_key(x) for x in (suspicious or [])}
     ok: list[dict] = []
     tables = 0
     rejected: list[str] = []
@@ -267,6 +302,10 @@ def _screen(items, part: Part, codes: list[str], who: str) -> tuple[list[dict], 
         loc, why = _find_locator(quote, part, model_loc)
         if loc is None:
             rejected.append(f"«{quote[:60]}»: {why}")
+            continue
+        if ingest.is_injection(quote) or check._loc_key(loc) in sus:
+            if inj is not None:
+                inj.append(loc)
             continue
         if not text:
             rejected.append(f"«{quote[:60]}»: пустой text")
@@ -312,12 +351,13 @@ class Tier:
     valid: bool = False  # получен разобранный ответ со списком claims
     accepted: list[dict] = field(default_factory=list)
     tables: int = 0
+    injected: list[str] = field(default_factory=list)  # локаторы отброшенных цитат с инъекцией
     rejected: list[str] = field(default_factory=list)
     weak: bool = False  # ответ валиден, но принято 0 при непустом или отброшено больше DROP_ESCALATE_SHARE
     why: str = ""
 
 
-def _try(slug, role, system, user, aid, category, part, codes) -> Tier:
+def _try(slug, role, system, user, aid, category, part, codes, sid="", suspicious=()) -> Tier:
     """Один ярус: вызов модели и поштучный отбор утверждений; в журнал — claims_dropped."""
     try:
         obj, r = llm.chat_json([{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -331,8 +371,11 @@ def _try(slug, role, system, user, aid, category, part, codes) -> Tier:
         return Tier(why=f"роль «{role}» не настроена: {e}")
     if not isinstance(obj.get("claims"), list):
         return Tier(why="«claims» не список")
-    ok, tables, rej = _screen(obj["claims"], part, codes, f"extract.py:{_model_label(role)}")
-    t = Tier(valid=True, accepted=ok, tables=tables, rejected=rej)
+    inj: list[str] = []
+    ok, tables, rej = _screen(obj["claims"], part, codes, f"extract.py:{_model_label(role)}", suspicious, inj)
+    for loc in inj:
+        event(slug, "injection_quote_dropped", action_id=aid, role=role, source=sid, locator=loc)
+    t = Tier(valid=True, accepted=ok, tables=tables, injected=inj, rejected=rej)
     seen = len(ok) + len(rej)
     if seen and (not ok or len(rej) > DROP_ESCALATE_SHARE * seen):
         t.weak = True
@@ -409,7 +452,12 @@ def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] 
     if not isinstance(obj, dict) or not isinstance(obj.get("claims"), list):
         event(slug, "apply_rejected", action_id=aid, reason="не JSON с ключом claims")
         raise ValueError(f"ответ в {p.name} — не JSON-объект с ключом «claims». Что сделать: верните только JSON вида {{\"claims\":[…]}}, без пояснений.")
-    ok, _tables, rej = _screen(obj["claims"], part, codes, ENV_WHO)
+    inj: list[str] = []
+    ok, _tables, rej = _screen(obj["claims"], part, codes, ENV_WHO, ent.get("suspicious"), inj)
+    for loc in inj:
+        event(slug, "injection_quote_dropped", action_id=aid, role="env-model", source=sid, locator=loc)
+    if inj:
+        print(f"Отброшено {len(inj)} цитат с признаками инъекции (локаторы: {', '.join(inj)}).")
     if rej:
         event(slug, "claims_dropped", action_id=aid, role="env-model", count=len(rej), reasons=rej[:5])
     if rej and not ok:
@@ -488,12 +536,12 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
         aid = rep.action_ids[part.idx]
         unit = f"{sid}:part-{part.idx:02d}"
         user = _user_prompt(sid, part, len(parts), qs, suspicious)
-        t1 = _try(slug, model_role, system, user, aid, "yandex", part, codes)
+        t1 = _try(slug, model_role, system, user, aid, "yandex", part, codes, sid, suspicious)
         tiers = [t1]
         if (not t1.valid or t1.weak) and model_role != "pro":
             rep.escalations += 1
             event(slug, "escalation", step="lite->pro", unit=unit, part=part.idx, reason=t1.why, action_id=aid)
-            tiers.append(_try(slug, "pro", system, user, aid, "retry", part, codes))
+            tiers.append(_try(slug, "pro", system, user, aid, "retry", part, codes, sid, suspicious))
         accepted = [c for t in tiers for c in t.accepted]  # принятое с lite сохраняется и объединяется с принятым от pro
         last = tiers[-1]
         saw_items = any(t.valid and (t.accepted or t.rejected) for t in tiers)
@@ -510,6 +558,7 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
                 failed_human.append((part.idx, why))
             continue
         rep.dropped_table_facts += sum(t.tables for t in tiers)
+        rep.dropped_injection += sum(len(t.injected) for t in tiers)
         if len(tiers) > 1 and not last.valid and t1.accepted:
             print(f"Часть {part.idx}: pro не дал ответа ({last.why}), сохранено принятое с lite: {len(t1.accepted)}.")
             event(slug, "pro_failed_kept_lite", unit=unit, part=part.idx, kept=len(t1.accepted), reason=last.why, action_id=aid)
@@ -585,7 +634,7 @@ def main(argv=None) -> int:
     if a.dry_run or a.emit_prompt:
         return 0
     print(f"Источник {a.source}: частей {rep.parts_total} (из кеша {rep.parts_cached}), утверждений добавлено {rep.claims_added}, "
-          f"цитат отброшено {rep.dropped_quotes}, табличных отброшено {rep.dropped_table_facts}, эскалаций {rep.escalations}, "
+          f"цитат отброшено {rep.dropped_quotes}, табличных отброшено {rep.dropped_table_facts}, с инъекцией отброшено {rep.dropped_injection}, эскалаций {rep.escalations}, "
           f"стоимость {_fmt_rub(rep.rub)}.")
     if rep.pending:
         print(f"Без результата части: {', '.join(map(str, rep.pending))}. Что сделать: см. подсказки выше и `python tools/status.py`; затем запустите команду ещё раз — готовое не задвоится.")
