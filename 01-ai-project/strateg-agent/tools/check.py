@@ -3,7 +3,8 @@
 
 * estimate — расчёт лежит в `calc/<C-id>.py` (соглашение задачи 18, например `calc/C-021.py`; последняя строка
   вывода скрипта `RESULT=<число> <единица>`). В поле locator утверждения можно продублировать `calc/<C-id>.py`.
-  Задача 8 проверяет только существование файла внутри проекта; запуск и сверку значения делает задача 18.
+  Если calc есть, проверка 3 запускает его (analyze.run_calc_ex, отдельный процесс) и сверяет RESULT с числом в тексте
+  (или value) через numparse с учётом единицы и «млн/тыс»; расхождение, ошибка или таймаут — FAIL. Нет calc — FAIL.
 * observation — locator вида `файл#зона` (например `S-007.png#top-right`); файл ищется в `materials/` проекта
   (или по пути от корня проекта) и должен существовать, зона не пуста. extracted_by `ux-observer` допустим.
 * Коды выхода CLI: 0 — PASS, 1 — есть FAIL, 2 — есть WARN (FAIL нет), 3 — ошибка использования.
@@ -40,12 +41,12 @@ import yaml  # noqa: E402
 
 from rapidfuzz import fuzz  # noqa: E402
 
-from tools import claims, ingest, lock, state, tables  # noqa: E402
+from tools import analyze, claims, ingest, lock, state, tables  # noqa: E402
 from tools.common import (  # noqa: E402
     die, now_iso, project_path, read_text, read_yaml, setup_stdio, sha256_file, sha256_text, write_text_atomic,
 )
 from tools.log import event  # noqa: E402
-from tools.numparse import count_negations, is_year, normalize_quote, num_match, parse_numbers  # noqa: E402
+from tools.numparse import Num, count_negations, is_year, normalize_quote, num_match, parse_numbers  # noqa: E402
 
 FUZZY_WARN = 92
 CELL_RE = re.compile(r"^.+!\$?[A-Za-z]{1,3}\$?\d+$")
@@ -183,7 +184,22 @@ def _check_estimate(slug, c) -> Finding:
     if not p.is_file():
         return _f("FAIL", 3, cid, f"у estimate нет расчёта calc/{cid}.py",
                   f"Что сделать: положи скрипт в calc/{cid}.py (последняя строка вывода `RESULT=<число> <единица>`).")
-    return _f("OK", 3, cid, f"расчёт calc/{cid}.py на месте")
+    try:
+        res = analyze.run_calc_ex(slug, cid)[2]
+    except ValueError as e:
+        why, _, todo = str(e).partition(" Что сделать:")
+        return _f("FAIL", 3, cid, why, "Что сделать:" + todo if todo else f"Что сделать: запусти `python tools/analyze.py calc {cid}` и исправь расчёт.")
+    cand = list(parse_numbers(c.get("text") or ""))
+    v = c.get("value")
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        cand.append(Num(float(v), res.unit, str(v), 0.0))
+    ok = num_match(res, cand)
+    if not ok and res.unit is None:  # единица в RESULT не распознана: сверяем только число
+        ok = any(math.isclose(res.value, q.value, rel_tol=0, abs_tol=res.precision + 1e-9) for q in cand)
+    if not ok:
+        return _f("FAIL", 3, cid, f"расчёт calc/{cid}.py даёт {res.raw} (RESULT), а в записи такого числа с этой единицей нет",
+                  f"Что сделать: исправь число в тексте утверждения под результат расчёта или поправь calc/{cid}.py.")
+    return _f("OK", 3, cid, f"расчёт calc/{cid}.py воспроизводит число: RESULT={res.raw}")
 
 
 def _check_observation(slug, c) -> Finding:

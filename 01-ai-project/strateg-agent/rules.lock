@@ -5,7 +5,7 @@ files:
   rules/style.md: 40a3fd8ce0ce9cf53bbed4ff49d893e04d4a7389a285ca072e8cd0cd58dde40a
   prompts/critic-claims.md: 5bb34278fa85550fb258e39160c5f16d469b95476e8f35542d9da0c24c7e3ceb
   prompts/critic-promises.md: a8c60e5984a656fb4e73340aa7ffc80696bc3dbad4e21735a3a4845795c03977
-  prompts/critic.md: b6f361ff7d37a302dbd3ec8e033a83968e174a8305b79497e77b342233cdc91c
+  prompts/critic.md: 3bde5fdadacf1036f21bb174f07aabdf1f28073e5f237e39c768a6703c4ecbfe
   prompts/extract.md: daf0c6f1386b683624ab0e96b75ffea6238109d18ae4ce55f403bb1ada19c160
   prompts/interview-coding.md: 775efdb80287943424b320670a3239a7f83f11500febdd97d30acfa81613f4f9
   prompts/respondent.md: 3d0eca4e4601a50118c1d22ed470143f12ac61a7daf9aa40e3c42cd042d34161
@@ -16,10 +16,10 @@ files:
   methods/positioning.md: 0f174c8176e746ede50b16f87ef2433fb6791274cf2d64b538d7c3529373b037
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
-  methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
+  methods/ux-review.md: 1bb17ae57dc3ad94112962fc3c4a6b6eea1882e47495835a2cbd65364e30cb89
   AGENTS.md: 8d6dd0501c611ced4f990b9ed002f6ac3a4f42b6e43c0db557575c089c4c6ab0
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
-  tools/check.py: a8d71decf8aeab5532130330a115c1504927db4dfe9962d378927be126e6632d
+  tools/check.py: ed909447d98439221f4dac862128f89b15c700f3b1714863f3288a239f5f5a02
   tools/lock.py: 3dc00d2620a76f2b6aa6cfd6d85b80d129dcfc6bbf26931124c4b6e378a3ff54
 history:
 - updated_at: '2026-11-09T19:38:15+03:00'
@@ -142,3 +142,18 @@ history:
   reason: 'задача 19: расширены и сужены паттерны инъекций (закрытие дыр red-team)'
   changed:
   - rules/injection-patterns.yaml
+- updated_at: '2026-11-13T23:26:18+03:00'
+  reason: 'задача 18: check.py calc'
+  changed:
+  - tools/check.py
+- updated_at: '2026-11-13T23:25:29+03:00'
+  reason: 'аудит КТ-A: критик без подсказок'
+  changed:
+  - prompts/critic.md
+- updated_at: '2026-11-14T19:25:25+03:00'
+  reason: 'аудит КТ-A: уборка snap.py из methods/ux-review.md'
+  changed:
+  - methods/ux-review.md
+- updated_at: '2026-11-14T19:33:59+03:00'
+  reason: 'задача 19: слияние с main'
+  changed: []

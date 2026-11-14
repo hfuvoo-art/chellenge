@@ -138,7 +138,7 @@ def test_short_html_flagged(tmp_project, capsys):
     assert s2["chars"] > 1500 and s2["warnings"] == ["short-text"]  # длинно, но без цифр — флаг именно по цифрам
     body = " ".join(l for l in _md(tmp_project, sid2).splitlines() if not l.startswith("<!--"))
     assert not any(ch.isdigit() for ch in body)
-    assert "snap.py" in ingest.warning_hint("short-text")
+    assert "snap.py" not in ingest.warning_hint("short-text") and "PDF" in ingest.warning_hint("short-text")
     assert sid == "S-001"
 
 
@@ -185,3 +185,86 @@ def test_sources_yaml_has_no_absolute_path(tmp_project, tmp_path):
     ingest.ingest(tmp_project, str(f), found_by="user")
     s = _sources(tmp_project)[0]
     assert s["path"] == "a.docx" and str(tmp_path) not in str(s).replace("\\", "/")
+
+
+# ---------- белый список доменов (аудит КТ-A) ----------
+
+def _brief(slug, body):
+    from tools.common import project_path
+    (project_path(slug) / "brief.md").write_text(body, encoding="utf-8")
+
+
+WL = "# Бриф\n\n## Белый список доменов\nЗадан человеком: `megafon.ru`, `csr.ru`.\n\n## Точка 1\nТекст `evil.example`.\n"
+
+
+def test_whitelist_parse_only_section(tmp_project):
+    _brief(tmp_project, WL)
+    assert ingest.load_whitelist(tmp_project) == ["megafon.ru", "csr.ru"]
+
+
+def test_domain_outside_whitelist_refused_no_write(tmp_project, monkeypatch):
+    _brief(tmp_project, WL)
+    monkeypatch.setattr(ingest, "_fetch", lambda u: (_ for _ in ()).throw(AssertionError("сеть")))
+    with pytest.raises(ValueError, match="evil.example") as ei:
+        ingest.ingest(tmp_project, "https://evil.example/x", found_by="user")
+    assert "белом списке" in str(ei.value) and "--allow-domain" in str(ei.value) and "добавлено человеком" in str(ei.value)
+    from tools.common import project_path
+    assert not (project_path(tmp_project) / "sources.yaml").exists()
+
+
+def test_cli_refusal_exit_code(tmp_project, capsys):
+    _brief(tmp_project, WL)
+    with pytest.raises(SystemExit) as ei:
+        ingest.main(["https://evil.example/x", "--found-by", "user", "-p", tmp_project])
+    assert ei.value.code != 0 and "белом списке" in capsys.readouterr().err
+
+
+def test_subdomain_allowed(tmp_project):
+    _brief(tmp_project, WL)
+    sid = ingest.ingest_html_text(tmp_project, long_html(), url="https://www.megafon.ru/roaming", found_by="user")
+    assert sid == "S-001"
+
+
+def test_allow_domain_logged_as_human_consent(tmp_project):
+    from tools.common import project_path, read_jsonl
+    _brief(tmp_project, WL)
+    sid = ingest.ingest_html_text(tmp_project, long_html(), url="https://mts.ru/a", found_by="user", allow_domain=["mts.ru"])
+    assert sid == "S-001"
+    ev = [e for e in read_jsonl(project_path(tmp_project) / "log.jsonl") if e["kind"] == "domain_consent"]
+    assert ev and ev[0]["domain"] == "mts.ru" and ev[0]["by"] == "human"
+
+
+def test_reviews_domain_checked(tmp_project):
+    _brief(tmp_project, WL)
+    with pytest.raises(ValueError, match="play.google.com"):
+        ingest.ingest_reviews(tmp_project, "gplay:ru.app", since="2026-09-01", found_by="user")
+
+
+def test_local_file_not_checked(tmp_project, tmp_path):
+    _brief(tmp_project, WL)
+    f = tmp_path / "a.txt"
+    f.write_text("Цена пакета составляет 650 рублей за семь дней поездки.\n", encoding="utf-8")
+    assert ingest.ingest(tmp_project, f, found_by="user") == "S-001"
+
+
+def test_no_section_warns_not_refuses(tmp_project, capsys):
+    _brief(tmp_project, "# Бриф\nбез раздела\n")
+    ingest.ingest_html_text(tmp_project, long_html(), url="https://example.com/a", found_by="user")
+    assert "Белый список" in capsys.readouterr().err
+
+
+def test_redirect_to_foreign_domain_refused(tmp_project, monkeypatch):
+    import requests
+    _brief(tmp_project, WL)
+
+    class R:
+        url = "https://evil.example/landing"
+        content = b"x"
+        headers = {"Content-Type": "text/html"}
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr(requests, "get", lambda *a, **k: R())
+    with pytest.raises(ValueError, match="evil.example"):
+        ingest.ingest(tmp_project, "https://megafon.ru/a", found_by="user")
