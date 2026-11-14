@@ -67,6 +67,7 @@ class ExtractReport:
     dropped_injection: int = 0  # отброшено: цитата с паттерном инъекции или из suspicious-локатора
     emitted: list[Path] = field(default_factory=list)  # пути для ответа модели среды
     action_ids: dict[int, str] = field(default_factory=dict)
+    parts_previous: list[int] = field(default_factory=list)  # извлечены ранее при другом action_id (без --force не повторяются)
 
 
 # ---------- части ----------
@@ -474,7 +475,7 @@ def apply_result(slug: str, sid: str, part_idx: int, path, questions: list[str] 
     state.add_degraded(slug, "env-model", f"извлечение {sid} часть {part_idx}: ответ модели среды (режим без ключа или эскалация)")
     event(slug, "env_model", action_id=aid, unit=f"{sid}:part-{part_idx:02d}",
           note="расход модели среды учитывайте вручную: python tools/log.py model <usd>")
-    state.mark_done(slug, aid, {"part": part_idx, "claims": added, "degraded": "env-model"})
+    state.mark_done(slug, aid, {"part": part_idx, "claims": added, "degraded": "env-model", "questions": codes})
     event(slug, "extract_part", source=sid, part=part_idx, claims=added, via="env-model")
     return added
 
@@ -497,7 +498,31 @@ def _estimate(model_role: str, parts: list[Part], qs) -> tuple[float | None, int
     return (round(total, 4) if known else None), tokens
 
 
-def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=False, emit_prompt=False) -> ExtractReport:
+def _previously_extracted(slug, sid: str, part: Part, aid: str, codes: list[str], done: dict) -> bool:
+    """Часть уже извлечена при другом action_id (изменились промпт, нарезка или текст вопросов) по тем же вопросам.
+    Новый вопрос (код, которого раньше не было) — это не «извлечено ранее»: такая часть запускается как обычно."""
+    prefix = f"extract:{sid}:part-{part.idx:02d}:"
+    old = [k for k in done if k.startswith(prefix) and k != aid]
+    if not old:
+        return False
+    prev: set[str] = set()
+    legacy = False
+    for k in old:
+        qs = (done[k] or {}).get("questions")
+        if qs is None:
+            legacy = True  # запись до появления поля: коды берём из утверждений источника
+        else:
+            prev.update(qs)
+    if legacy:
+        legacy_codes = {q for c in claims.load(slug) if c.get("source") == sid for q in (c.get("question") or [])}
+        if not legacy_codes:
+            return True  # вопросов в утверждениях нет: считаем, что часть извлечена по всем
+        prev |= legacy_codes
+    return set(codes) <= prev
+
+
+def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=False, emit_prompt=False,
+                   force=False) -> ExtractReport:
     md, ent = _source(slug, sid)
     qs = _questions(slug, questions)
     codes = [q for q, _ in qs]
@@ -505,21 +530,28 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
     rep = ExtractReport(parts_total=len(parts))
     system = load_prompt()
     suspicious = ent.get("suspicious")
-    if not dry_run and not emit_prompt:
-        llm._require_config(model_role, None)  # NoKeyError до любой работы: CLI подскажет --emit-prompt
     todo: list[Part] = []
+    done = state.load(slug)["done"]
     for part in parts:
         aid = _aid(sid, part, qs)
         rep.action_ids[part.idx] = aid
-        if state.is_done(slug, aid):
+        if aid in done:
             rep.parts_cached += 1
+        elif not force and _previously_extracted(slug, sid, part, aid, codes, done):
+            rep.parts_previous.append(part.idx)
+            if not dry_run:
+                print(f"Часть {part.idx} источника {sid} уже извлечена ранее (другая версия кода/промпта); повторить — --force.")
         else:
             todo.append(part)
+    if todo and not dry_run and not emit_prompt:
+        llm._require_config(model_role, None)  # NoKeyError до вызовов: CLI подскажет --emit-prompt (кеш и «извлечено ранее» проверены выше)
     if dry_run:
         rub, tokens = _estimate(model_role, todo, qs)
         rep.rub = rub
         price = f"≈ {rub:.2f} ₽" if rub is not None else "цена неизвестна (модель или цена не заданы: config/prices.yaml, .env)"
-        print(f"Оценка для {sid}: частей {len(todo)} из {len(parts)} (в кеше {rep.parts_cached}), "
+        prev = (f", извлечено ранее {len(rep.parts_previous)} (части {', '.join(map(str, rep.parts_previous))}; "
+                f"без --force не повторяются, не платные)") if rep.parts_previous else ""
+        print(f"Оценка для {sid}: платных частей {len(todo)} из {len(parts)} (в кеше {rep.parts_cached}{prev}), "
               f"≈ {tokens} токенов, {price}; эскалации на pro не входят; вызовов не делаю.")
         return rep
     if emit_prompt:
@@ -564,7 +596,7 @@ def extract_source(slug, sid, *, questions=None, model_role="extract", dry_run=F
             event(slug, "pro_failed_kept_lite", unit=unit, part=part.idx, kept=len(t1.accepted), reason=last.why, action_id=aid)
         added = _commit(slug, sid, accepted)
         rep.claims_added += added
-        state.mark_done(slug, aid, {"part": part.idx, "claims": added})
+        state.mark_done(slug, aid, {"part": part.idx, "claims": added, "questions": codes})
         event(slug, "extract_part", source=sid, part=part.idx, claims=added, via="yandex")
     rep.rub = _rub_for(slug, [rep.action_ids[p.idx] for p in todo])
     if failed_human:
@@ -586,11 +618,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="Извлечение утверждений из источника: режет текст на части ≤12 000 символов (перекрытие 1 абзац), "
                     "отправляет модели, поштучно проверяет цитаты и пишет утверждения в claims.jsonl. Повторный запуск не отправляет "
-                    "готовые части. Без ключа: --emit-prompt и --apply.")
+                    "готовые и уже извлечённые ранее части (без --force). Без ключа: --emit-prompt и --apply.")
     ap.add_argument("source", help="номер источника, например S-003")
     ap.add_argument("-p", "--project", help="имя проекта (по умолчанию текущий)")
     ap.add_argument("--question", action="append", metavar="Q", help="только этот вопрос (например Q4); можно повторять. Без флага — все вопросы из questions.md")
     ap.add_argument("--dry-run", action="store_true", help="только оценка частей, токенов и цены; вызовов нет")
+    ap.add_argument("--force", action="store_true",
+                    help="повторить извлечение частей, уже извлечённых ранее при другой версии кода/промпта/вопросов "
+                         "(новые платные вызовы; те же цитаты в claims.jsonl не задваиваются)")
     ap.add_argument("--emit-prompt", action="store_true",
                     help="режим без ключа: напечатать промпт следующей части и путь для ответа модели среды (в журнал: degraded: env-model)")
     ap.add_argument("--apply", metavar="ФАЙЛ.json", help="применить ответ модели среды (JSON) к части, номер задаётся --part")
@@ -624,7 +659,7 @@ def main(argv=None) -> int:
             else:
                 print(f"Все части готовы. Дальше: python tools/check.py --only 1,2,3,4 -p {slug}")
             return 0
-        rep = extract_source(slug, a.source, questions=a.question, dry_run=a.dry_run, emit_prompt=a.emit_prompt)
+        rep = extract_source(slug, a.source, questions=a.question, dry_run=a.dry_run, emit_prompt=a.emit_prompt, force=a.force)
     except llm.NoKeyError as e:
         print(f"{e}\nЧто сделать без ключа: `python tools/extract.py {a.source} --emit-prompt` и затем `--apply файл.json --part N` (модель среды вместо Yandex; в статусе красная строка).")
         return 3
