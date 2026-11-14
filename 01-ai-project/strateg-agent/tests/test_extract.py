@@ -562,3 +562,92 @@ def test_table_ambiguous_quote_is_dropped(tmp_project):
     assert extract._table_locator(row, body, "A1")[0] is None
     assert extract._table_locator(row, body, "")[0] is None
     assert extract._table_locator("Нет такой цитаты в таблице вовсе", body, "A1")[0] is None
+
+
+# ---- уже извлечённое при смене хеша (аудит КТ-B) ----
+
+def _extract_then_edit_question(fake_llm, slug):
+    """Извлекает источник, затем правит текст вопроса Q1 (код тот же): action_id частей меняется."""
+    sid = _ingest(slug, _paras(2))
+    qf = project_path(slug) / "questions.md"
+    qf.write_text("- Q1: Первый вопрос\n", encoding="utf-8")
+    fake_llm.add(_resp(_c(_paras(2)[1])))
+    extract.extract_source(slug, sid)
+    qf.write_text("- Q1: Первый вопрос, уточнённая формулировка\n", encoding="utf-8")
+    return sid
+
+
+def test_extract_skips_previously_extracted_on_hash_change(fake_llm, tmp_project, capsys):
+    sid = _extract_then_edit_question(fake_llm, tmp_project)
+    n_calls, n_claims = len(fake_llm.calls), len(claims.load(tmp_project))
+    rep = extract.extract_source(tmp_project, sid)
+    assert len(fake_llm.calls) == n_calls and len(claims.load(tmp_project)) == n_claims
+    assert rep.parts_previous == [1] and rep.claims_added == 0
+    out = capsys.readouterr().out
+    assert "уже извлечена ранее" in out and "--force" in out and sid in out
+
+
+def test_skip_previously_extracted_works_without_key(tmp_project, capsys, fake_llm, monkeypatch):
+    sid = _extract_then_edit_question(fake_llm, tmp_project)
+
+    def _no_key(*a, **k):
+        raise extract.llm.NoKeyError("нет ключа")
+    monkeypatch.setattr(extract.llm, "_require_config", _no_key)
+    # проверка уже извлечённого раньше проверки ключа: понятный ответ, а не NoKeyError
+    assert extract.main([sid, "-p", tmp_project]) == 0
+    assert "--force" in capsys.readouterr().out
+
+
+def test_extract_force_reextracts(fake_llm, tmp_project):
+    sid = _extract_then_edit_question(fake_llm, tmp_project)
+    n_calls = len(fake_llm.calls)
+    fake_llm.add(_resp(_c(_paras(2)[1])))
+    rep = extract.extract_source(tmp_project, sid, force=True)
+    assert len(fake_llm.calls) == n_calls + 1 and rep.parts_previous == []
+    assert len(claims.load(tmp_project)) == 1  # то же место и цитата не плодят записей
+
+
+def test_new_question_is_not_blocked_as_previous(fake_llm, tmp_project):
+    sid = _ingest(tmp_project, _paras(2))
+    (project_path(tmp_project) / "questions.md").write_text("- Q1: Первый\n- Q4: Новый\n", encoding="utf-8")
+    fake_llm.add(_resp(_c(_paras(2)[1])), _resp(_c(_paras(2)[1])))
+    extract.extract_source(tmp_project, sid, questions=["Q1"])
+    rep = extract.extract_source(tmp_project, sid, questions=["Q4"])
+    assert rep.parts_previous == [] and len(fake_llm.calls) == 2
+
+
+def test_dry_run_reports_previously_extracted(fake_llm, tmp_project, capsys):
+    sid = _extract_then_edit_question(fake_llm, tmp_project)
+    capsys.readouterr()
+    rep = extract.extract_source(tmp_project, sid, dry_run=True)
+    out = capsys.readouterr().out
+    assert rep.parts_previous == [1] and "извлечено ранее" in out and "платных частей 0" in out
+    assert rep.rub in (0, 0.0)
+
+
+def test_cli_help_mentions_force(capsys):
+    with pytest.raises(SystemExit):
+        extract.main(["--help"])
+    assert "--force" in capsys.readouterr().out
+
+
+def test_legacy_done_entry_without_questions_counts_as_previous(fake_llm, tmp_project):
+    sid = _ingest(tmp_project, _paras(2))
+    md = (project_path(tmp_project) / "materials" / f"{sid}.md").read_text(encoding="utf-8")
+    part = extract.split_parts(md, extract.PART_LIMIT)[0]
+    state.mark_done(tmp_project, f"extract:{sid}:part-01:000000000000", {"part": 1, "claims": 3})  # старая запись без поля questions
+    rep = extract.extract_source(tmp_project, sid)
+    assert rep.parts_previous == [part.idx] and fake_llm.calls == []
+
+
+def test_legacy_entry_new_question_gets_distinct_message(fake_llm, tmp_project, capsys):
+    sid = _ingest(tmp_project, _paras(2))
+    (project_path(tmp_project) / "questions.md").write_text("- Q1: Первый\n- Q99: Новый\n", encoding="utf-8")
+    state.mark_done(tmp_project, f"extract:{sid}:part-01:000000000000", {"part": 1, "claims": 3})
+    rep = extract.extract_source(tmp_project, sid, dry_run=True)
+    out = capsys.readouterr().out
+    assert "новый вопрос" in out and "--force --question" in out and fake_llm.calls == []
+    assert rep.parts_previous == [1]
+    assert extract.main([sid, "-p", tmp_project]) == 0
+    out = capsys.readouterr().out
+    assert "не проверить" in out and "Ничего не извлекалось" in out
