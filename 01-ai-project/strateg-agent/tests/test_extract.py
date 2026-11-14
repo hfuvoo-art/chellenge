@@ -629,3 +629,12 @@ def test_cli_help_mentions_force(capsys):
     with pytest.raises(SystemExit):
         extract.main(["--help"])
     assert "--force" in capsys.readouterr().out
+
+
+def test_legacy_done_entry_without_questions_counts_as_previous(fake_llm, tmp_project):
+    sid = _ingest(tmp_project, _paras(2))
+    md = (project_path(tmp_project) / "materials" / f"{sid}.md").read_text(encoding="utf-8")
+    part = extract.split_parts(md, extract.PART_LIMIT)[0]
+    state.mark_done(tmp_project, f"extract:{sid}:part-01:000000000000", {"part": 1, "claims": 3})  # старая запись без поля questions
+    rep = extract.extract_source(tmp_project, sid)
+    assert rep.parts_previous == [part.idx] and fake_llm.calls == []

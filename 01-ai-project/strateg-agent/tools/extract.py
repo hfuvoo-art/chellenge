@@ -506,18 +506,11 @@ def _previously_extracted(slug, sid: str, part: Part, aid: str, codes: list[str]
     if not old:
         return False
     prev: set[str] = set()
-    legacy = False
     for k in old:
         qs = (done[k] or {}).get("questions")
         if qs is None:
-            legacy = True  # запись до появления поля: коды берём из утверждений источника
-        else:
-            prev.update(qs)
-    if legacy:
-        legacy_codes = {q for c in claims.load(slug) if c.get("source") == sid for q in (c.get("question") or [])}
-        if not legacy_codes:
-            return True  # вопросов в утверждениях нет: считаем, что часть извлечена по всем
-        prev |= legacy_codes
+            return True  # запись до появления поля: какие вопросы задавались, неизвестно (в утверждениях только те, по которым нашлись ответы) — считаем «по всем»; новый вопрос запускают с --force
+        prev.update(qs)
     return set(codes) <= prev
 
 
