@@ -1,2 +1,2 @@
-# Решения: {id: D-1, owner, metric, basis: [C-001], target, due, depends_on: [], revisit_if}
+# Решения: {id: D-1, decision: "что решили", owner, metric, basis: [C-001], target, deadline: 2027-03-01, depends_on: [F-1], revisit_if: ["условие пересмотра; ссылки C-/S- проверяются автоматически"], status: active|done|revisit|dropped}
 decisions: []

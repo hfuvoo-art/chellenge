@@ -17,7 +17,7 @@ files:
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: 1bb17ae57dc3ad94112962fc3c4a6b6eea1882e47495835a2cbd65364e30cb89
-  AGENTS.md: 8d6dd0501c611ced4f990b9ed002f6ac3a4f42b6e43c0db557575c089c4c6ab0
+  AGENTS.md: 6a568deacade0b3bc1c7a6fd2828104eee4c1269571013204d4883a4631e0bfd
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: ed909447d98439221f4dac862128f89b15c700f3b1714863f3288a239f5f5a02
   tools/lock.py: 3dc00d2620a76f2b6aa6cfd6d85b80d129dcfc6bbf26931124c4b6e378a3ff54
@@ -150,3 +150,13 @@ history:
   reason: 'аудит КТ-A: уборка snap.py из methods/ux-review.md'
   changed:
   - methods/ux-review.md
+- updated_at: '2026-11-14T19:25:06+03:00'
+  reason: 'задача 17: AGENTS.md и playbook 6 — impact.py/review.py вместо временных
+    замен, deadline'
+  changed:
+  - AGENTS.md
+- updated_at: '2026-11-14T19:37:52+03:00'
+  reason: 'слияние t17 в main: пересчёт хешей (AGENTS.md из t17, methods/ux-review.md
+    из main)'
+  changed:
+  - AGENTS.md
