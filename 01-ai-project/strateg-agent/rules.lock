@@ -17,7 +17,7 @@ files:
   methods/test-plan.md: 8077f54e7fd586139a85ac6f129477f2e36e4756e7a2057b733e6a3a647c59ee
   methods/unit-economics.md: 4bceea178cd170cbde836720ab01409bc3e53682040d4b2bedc5f5edc839f569
   methods/ux-review.md: b568d2ead2066f4e17637cc6afe4e407fda624e750f27686068ddaf4bc7dd5eb
-  AGENTS.md: 8d6dd0501c611ced4f990b9ed002f6ac3a4f42b6e43c0db557575c089c4c6ab0
+  AGENTS.md: 6a568deacade0b3bc1c7a6fd2828104eee4c1269571013204d4883a4631e0bfd
   CLAUDE.md: 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
   tools/check.py: a8d71decf8aeab5532130330a115c1504927db4dfe9962d378927be126e6632d
   tools/lock.py: 3dc00d2620a76f2b6aa6cfd6d85b80d129dcfc6bbf26931124c4b6e378a3ff54
@@ -138,3 +138,8 @@ history:
   - AGENTS.md
   - tools/check.py
   - tools/lock.py
+- updated_at: '2026-11-14T19:25:06+03:00'
+  reason: 'задача 17: AGENTS.md и playbook 6 — impact.py/review.py вместо временных
+    замен, deadline'
+  changed:
+  - AGENTS.md
