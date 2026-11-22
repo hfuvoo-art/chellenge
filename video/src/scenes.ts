@@ -27,8 +27,8 @@ export const SCENES: Scene[] = [
   {n: 7, start: 30, end: 35, stage: 'teplo', what: 'Пустой стул, пиджак папы на спинке, недопитый чай', clip: 's07.mp4', clipSec: 3},
   {n: 8, start: 35, end: 40, stage: 'dym', what: 'Вечерний двор, дым мангала поднимается через лозу', clip: 's08.mp4'},
   {n: 10, start: 40, end: 45, stage: 'dym', what: 'Силуэты папы и девочки со спины уходят в дым', clip: 's10.mp4'},
-  {n: 11, start: 45, end: 50, stage: 'pamyat', what: 'Дым двора перетекает в дымок свечи. Наши дни', clip: 's11.mp4'},
-  {n: 12, start: 50, end: 60, stage: 'pamyat', what: 'Свеча Tonka горит рядом с гранатом, пустой стул напротив', clip: 's12.mp4'},
+  {n: 11, start: 45, end: 50, stage: 'pamyat', what: 'Дым двора перетекает в дымок свечи. Наши дни', clip: 's11.mp4', clipSec: 3},
+  {n: 12, start: 50, end: 60, stage: 'pamyat', what: 'Свеча Tonka горит рядом с гранатом, пустой стул напротив', clip: 's12.mp4', clipSec: 5},
   {n: 13, start: 60, end: 68, stage: 'final', what: 'Тёмно-винный фон, лёгкий дым'},
 ];
 
