@@ -203,7 +203,7 @@ const EndCard: React.FC = () => {
       </div>
       <div style={{marginTop: 48, height: 90, display: 'flex', alignItems: 'center'}}>
         {LOGO && hasFile(`brand/${LOGO}`) ? (
-          <Img src={staticFile(`brand/${LOGO}`)} style={{height: 90}} />
+          <Img src={staticFile(`brand/${LOGO}`)} style={{height: 44}} />
         ) : (
           <div
             style={{
