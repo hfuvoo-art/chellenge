@@ -17,7 +17,7 @@ export type Scene = {
 };
 
 export const SCENES: Scene[] = [
-  // Финальная версия 22.11: 11 ИИ-клипов, ~56 с (клипы почти в родной скорости, без рывков). Сцена 9 (фактуры) убрана ради сроков.
+  // Финальная версия 22.11: 11 ИИ-клипов, ~57 с (клипы почти в родной скорости, без рывков). Сцена 9 (фактуры) убрана ради сроков.
   {n: 1, start: 0, end: 3, stage: 'prolog', what: 'Рука чиркает спичкой, огонь освещает медь и край граната', clip: 's01.mp4', clipSec: 3},
   {n: 2, start: 3, end: 6, stage: 'sok', what: 'Снизу: ноги папы поднимаются по каменной лестнице, в руке свёрток', clip: 's02.mp4', clipSec: 3},
   {n: 3, start: 6, end: 11, stage: 'sok', what: 'Руки папы кладут огромный гранат на медный поднос, детские руки тянутся', clip: 's03.mp4', clipSec: 5},
@@ -29,7 +29,7 @@ export const SCENES: Scene[] = [
   {n: 10, start: 34, end: 39, stage: 'dym', what: 'Силуэты папы и девочки со спины уходят в дым', clip: 's10.mp4', clipSec: 5},
   {n: 11, start: 39, end: 42, stage: 'pamyat', what: 'Дым двора перетекает в дымок свечи. Наши дни', clip: 's11.mp4', clipSec: 3},
   {n: 12, start: 42, end: 48, stage: 'pamyat', what: 'Свеча Tonka горит рядом с гранатом, пустой стул напротив', clip: 's12.mp4', clipSec: 5},
-  {n: 13, start: 48, end: 56, stage: 'final', what: 'Тёмно-винный фон, лёгкий дым'},
+  {n: 13, start: 48, end: 57, stage: 'final', what: 'Тёмно-винный фон, лёгкий дым'},
 ];
 
 export const TOTAL_SECONDS = SCENES[SCENES.length - 1].end;
@@ -39,11 +39,12 @@ export const TITLES: {text: string; start: number; end: number; big?: boolean; t
   {text: 'Папа всегда приносил домой\nсамый спелый гранат', start: 3.5, end: 8.5},
   {text: 'И в доме становилось тепло', start: 17, end: 21.5},
   {text: 'Дом остаётся с нами,\nдаже когда мы далеко', start: 43, end: 47.8, top: true},
-  {text: 'Моему папе.\nОн родился в Баку', start: 48.5, end: 52.5, big: true},
+  // Посвящение из брифа (ключевые смыслы 1 и 2), переписано так, чтобы было понятно, чьё оно
+  {text: 'Мира Бруман посвятила этот аромат\nсвоему папе. Он родился в Баку', start: 48.5, end: 53, big: true},
 ];
 
 // Когда появляется логотип и название аромата (секунды)
-export const ENDCARD_START = 52.5;
+export const ENDCARD_START = 53;
 
 // Цвета этапов из палитры брифа: для заглушек аниматика и подписей.
 export const STAGE_LOOK: Record<Stage, {label: string; from: string; to: string}> = {
@@ -57,9 +58,10 @@ export const STAGE_LOOK: Record<Stage, {label: string; from: string; to: string}
 
 // Голос за кадром: положи файлы в public/audio/ и впиши имена.
 // Голос, музыка и звуки из ElevenLabs. Файлы в public/audio/; отсутствующие пропускаются.
+// 22.11: голос Yandex SpeechKit «София (LiveTTS)», выбран командой из трёх живых голосов
 export const VOICE: {file: string; start: number}[] = [
   {file: 'golos-1.mp3', start: 3.5},
-  {file: 'golos-2.mp3', start: 17},
+  {file: 'golos-2.mp3', start: 17.3},
   {file: 'golos-3.mp3', start: 43.3},
 ];
 export const MUSIC: string | null = 'muzyka.mp3';
