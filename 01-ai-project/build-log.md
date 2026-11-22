@@ -220,3 +220,4 @@
 - **Видео** `submission/draft/chernovik-v1.mp4`, 5:22: черновик 3:00 (ID каталога заблюрен) + 7 кусков записи 22.11 (правка, check, S-010, impact и блок, check, review, статус); закадра нет; вне git.
 - **Описание** `submission/opisanie.html` → `opisanie-strateg-agent.pdf` (все 6 разделов брифа, 4 скриншота); README — цена по статусу 22.11, доп. уровень: пересмотр, решения, анализ данных — «есть».
 - **Репо жюри — снимок v1** c8d96e2 (поверх a4c56a0, commit-tree, без истории). `pytest` → 540 passed, 5 xfailed; `lock.py --verify` → OK.
+- **Второй пример** `projects/family-connect` (бриф организаторов «Связь для близких», шаги 1–6): `check.py` OK 59 / FAIL 0, 639,66 ₽, красная строка `env-model` (эскалация критика). README дополнен. **Репо жюри — снимок v1.1** b7d11dc (поверх c8d96e2, commit-tree): `pytest` → 540 passed, 5 xfailed; `lock.py --verify` → OK.
