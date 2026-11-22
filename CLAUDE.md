@@ -9,7 +9,7 @@
 
 ИИ-проект (МегаФон): работу начинай с `docs/08-ii-proekt-master-prompt.md`, прогресс отмечается галочками в `docs/09-ii-proekt-plan-sborki.md`. Агенты сборки и проверки лежат в `.claude/agents/`, описаны в `docs/10-ii-proekt-agenty.md`; `jury-auditor` подходит для всех трёх номинаций.
 
-Скилы команды лежат в `skills/` (zip для установки в `zips/`): `mgimo-brief-breakdown`, `ai-video-pipeline`, `remotion-montage`, `site-design`, `arena` (турнир агентов для идей; в Claude Code уже подключён через `.claude/skills/arena`).
+Скилы команды лежат в `skills/` (zip для установки в `zips/`): `mgimo-brief-breakdown`, `ai-video-pipeline`, `remotion-montage`, `site-design`, `arena` (турнир агентов для идей; в Claude Code уже подключён через `.claude/skills/arena`). В `.claude/skills/` также стоят `ui-ux-pro-max` и `unslop` (чистка интерфейса от примет ИИ, запускать только по команде Роберта, см. `notes/skill-unslop.md`).
 
 Правила:
 - Ролик монтируем в Remotion, проект ролика в папке `video/`. Большие медиафайлы не коммить, их место на Google Drive.
