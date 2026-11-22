@@ -75,7 +75,19 @@ const SceneLayer: React.FC<{scene: Scene}> = ({scene}) => {
   const opacity = scene.n === 1 ? 1 : interpolate(frame, [0, FADE * fps], [0, 1], {extrapolateRight: 'clamp'});
   return (
     <AbsoluteFill style={{opacity}}>
-      {scene.clip && hasFile(`clips/${scene.clip}`) ? <Video src={staticFile(`clips/${scene.clip}`)} /> : <Placeholder scene={scene} />}
+      {scene.clip && hasFile(`clips/${scene.clip}`) ? (
+        // Масштаб 1.1 от левого верхнего угла убирает за кадр значок генератора в правом нижнем углу
+        <AbsoluteFill style={{transform: 'scale(1.1)', transformOrigin: '0% 0%'}}>
+          <Video
+            src={staticFile(`clips/${scene.clip}`)}
+            playbackRate={scene.clipSec ? Math.min(1, scene.clipSec / (scene.end - scene.start + FADE)) : 1}
+            volume={scene.clipVolume ?? 0.5}
+            style={{width: '100%', height: '100%', objectFit: 'cover'}}
+          />
+        </AbsoluteFill>
+      ) : (
+        <Placeholder scene={scene} />
+      )}
     </AbsoluteFill>
   );
 };
