@@ -42,3 +42,10 @@
 
 ## 4. Видео до 5 минут (по желанию)
 Пока нет. Сценарий по шагам без голоса: [[scenariy-video]]. Снимает Роберт записью экрана телефона.
+
+## Поля формы подачи (22.11.2026)
+
+Форма в кабинете разбита на отдельные поля:
+- Тестовые аккаунты: три строки с логинами и паролями.
+- Исходный код: https://github.com/hfuvoo-art/chellenge/tree/claude/project-thread-hfs6t6/02-vibe-coding
+- Описание процесса создания: https://github.com/hfuvoo-art/chellenge/blob/claude/project-thread-hfs6t6/02-vibe-coding/opisanie-processa.pdf (PDF со скриншотами, лежит в репозитории).
