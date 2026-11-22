@@ -21,3 +21,9 @@
 
 ## Если останется время
 - Записать `/cost` в журнал (`log.py model`) и обновить цифру расходов в описании: сейчас 318,85 ₽ занижено.
+
+## Итоговые ссылки для кабинета (от Роберта, 22.11 20:48 МСК)
+1. Репо жюри: https://github.com/hfuvoo-art/strateg-agent (ZIP: https://github.com/hfuvoo-art/strateg-agent/archive/refs/heads/main.zip)
+2. Демо-проект: https://github.com/hfuvoo-art/strateg-agent/tree/main/projects/esim-travel
+3. Видео: https://disk.yandex.ru/d/9TFWKwqUfm5nrg (файл `chernovik-v2.mp4`)
+4. Описание: https://disk.yandex.ru/d/9TFWKwqUfm5nrg (файл `opisanie-strateg-agent.pdf`)
