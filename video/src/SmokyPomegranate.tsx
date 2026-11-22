@@ -11,7 +11,7 @@ import {
 } from 'remotion';
 import {Audio, Video} from '@remotion/media';
 import {loadFont} from '@remotion/google-fonts/CormorantGaramond';
-import {ENDCARD_START, LOGO, MUSIC, SCENES, SFX, STAGE_LOOK, Scene, TITLES, VOICE} from './scenes';
+import {ENDCARD_START, LOGO, MUSIC, SCENES, SFX, STAGE_LOOK, Scene, TITLES, TOTAL_SECONDS, VOICE} from './scenes';
 
 const {fontFamily} = loadFont('normal', {weights: ['400', '500'], subsets: ['cyrillic', 'latin']});
 
@@ -53,7 +53,16 @@ export const SmokyPomegranate: React.FC = () => {
         <EndCard />
       </Sequence>
 
-      {MUSIC && hasFile(`audio/${MUSIC}`) && <Audio src={staticFile(`audio/${MUSIC}`)} volume={0.45} />}
+      {MUSIC && hasFile(`audio/${MUSIC}`) && <Audio
+          src={staticFile(`audio/${MUSIC}`)}
+          // Музыка написана на 70 с, ролик короче: плавно уводим её в тишину к концу
+          volume={(f) =>
+            interpolate(f, [0, (TOTAL_SECONDS - 5) * fps, TOTAL_SECONDS * fps - 6], [0.45, 0.45, 0], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            })
+          }
+        />}
       {VOICE.filter((v) => hasFile(`audio/${v.file}`)).map((v) => (
         <Sequence key={v.file} from={Math.round(v.start * fps)}>
           <Audio src={staticFile(`audio/${v.file}`)} />
@@ -81,7 +90,7 @@ const SceneLayer: React.FC<{scene: Scene}> = ({scene}) => {
           <Video
             src={staticFile(`clips/${scene.clip}`)}
             playbackRate={scene.clipSec ? Math.min(1, scene.clipSec / (scene.end - scene.start + FADE)) : 1}
-            volume={scene.clipVolume ?? 0.5}
+            volume={scene.clipVolume ?? 0.3}
             style={{width: '100%', height: '100%', objectFit: 'cover'}}
           />
         </AbsoluteFill>
