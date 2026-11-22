@@ -1,0 +1,15 @@
+sources:
+- id: S-001
+  kind: pdf
+  title: Бриф на разработку стратегии продукта /
+  path: Пример брифа.pdf
+  path_key: 04d6c5e053f6002d
+  found_by: user
+  fetched_at: '2026-11-22T17:20:17+03:00'
+  sha256: 558d2c665caa4f4954135c8bbfb69d791e398dcdc5b625d5ded7bdb2d0eb0fa5
+  as_of: '2026-11-18'
+  as_of_source: meta
+  chars: 29690
+  warnings: []
+  suspicious: []
+  supersedes: null

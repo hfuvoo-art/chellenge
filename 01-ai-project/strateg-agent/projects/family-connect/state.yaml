@@ -1,0 +1,212 @@
+step:
+  n: 6
+  name: after-decision
+done:
+  ingest:S-001:8ce141aabfb4:
+    at: '2026-11-22T17:20:17+03:00'
+    kind: pdf
+  extract:S-001:part-01:c2ed27d7b3fc:
+    at: '2026-11-22T17:22:40+03:00'
+    part: 1
+    claims: 7
+    questions:
+    - Q1
+    - Q2
+    - Q3
+    - Q4
+    - Q5
+    - Q6
+    - Q7
+  extract:S-001:part-02:929653135a22:
+    at: '2026-11-22T17:22:47+03:00'
+    part: 2
+    claims: 6
+    questions:
+    - Q1
+    - Q2
+    - Q3
+    - Q4
+    - Q5
+    - Q6
+    - Q7
+  extract:S-001:part-03:bcf7cbfb706c:
+    at: '2026-11-22T17:22:54+03:00'
+    part: 3
+    claims: 6
+    questions:
+    - Q1
+    - Q2
+    - Q3
+    - Q4
+    - Q5
+    - Q6
+    - Q7
+  extract:S-001:part-04:e43a0a2bc45b:
+    at: '2026-11-22T17:22:59+03:00'
+    part: 4
+    claims: 1
+    questions:
+    - Q1
+    - Q2
+    - Q3
+    - Q4
+    - Q5
+    - Q6
+    - Q7
+  extract:S-001:part-01:40041ffe3ec3:
+    at: '2026-11-22T17:23:37+03:00'
+    part: 1
+    claims: 1
+    questions:
+    - Q1
+    - Q3
+    - Q7
+  extract:S-001:part-02:78136a327cf3:
+    at: '2026-11-22T17:23:49+03:00'
+    part: 2
+    claims: 5
+    questions:
+    - Q1
+    - Q3
+    - Q7
+  extract:S-001:part-03:359b69dad8a3:
+    at: '2026-11-22T17:23:57+03:00'
+    part: 3
+    claims: 0
+    questions:
+    - Q1
+    - Q3
+    - Q7
+  extract:S-001:part-04:e3164121b56a:
+    at: '2026-11-22T17:24:03+03:00'
+    part: 4
+    claims: 2
+    questions:
+    - Q1
+    - Q3
+    - Q7
+  extract:S-001:part-01:eb29edde5afc:
+    at: '2026-11-22T17:24:49+03:00'
+    part: 1
+    claims: 0
+    questions:
+    - Q2
+    - Q6
+  extract:S-001:part-02:142d05a820af:
+    at: '2026-11-22T17:24:56+03:00'
+    part: 2
+    claims: 0
+    questions:
+    - Q2
+    - Q6
+  extract:S-001:part-03:ab5b5f00ebc9:
+    at: '2026-11-22T17:25:05+03:00'
+    part: 3
+    claims: 0
+    questions:
+    - Q2
+    - Q6
+  extract:S-001:part-04:91615fe8bfce:
+    at: '2026-11-22T17:25:12+03:00'
+    part: 4
+    claims: 0
+    questions:
+    - Q2
+    - Q6
+  critic:options:64dc48d7b706:
+    at: '2026-11-22T17:30:04+03:00'
+    path: critique.md
+  critic:promises:797e9096f21d:
+    at: '2026-11-22T17:34:37+03:00'
+    verdicts:
+      P-1:
+        feature: F-3
+        verdict: partial
+        note: F-3 даёт сигнал при низком остатке, но «раньше, чем останется без связи»
+          зависит от задержки обновления остатка; в пилоте — только для группы с новым
+          обслуживанием (planned, 2027-Q2)
+      P-2:
+        feature: F-3
+        verdict: partial
+        note: F-3 со ссылкой на F-1; передача возможна только при разрешающем тарифе,
+          праве организатора и свободном остатке — обещание без этой оговорки шире
+          функции
+      P-3:
+        feature: F-4
+        verdict: ok
+        note: planned, срок 2027-Q2
+      P-4:
+        feature: F-5
+        verdict: ok
+        note: 'F-5 вместе с F-2: остаток виден только при согласии участника; planned,
+          срок 2027-Q2'
+      P-5:
+        feature: F-6
+        verdict: ok
+        note: exists
+    degraded: env-model
+  critic:promises:b514dcc837ee:
+    at: '2026-11-22T17:34:46+03:00'
+    verdicts:
+      P-1:
+        feature: F-3
+        verdict: partial
+        note: F-3 покрывает сигнал о низком остатке, но только для группы «новое обслуживание»
+      P-2:
+        feature: F-1
+        verdict: ok
+        note: ''
+      P-3:
+        feature: F-4
+        verdict: ok
+        note: ''
+      P-4:
+        feature: F-5
+        verdict: ok
+        note: ''
+      P-5:
+        feature: F-6
+        verdict: ok
+        note: ''
+  critic:promises:f5d96bdd2ad2:
+    at: '2026-11-22T17:34:55+03:00'
+    verdicts:
+      P-1:
+        feature: F-3
+        verdict: ok
+        note: ''
+      P-2:
+        feature: F-1
+        verdict: ok
+        note: ''
+      P-3:
+        feature: F-4
+        verdict: ok
+        note: ''
+      P-4:
+        feature: F-5
+        verdict: ok
+        note: ''
+      P-5:
+        feature: F-6
+        verdict: ok
+        note: ''
+waiting: null
+human:
+- point: точка 1
+  summary: Постановка и 7 вопросов подтверждены без правок
+  minutes: 1.0
+  at: '2026-11-22T17:22:20+03:00'
+- point: точка 2
+  summary: 'Выбран O3: сигнал о низком остатке со ссылкой на передачу'
+  minutes: 1.0
+  at: '2026-11-22T17:31:31+03:00'
+- point: точка 3
+  summary: Стратегия O3 принята без правок
+  minutes: 1.0
+  at: '2026-11-22T17:36:36+03:00'
+degraded:
+- flag: env-model
+  note: 'критик (проверка обещаний): ответ модели среды (режим без ключа или эскалация)'
+  at: '2026-11-22T17:34:37+03:00'
+created: '2026-11-22T17:20:16+03:00'
