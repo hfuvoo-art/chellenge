@@ -121,3 +121,19 @@ sources:
   warnings: []
   suspicious: []
   supersedes: null
+- id: S-010
+  kind: pdf
+  title: 'Роуминг от МегаФона: тарифы, стоимость | Московский регион, официальный
+    сайт'
+  url: https://moscow.megafon.ru/roaming/world/
+  path: Роуминг от МегаФона_ тарифы, стоимость _ Московский регион, официальный сайт.pdf
+  path_key: 5ddc3d0bc6166a3c
+  found_by: user
+  fetched_at: '2026-11-22T16:32:47+03:00'
+  sha256: fc1ba00af9c61f77400e30fe84d6ba4465177fbaaad3346f353f2166a28e9779
+  as_of: '2026-11-22'
+  as_of_source: meta
+  chars: 2177
+  warnings: []
+  suspicious: []
+  supersedes: S-007

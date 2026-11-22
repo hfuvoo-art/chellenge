@@ -130,6 +130,15 @@ done:
   critic:options:0541ac5cb8f1:
     at: '2026-11-22T16:28:24+03:00'
     path: critique.md
+  ingest:S-010:deb95088ef54:
+    at: '2026-11-22T16:32:48+03:00'
+    kind: pdf
+  extract:S-010:part-01:6f2ba1988dcd:
+    at: '2026-11-22T16:33:04+03:00'
+    part: 1
+    claims: 2
+    questions:
+    - Q2
 waiting: null
 human:
 - point: точка 1
