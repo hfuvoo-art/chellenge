@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Smoky Pomegranate — описание процесса</title>
+<style>
+@page { size: A4; margin: 16mm 15mm; }
+body { font-family: "DejaVu Serif", Georgia, serif; color: #2a1a16; font-size: 10.5pt; line-height: 1.45; }
+h1 { font-size: 22pt; color: #6b1420; margin: 0 0 4pt; }
+h2 { font-size: 14pt; color: #6b1420; border-bottom: 1px solid #c9a27a; padding-bottom: 3pt; margin: 18pt 0 6pt; page-break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 10pt 0 4pt; page-break-after: avoid; }
+.sub { color: #7a5a48; margin-bottom: 10pt; }
+table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 6pt 0; }
+th, td { border: 1px solid #d8c2aa; padding: 4pt 5pt; vertical-align: top; text-align: left; }
+th { background: #f3e6d8; }
+code, .p { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; color: #4a2a20; }
+img { max-width: 100%; display: block; margin: 6pt auto 2pt; border: 1px solid #ddd; }
+.cap { font-size: 8.5pt; color: #7a5a48; text-align: center; margin-bottom: 8pt; }
+.row { display: flex; gap: 8pt; align-items: center; }
+.row > div { flex: 1; }
+.page { page-break-before: always; }
+ul { margin: 4pt 0 4pt 16pt; padding: 0; }
+</style></head><body>
+
+<h1>Smoky Pomegranate</h1>
+<div class="sub">ИИ-ролик для Tonka Perfumes · MGIMO×AI Challenge 2026 · описание процесса</div>
+
+<p><b>Ролик:</b> 68 секунд, 16:9, 1920×1080, H.264. История о папе, гранате и доме в старом Баку, увиденная глазами пятилетней девочки. Продукт, свеча Tonka Smoky Pomegranate 220 мл, появляется в финале на том же столе, где когда-то лежал папин гранат.</p>
+
+<h2>1. Идея и драматургия</h2>
+<p>Ролик построен как воспоминание взрослой дочери. Он начинается и заканчивается огнём: спичка в темноте в прологе и свеча в финале. Лиц нет: мы видим только руки папы, руки девочки, их силуэты со спины. Так зритель подставляет своего отца и свой дом.</p>
+<table>
+<tr><th>Время</th><th>Этап аромата</th><th>Что в кадре</th><th>Звук и слова</th></tr>
+<tr><td>0–5 с</td><td>Пролог</td><td>Рука зажигает спичку, огонь освещает медный поднос и гранат</td><td>чирк спички, тишина</td></tr>
+<tr><td>5–20 с</td><td>1. Сок граната</td><td>Папа поднимается по каменной лестнице бакинского двора со свёртком; его руки кладут огромный треснувший гранат на медный поднос, детские руки тянутся; макро зёрен и капли сока</td><td>голос: «Папа всегда приносил домой… самый спелый гранат»</td></tr>
+<tr><td>20–35 с</td><td>2. Тепло дома</td><td>Девочка греет гранат в ладонях у окна; тёмный чай льётся в армуду, сухая роза, корица, кардамон; пустой стул с папиным пиджаком и недопитый чай</td><td>голос: «И в доме… становилось тепло»</td></tr>
+<tr><td>35–45 с</td><td>3. Дым</td><td>Вечерний двор, дым мангала поднимается сквозь лозу; силуэты папы и девочки уходят в дым</td><td>треск углей, звуки двора</td></tr>
+<tr><td>45–60 с</td><td>4. Память</td><td>Наши дни: дымок свечи; свеча Tonka горит рядом с расколотым гранатом и стаканом чая, напротив пустой стул</td><td>голос: «Дом остаётся с нами… даже когда мы далеко»</td></tr>
+<tr><td>60–68 с</td><td>Посвящение</td><td>Титр «Моему папе. Он родился в Баку», логотип Tonka Perfumes, название аромата</td><td>музыка затихает</td></tr>
+</table>
+<p>Все четыре ключевых смысла брифа есть в ролике: посвящение папе (финальный титр), Баку (двор, балкон, армуду, титр), гранат как символ заботы (папа приносит его домой) и «дом остаётся с нами» (финальная фраза и пустой стул рядом со свечой).</p>
+
+<h2>2. Нейросети и инструменты</h2>
+<table>
+<tr><th>Инструмент</th><th>Зачем</th><th>Тариф и права</th></tr>
+<tr><td>Claude (Anthropic)</td><td>Разбор брифа, сценарий, раскадровка, промпты, управление генерацией в браузере, код монтажа и музыки</td><td>подписка команды</td></tr>
+<tr><td>Kling AI, модель Kling Image 4.0</td><td>Ключевые кадры всех 11 сцен (2K, 16:9); кадр со свечой по фото продукта как референсу</td><td>бесплатный тариф Kling (кредиты новых аккаунтов)</td></tr>
+<tr><td>Kling AI, модель Kling 4.0 Flash, режим Keyframes</td><td>Видео из кадров: картинка становится первым кадром, промпт задаёт движение. 720p, 3–5 с. Родной звук Kling: живые звуки сцен</td><td>бесплатный тариф Kling</td></tr>
+<tr><td>Yandex SpeechKit (AI Studio)</td><td>Голос за кадром: голос «Марина», амплуа «шёпот», русский язык, паузы разметкой</td><td>платный облачный аккаунт Yandex Cloud; синтезированная речь используется по условиям SpeechKit</td></tr>
+<tr><td>Python + NumPy (код)</td><td>Музыка: процедурный синтез в ладу шур (дрон виолончели, щипковая «тар»-линия, смычковая «кяманча», редкие ноты фортепиано, ревербер). Код: <code>video/tools/muzyka.py</code></td><td>собственный код, права у команды</td></tr>
+<tr><td>Remotion (React)</td><td>Монтаж кодом: таймлайн, переходы, титры, логотип, сведение звука, рендер 1920×1080</td><td>открытая лицензия для команд до 3 человек</td></tr>
+</table>
+<p><b>Что пробовали и отказались:</b> ElevenLabs (голос и звуки) недоступен из России; Suno на бесплатном тарифе не даёт скачать трек и не даёт коммерческих прав; Grok на бесплатном тарифе не делает видео. Поэтому голос перенесли в Yandex SpeechKit, а музыку написали кодом, чтобы права на неё были чистыми.</p>
+
+<h2>3. Пайплайн</h2>
+<ol>
+<li>Бриф → сценарий и раскадровка (Claude), листок генерации с промптом картинки и промптом движения на каждую сцену.</li>
+<li>Опорные образы: гранат (большой, треснувший у основания, медный поднос), руки папы (оливковая кожа, тонкое серебряное кольцо, коричневый шерстяной пиджак), девочка (выцветшее красное платье с белым узором). Эти описания повторяются в каждом промпте.</li>
+<li>Kling Image 4.0: по 1–2 варианта на сцену, отбор лучшего.</li>
+<li>Kling 4.0 Flash Keyframes: выбранный кадр становится первым кадром видео, промпт описывает только движение и просит сохранить объекты неизменными.</li>
+<li>Монтаж в Remotion: клипы 3 с растянуты до длины сцены замедлением, мягкие наплывы, титры, голос, музыка, родной звук Kling, логотип в векторе.</li>
+</ol>
+<img src="animatik-kadry.jpg"><div class="cap">Раскадровка (аниматик) до генерации</div>
+
+<h2>4. Единый стиль</h2>
+<p>В конец каждого промпта картинки добавлялся одинаковый «хвост»:</p>
+<p class="p">shot on 35mm film, Kodak Portra 400, soft film grain, golden hour, low warm sun, long soft shadows, shallow depth of field, palette of pomegranate red, deep wine, copper, ochre, sandstone, bluish-grey smoke, intimate and quiet mood, no text, no logos, no flags</p>
+<p>Кроме того: одни и те же описания героев и граната во всех сценах; лица никогда не в кадре; все видео сделаны одной моделью из кадров одной модели, поэтому свет и плёночное зерно совпадают. В монтаже на все клипы одинаково наложены зерно и тёплая виньетка.</p>
+
+<h2 class="page">5. Ключевые промпты по сценам</h2>
+<table>
+<tr><th>Сцена</th><th>Промпт картинки (Kling Image 4.0, + стилевой хвост)</th><th>Промпт движения (Kling 4.0 Flash)</th></tr>
+<tr><td>s01 Пролог</td><td class="p">extreme close-up macro, a woman's hand striking a match in a dark quiet room, the small flame lights the edge of a copper tray and the curve of a red pomegranate, deep darkness around</td><td class="p">the match ignites, flame flickers, warm light slowly grows on the copper, static macro camera</td></tr>
+<tr><td>s02 Сок</td><td class="p">low camera at child height looking up worn stone steps of an old courtyard house in Baku, warm sandstone walls, wooden balcony with carved railings, grapevine, a man's legs in old leather shoes climbing the steps, in his hand a paper bundle</td><td class="p">the man slowly climbs the stairs away from camera, camera tilts up gently, light flickers through grape leaves</td></tr>
+<tr><td>s03 Сок</td><td class="p">top-down medium shot, a man's weathered hands with a silver ring placing one very large ripe cracked pomegranate on a hammered copper tray, small hands of a little girl in a red dress reach in from the bottom of the frame</td><td class="p">the hands set the pomegranate down and withdraw, the small hands reach toward it, slow push-in</td></tr>
+<tr><td>s04 Сок</td><td class="p">extreme macro of a very large ripe pomegranate, the crack opens, ruby seeds glisten, a single drop of juice runs down the skin, backlit by warm sun</td><td class="p">extreme macro, the crack slowly widens, glossy ruby seeds glisten, one drop of juice slides down the skin and falls, very slow camera drift</td></tr>
+<tr><td>s05 Тепло</td><td class="p">close-up, small hands of a five-year-old girl in a faded red dress holding a very large pomegranate against her chest, warm window light makes the fruit glow</td><td class="p">the small hands of the little girl gently turn the large pomegranate held against her red dress, subtle breathing motion, handheld camera, dust floating in warm window light, face never visible</td></tr>
+<tr><td>s06 Тепло</td><td class="p">side view of a modest kitchen table in an old Baku house, dark black tea poured from a copper teapot into a pear-shaped armudu glass, dried rose buds, cardamom and cinnamon on linen cloth, steam glowing in a sunbeam</td><td class="p">dark black tea slowly pours from a copper teapot into a pear-shaped armudu glass, steam curls up through the warm sunbeam, slow lateral dolly, no people</td></tr>
+<tr><td>s07 Тепло</td><td class="p">an empty old wooden chair, a man's worn brown wool jacket hanging on its back, a half-finished pear-shaped armudu glass of dark tea, late golden light, the room feels like someone just left</td><td class="p">static camera, the empty chair stays still, late sunlight slowly moves across the chair and the jacket, the thin steam from the tea glass slowly fades away</td></tr>
+<tr><td>s08 Дым</td><td class="p">dusk in the courtyard of an old Baku house, soft smoke from a small charcoal grill rises through the grapevine, warm sandstone walls glowing, carved wooden balcony, first warm lights in the windows</td><td class="p">dusk falls over the old courtyard, soft bluish-grey smoke drifts slowly upward through the grapevine leaves, embers glow, camera slowly tilts up following the smoke</td></tr>
+<tr><td>s10 Дым</td><td class="p">wide shot from behind at dusk, silhouettes of a man in a brown wool jacket and a small girl in a red dress walking hand in hand away from camera, soft bluish-grey smoke from a charcoal grill, faces not visible</td><td class="p">the man and the little girl walk slowly hand in hand away from camera, smoke thickens and gradually fills the frame until they dissolve in it, static camera</td></tr>
+<tr><td>s11 Память</td><td class="p">macro, a thin wisp of smoke rising from a freshly lit candle in a quiet modern room, beside it a hammered copper tray with a large split ripe pomegranate</td><td class="p">static macro, a thin wisp of smoke curls slowly upward from the candle, the small flame breathes softly</td></tr>
+<tr><td>s12 Память</td><td class="p">[референс: фото «Арома свеча 220 мл»] the exact candle from the reference image: deep wine-red faceted glass jar with diamond pattern and a brushed gold label, same shape, same proportions, same colors; the matching ribbed red glass lid is removed and rests on the table beside the jar; the candle is lit… next to a large split ripe pomegranate and a pear-shaped glass of dark tea, an empty wooden chair across the table</td><td class="p">the candle flame flickers softly inside the jar, a thin wisp of smoke rises, very slow camera pull-back, the candle jar, its gold label and the lid stay perfectly still and unchanged</td></tr>
+</table>
+
+<h2>6. Точный продукт</h2>
+<p>Свечу генерировали не по описанию, а по фото из материалов партнёра: оно загружено в Kling Image 4.0 как референс. В промпте отдельно названы форма (гранёная банка с ромбами), цвет (тёмно-винное стекло), золотая этикетка и крышка. Крышка в промпте снята и лежит рядом, потому что в закрытой банке свечу не зажечь. Из двух вариантов выбран тот, где этикетка читается чётче. В видео-промпте прописано, что банка, этикетка и крышка остаются неподвижными, поэтому модель двигает только пламя, дым и камеру.</p>
+<div class="row"><div><img src="svecha-foto.jpg" style="max-height:230px;width:auto"><div class="cap">Фото продукта (материалы партнёра)</div></div><div><img src="s12-kadr.jpg"><div class="cap">Сгенерированный кадр s12</div></div></div>
+<img src="kling-svecha-prompt.jpg"><div class="cap">Kling: промпт и референс для кадра со свечой</div>
+<img src="kling-svecha-grid.jpg"><div class="cap">Kling: два варианта свечи, загруженное фото продукта, видео s11 и s12</div>
+
+<h2 class="page">7. Генерации: удачные и неудачные</h2>
+<img src="kontakt-list-1.jpg"><div class="cap">Контактный лист первых генераций кадров</div>
+<p><b>Неудачные и отброшенные:</b></p>
+<ul>
+<li>№7: у папы лишняя пара рук, руки девочки тянутся из-под подноса. Взяли №8, где руки на месте.</li>
+<li>№9: капля сока выглядит как слеза и «висит» отдельно от граната. Взяли №10.</li>
+<li>№15: пиджак лежит не на спинке, а на сиденье, стул теряется в комнате. Взяли №16, а для видео s07 сгенерировали кадр заново с окном и ковром.</li>
+<li>№1 и №2: гранат слишком «глянцевый», без трещины у основания, как требует бриф. Трещину добавили в описание граната во всех промптах.</li>
+<li>Первые попытки голоса и музыки: ElevenLabs недоступен, в Suno треки получились, но без права скачивать и использовать. От них отказались.</li>
+</ul>
+
+<h2>8. Монтаж (вручную, кодом в Remotion)</h2>
+<img src="montazh-kadry-1-11.jpg"><div class="cap">Кадры из монтажа по сценам s01–s12</div>
+<ul>
+<li>Сборка 11 клипов на таймлайне по 5 секунд (финальная свеча 10 секунд), мягкие наплывы между сценами.</li>
+<li>Клипы длиной 3 секунды растянуты до длины сцены замедлением; это даёт тихий, медленный ритм.</li>
+<li>Водяной знак Kling убран кадрированием (лёгкое увеличение кадра), видео подняты до 1920×1080 при рендере.</li>
+<li>Цветокоррекция: тёплая виньетка и плёночное зерно поверх всех сцен.</li>
+<li>Титры на русском (дублируют голос) и финальный титр-посвящение набраны шрифтом, не сгенерированы.</li>
+<li>Логотип Tonka Perfumes наложен из векторного файла партнёра (SVG).</li>
+<li>Сведение: голос сверху, родной звук клипов Kling как живые звуки (огонь, шаги, чай, двор), музыка тихо под ними, с подъёмом в «дыме» и затуханием к финалу.</li>
+</ul>
+
+<h2>9. Музыка, звуки и голос: откуда и на каком основании</h2>
+<table>
+<tr><th>Что</th><th>Источник</th><th>Основание</th></tr>
+<tr><td>Голос (3 фразы)</td><td>Yandex SpeechKit, голос «Марина», амплуа «шёпот»</td><td>синтез в облаке команды (Yandex Cloud, платный аккаунт); синтезированная речь используется по условиям сервиса</td></tr>
+<tr><td>Живые звуки</td><td>родной звук, который Kling 4.0 генерирует вместе с видео</td><td>сгенерировано нейросетью Kling вместе с видеорядом</td></tr>
+<tr><td>Музыка</td><td>синтезирована нашим кодом (<code>video/tools/muzyka.py</code>): лад шур, 60 уд/мин, тар, кяманча, виолончель, фортепиано</td><td>собственная разработка команды, без сторонних сэмплов</td></tr>
+</table>
+<img src="speechkit.jpg"><div class="cap">Yandex SpeechKit: настройки голоса для фразы «Дом остаётся с нами… даже когда мы далеко»</div>
+
+<h2>10. Соответствие требованиям</h2>
+<ul>
+<li>Длительность 68 с (от 30 с до 2 мин), 16:9, 1920×1080.</li>
+<li>Весь видеоряд создан нейросетями (Kling). Стоков и съёмки нет.</li>
+<li>Титры и логотип наложены в монтаже, не сгенерированы.</li>
+<li>Лиц реальных людей нет, лица героев не показаны вообще. Флагов, гербов и гимнов нет (в каждом промпте <code>no flags</code>).</li>
+<li>Продукт сгенерирован по фото партнёра, форма и цвет совпадают.</li>
+</ul>
+</body></html>

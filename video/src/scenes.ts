@@ -35,10 +35,10 @@ export const SCENES: Scene[] = [
 export const TOTAL_SECONDS = SCENES[SCENES.length - 1].end;
 
 // Титры (дублируют голос за кадром). Время в секундах.
-export const TITLES: {text: string; start: number; end: number; big?: boolean}[] = [
+export const TITLES: {text: string; start: number; end: number; big?: boolean; top?: boolean}[] = [
   {text: 'Папа всегда приносил домой\nсамый спелый гранат', start: 5.5, end: 10.5},
   {text: 'И в доме становилось тепло', start: 21, end: 26},
-  {text: 'Дом остаётся с нами,\nдаже когда мы далеко', start: 52, end: 58},
+  {text: 'Дом остаётся с нами,\nдаже когда мы далеко', start: 52, end: 58, top: true},
   {text: 'Моему папе.\nОн родился в Баку', start: 60.5, end: 64.5, big: true},
 ];
 

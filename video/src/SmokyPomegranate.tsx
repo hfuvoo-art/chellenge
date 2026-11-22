@@ -45,7 +45,7 @@ export const SmokyPomegranate: React.FC = () => {
           durationInFrames={Math.round((t.end - t.start) * fps)}
           name={`Титр: ${t.text.split('\n')[0]}`}
         >
-          <Title text={t.text} big={t.big} />
+          <Title text={t.text} big={t.big} top={t.top} />
         </Sequence>
       ))}
 
@@ -167,7 +167,7 @@ const Vignette: React.FC = () => (
   />
 );
 
-const Title: React.FC<{text: string; big?: boolean}> = ({text, big}) => {
+const Title: React.FC<{text: string; big?: boolean; top?: boolean}> = ({text, big, top}) => {
   const frame = useCurrentFrame();
   const {fps, durationInFrames} = useVideoConfig();
   const inF = 0.9 * fps;
@@ -175,9 +175,10 @@ const Title: React.FC<{text: string; big?: boolean}> = ({text, big}) => {
   return (
     <AbsoluteFill
       style={{
-        justifyContent: big ? 'center' : 'flex-end',
+        justifyContent: big ? 'center' : top ? 'flex-start' : 'flex-end',
         alignItems: 'center',
-        paddingBottom: big ? 0 : 130,
+        paddingBottom: big || top ? 0 : 130,
+        paddingTop: top ? 90 : 0,
       }}
     >
       <div
