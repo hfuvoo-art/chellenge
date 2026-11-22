@@ -1,6 +1,6 @@
 step:
-  n: 5
-  name: strategy
+  n: 6
+  name: after-decision
 done:
   ingest:S-001:17057da15899:
     at: '2026-11-13T21:26:16+03:00'
